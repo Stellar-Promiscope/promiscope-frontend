@@ -14,6 +14,8 @@ import { walletAdapters } from '@/lib/walletAdapters';
 import type { WalletProvider as WalletProviderAlias } from '@/lib/walletAdapters';
 import { purgeAllContactDetails } from '@/lib/contactDetailsCache';
 import { getServerSession, refreshSession } from '@/lib/sessionClient';
+import { removeWalletScopedKeys, setActiveWallet } from '@/lib/activeWallet';
+import { BLOCKED_USERS_KEY } from '@/lib/messaging/moderation';
 
 // @stellar/stellar-sdk and lib/stellar.ts (which also pulls it in) are
 // dynamically imported inside the functions below that actually need them
@@ -300,6 +302,10 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
+  // Keep the module-level active wallet in sync during render (not in an
+  // effect) so wallet-scoped localStorage helpers never read the previous
+  // wallet's keys while children render after an account switch (#1343).
+  setActiveWallet(publicKey);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingProvider, setConnectingProvider] =
@@ -769,6 +775,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     removeStoredSession();
     removeSessionExpiry();
     clearAllRememberedAddresses();
+    // Wallet-scoped caches (#1343). The read-receipt preference is kept per
+    // wallet since it is keyed by address and can't leak to another wallet.
+    removeWalletScopedKeys(BLOCKED_USERS_KEY);
     // Unlocked contact details (and any other cached data) must not survive
     // logout — see lib/contactDetailsCache.ts. The explicit purge below is
     // belt-and-suspenders on top of this blanket wipe: it also cancels any

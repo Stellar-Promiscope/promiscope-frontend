@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import useSWR from 'swr';
 import { fetchBlockedUsers, getBlockedUsers } from '@/lib/messaging/moderation';
+import { getActiveWallet } from '@/lib/activeWallet';
 
 const BLOCKED_USERS_SWR_KEY = 'blocked-users';
 
@@ -17,9 +18,11 @@ const BLOCKED_USERS_SWR_KEY = 'blocked-users';
  * cache.
  */
 export function useBlockedUsers() {
+  // Keyed per wallet so an account switch never serves the previous
+  // wallet's cached block list (#1343).
   const { data, error, isValidating, mutate } = useSWR(
-    BLOCKED_USERS_SWR_KEY,
-    fetchBlockedUsers,
+    [BLOCKED_USERS_SWR_KEY, getActiveWallet()],
+    () => fetchBlockedUsers(),
     {
       fallbackData: getBlockedUsers(),
       revalidateOnFocus: false,

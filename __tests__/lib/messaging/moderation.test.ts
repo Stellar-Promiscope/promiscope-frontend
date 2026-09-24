@@ -21,8 +21,11 @@ import {
   isBlockedByCounterpart,
   type BlockedUser,
 } from '@/lib/messaging/moderation';
+import { setActiveWallet } from '@/lib/activeWallet';
 
-const BLOCKED_USERS_KEY = 'scoutoff_blocked_users';
+const WALLET_A = 'GWALLETA';
+const WALLET_B = 'GWALLETB';
+const BLOCKED_USERS_KEY = `scoutoff_blocked_users:${WALLET_A}`;
 
 beforeEach(() => {
   mockPost.mockReset();
@@ -31,6 +34,7 @@ beforeEach(() => {
   mockPost.mockResolvedValue(undefined);
   mockDelete.mockResolvedValue(undefined);
   window.localStorage.clear();
+  setActiveWallet(WALLET_A);
 });
 
 describe('reportUser', () => {
@@ -177,5 +181,30 @@ describe('isBlockedByCounterpart', () => {
     const result = await isBlockedByCounterpart('user-2');
 
     expect(result).toBe(false);
+  });
+});
+
+describe('wallet scoping', () => {
+  it("never exposes one wallet's block list to another wallet", async () => {
+    setActiveWallet(WALLET_A);
+    await blockUser('user-2');
+    expect(isUserBlocked('user-2')).toBe(true);
+
+    setActiveWallet(WALLET_B);
+    expect(getBlockedUsers()).toEqual([]);
+    expect(isUserBlocked('user-2')).toBe(false);
+
+    await blockUser('user-3');
+    expect(getBlockedUsers().map((b) => b.userId)).toEqual(['user-3']);
+
+    setActiveWallet(WALLET_A);
+    expect(getBlockedUsers().map((b) => b.userId)).toEqual(['user-2']);
+  });
+
+  it('reads and writes nothing when no wallet is connected', async () => {
+    setActiveWallet(null);
+    await blockUser('user-2');
+    expect(getBlockedUsers()).toEqual([]);
+    expect(window.localStorage.length).toBe(0);
   });
 });
