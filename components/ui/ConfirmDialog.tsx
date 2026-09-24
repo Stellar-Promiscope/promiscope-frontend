@@ -2,6 +2,7 @@
 
 import Modal from './Modal';
 import Button from './Button';
+import { useTranslations } from 'next-intl';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -20,10 +21,11 @@ export default function ConfirmDialog({
   onCancel,
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   loading = false,
 }: ConfirmDialogProps) {
+  const t = useTranslations('common');
   const handleConfirm = async () => {
     await onConfirm();
   };
@@ -37,7 +39,7 @@ export default function ConfirmDialog({
         <p className="text-gray-700 dark:text-gray-300">{message}</p>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" onClick={onCancel} disabled={loading}>
-            {cancelLabel}
+            {cancelLabel ?? t('cancel')}
           </Button>
           <Button
             variant="danger"
@@ -45,7 +47,7 @@ export default function ConfirmDialog({
             isLoading={loading}
             disabled={loading}
           >
-            {confirmLabel}
+            {confirmLabel ?? t('confirm')}
           </Button>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const CONSENT_STORAGE_KEY = 'scoutoff:cookie-consent';
 const CONSENT_ACCEPTED = 'accepted';
@@ -41,6 +42,7 @@ interface CookieConsentBannerProps {
 export default function CookieConsentBanner({
   onConsentChange,
 }: CookieConsentBannerProps) {
+  const t = useTranslations('common');
   const [visible, setVisible] = useState(false);
   const [animating, setAnimating] = useState(false);
 
@@ -109,7 +111,7 @@ export default function CookieConsentBanner({
     <div
       role="dialog"
       aria-modal="false"
-      aria-label="Cookie consent"
+      aria-label={t('cookie_consent')}
       className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-out ${
         animating ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
       }`}
@@ -159,7 +161,7 @@ export default function CookieConsentBanner({
             <button
               type="button"
               onClick={handleDecline}
-              aria-label="Close consent banner"
+              aria-label={t('close_consent_banner')}
               className="ml-1 rounded-lg p-2 text-gray-500 transition hover:text-gray-300"
             >
               <X size={16} />

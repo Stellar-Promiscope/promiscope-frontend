@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
+import { useTranslations } from 'next-intl';
 import Modal from './Modal';
 
 interface QRModalProps {
@@ -11,12 +12,8 @@ interface QRModalProps {
   title?: string;
 }
 
-export default function QRModal({
-  isOpen,
-  onClose,
-  url,
-  title = 'Share via QR',
-}: QRModalProps) {
+export default function QRModal({ isOpen, onClose, url, title }: QRModalProps) {
+  const t = useTranslations('common');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -34,7 +31,7 @@ export default function QRModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title ?? t('share_via_qr')}>
       <div className="flex flex-col items-center gap-4">
         <canvas ref={canvasRef} className="rounded-lg" />
         <p className="text-xs text-gray-500 dark:text-gray-400 break-all text-center">

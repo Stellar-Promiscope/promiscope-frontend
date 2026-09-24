@@ -1,5 +1,15 @@
 import type { Preview, Decorator } from '@storybook/react';
+import { NextIntlClientProvider } from 'next-intl';
+import messages from '../messages/en.json';
 import './tailwind.css';
+
+// Primitives in components/ui read their accessible labels from the
+// `common` namespace (#1342), so every story needs an intl provider.
+const withIntl: Decorator = (Story) => (
+  <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
+    <Story />
+  </NextIntlClientProvider>
+);
 
 // Toggles the same `.dark` class app/layout.tsx applies to <html>, so
 // components using dark: variants (Issue #547 audit) render with the
@@ -24,7 +34,7 @@ const withTheme: Decorator = (Story, context) => {
 };
 
 const preview: Preview = {
-  decorators: [withTheme],
+  decorators: [withTheme, withIntl],
   globalTypes: {
     theme: {
       description: 'Light/dark theme',

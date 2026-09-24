@@ -51,26 +51,45 @@ process.env.NEXT_PUBLIC_SEP10_HOME_DOMAIN =
 process.env.SESSION_SECRET = 'test-session-secret-do-not-use-in-production';
 
 jest.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => {
-    const t: Record<string, string> = {
-      app_title: 'ScoutOff',
-      'nav.scout_dashboard': 'Scout Dashboard',
-      'nav.player_dashboard': 'Player Dashboard',
-      'common.loading': 'Loading...',
-      // wallet namespace
-      connect: 'Connect Wallet',
-      connecting: 'Connecting…',
-      disconnect: 'Disconnect Wallet',
-      selectProvider: 'Select Wallet',
-      selectProviderHint: 'Choose a Stellar wallet to connect with ScoutOff.',
-      install: 'Browser extension',
-      installMobile: 'Browser extension / mobile',
-      cancel: 'Cancel',
-      noWalletDetected:
-        'No wallet detected. Please install a Stellar wallet extension.',
-    };
-    return t[key] ?? key;
-  },
+  useTranslations:
+    (namespace?: string) => (key: string, values?: Record<string, unknown>) => {
+      const t: Record<string, string> = {
+        app_title: 'ScoutOff',
+        'nav.scout_dashboard': 'Scout Dashboard',
+        'nav.player_dashboard': 'Player Dashboard',
+        'common.loading': 'Loading...',
+        // wallet namespace
+        connect: 'Connect Wallet',
+        connecting: 'Connecting…',
+        disconnect: 'Disconnect Wallet',
+        selectProvider: 'Select Wallet',
+        selectProviderHint: 'Choose a Stellar wallet to connect with ScoutOff.',
+        install: 'Browser extension',
+        installMobile: 'Browser extension / mobile',
+        cancel: 'Cancel',
+        noWalletDetected:
+          'No wallet detected. Please install a Stellar wallet extension.',
+      };
+      if (t[key]) return t[key];
+      // Fall back to the real English message for namespaces translated
+      // after this stub was written (e.g. `common` primitive labels, #1342),
+      // interpolating simple `{name}` placeholders.
+      const en = jest.requireActual('./messages/en.json') as Record<
+        string,
+        unknown
+      >;
+      const message = `${namespace ?? ''}.${key}`
+        .split('.')
+        .filter(Boolean)
+        .reduce<unknown>(
+          (node, part) => (node as Record<string, unknown> | undefined)?.[part],
+          en,
+        );
+      if (typeof message !== 'string' || namespace !== 'common') return key;
+      return message.replace(/\{(\w+)\}/g, (_, name) =>
+        String(values?.[name] ?? ''),
+      );
+    },
   useLocale: () => 'en',
   useMessages: () => ({}),
   useNow: () => new Date(),

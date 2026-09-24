@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 type SpinnerSize = 'sm' | 'md' | 'lg';
 
@@ -19,19 +20,24 @@ const SIZE_CLASSES: Record<SpinnerSize, string> = {
 export interface SpinnerProps extends React.HTMLAttributes<HTMLSpanElement> {
   size?: SpinnerSize;
   className?: string;
+  /** Overrides the translated "Loading" label. */
+  loadingLabel?: string;
 }
 
 export default function Spinner({
   size = 'md',
   className,
+  loadingLabel,
   ...rest
 }: SpinnerProps) {
+  const t = useTranslations('common');
+  const label = loadingLabel ?? t('loading_status');
   const classes = [className, BASE_CLASSES, SIZE_CLASSES[size]]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <span role="status" aria-label="Loading" className={classes} {...rest}>
+    <span role="status" aria-label={label} className={classes} {...rest}>
       <svg
         data-testid="spinner-svg"
         className="h-full w-full animate-spin text-current"
@@ -54,7 +60,7 @@ export default function Spinner({
           d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
         />
       </svg>
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

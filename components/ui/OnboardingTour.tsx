@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { TourStep } from '@/hooks/useOnboardingTour';
 
 interface OnboardingTourProps {
@@ -26,6 +27,7 @@ export default function OnboardingTour({
   onSkip,
   onComplete,
 }: OnboardingTourProps) {
+  const t = useTranslations('common');
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{
     top: number;
@@ -115,7 +117,7 @@ export default function OnboardingTour({
         <button
           onClick={onDismiss}
           className="absolute top-3 right-3 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
-          aria-label="Close tour"
+          aria-label={t('close_tour')}
         >
           <X size={16} />
         </button>
@@ -139,7 +141,7 @@ export default function OnboardingTour({
             onClick={onPrev}
             disabled={isFirstStep}
             className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 transition"
-            aria-label="Previous step"
+            aria-label={t('previous_step')}
           >
             <ChevronLeft size={16} />
           </button>
@@ -163,7 +165,7 @@ export default function OnboardingTour({
               <button
                 onClick={onNext}
                 className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
-                aria-label="Next step"
+                aria-label={t('next_step')}
               >
                 <ChevronRight size={16} />
               </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/Spinner';
 import { parseContractError } from '@/lib/contractErrorMessage';
 
@@ -37,13 +38,14 @@ function explorerUrl(hash: string): string {
 }
 
 function ExplorerLink({ txHash }: { txHash: string }) {
+  const t = useTranslations('common');
   return (
     <a
       href={explorerUrl(txHash)}
       target="_blank"
       rel="noopener noreferrer"
       className="ml-auto text-brand-green underline hover:opacity-80 transition shrink-0"
-      aria-label="View transaction on Stellar Expert"
+      aria-label={t('view_on_stellar_expert')}
     >
       View on Stellar Expert →
     </a>

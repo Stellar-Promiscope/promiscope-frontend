@@ -142,9 +142,10 @@ export default async function RootLayout({
                 </main>
               </ToastProvider>
             </WalletProvider>
+            {/* Inside the intl provider: the banner's labels are translated (#1342). */}
+            {!isTestEnv && <CookieConsentGate />}
           </NextIntlClientProvider>
         </ThemeProvider>
-        {!isTestEnv && <CookieConsentGate />}
       </body>
     </html>
   );

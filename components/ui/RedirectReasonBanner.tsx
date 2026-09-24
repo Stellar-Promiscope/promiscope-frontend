@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { REDIRECT_REASONS, isRedirectReason } from '@/lib/redirectReason';
 
 interface RedirectReasonBannerProps {
@@ -16,6 +17,7 @@ interface RedirectReasonBannerProps {
 export default function RedirectReasonBanner({
   reason,
 }: RedirectReasonBannerProps) {
+  const t = useTranslations('common');
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed || !isRedirectReason(reason)) return null;
@@ -30,7 +32,7 @@ export default function RedirectReasonBanner({
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        aria-label="Dismiss"
+        aria-label={t('dismiss')}
         className="shrink-0 text-amber-800/70 dark:text-amber-200/70 hover:text-amber-900 dark:hover:text-amber-100 text-sm font-medium"
       >
         Dismiss
