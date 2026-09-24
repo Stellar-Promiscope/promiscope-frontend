@@ -407,5 +407,42 @@
     "accept": "Accept",
     "decline": "Decline",
     "privacy_link": "Privacy Policy"
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Connect your wallet to view active sessions.",
+      "loading": "Loading sessions…",
+      "load_error": "Failed to load active sessions.",
+      "empty": "No active sessions found.",
+      "this_device": "This device",
+      "signed_in": "Signed in {time}",
+      "last_active": "Last active {time}",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "confirm_revoke_current": "This is your current session. Revoking it will log you out immediately. Continue?",
+      "revoked_logged_out": "Session revoked — you have been logged out",
+      "revoked": "Session revoked",
+      "revoke_error": "Failed to revoke session",
+      "device_label": "{browser} on {os}",
+      "unknown_device": "Unknown device",
+      "unknown_browser": "Unknown browser",
+      "unknown_os": "Unknown OS"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell_label": "{count, plural, =0 {Notifications} one {Notifications, # unread notification} other {Notifications, # unread notifications}}",
+    "mark_all_read": "Mark all as read",
+    "loading": "Loading…",
+    "empty": "No notifications yet.",
+    "preferences": {
+      "connect_prompt": "Connect your wallet to manage notification preferences.",
+      "loading": "Loading preferences…",
+      "saving": "Saving…",
+      "milestone_approvals_label": "Milestone approvals",
+      "milestone_approvals_description": "Notify me when a validator approves one of my milestones.",
+      "contact_unlocks_label": "Contact unlocks",
+      "contact_unlocks_description": "Notify me when I unlock a player’s contact details."
+    }
   }
 }

@@ -50,6 +50,8 @@ process.env.NEXT_PUBLIC_SEP10_HOME_DOMAIN =
 // read.
 process.env.SESSION_SECRET = 'test-session-secret-do-not-use-in-production';
 
+const mockTranslatedNamespaces = ['common', 'account', 'notifications'];
+
 jest.mock('next-intl', () => ({
   useTranslations:
     (namespace?: string) => (key: string, values?: Record<string, unknown>) => {
@@ -71,24 +73,19 @@ jest.mock('next-intl', () => ({
           'No wallet detected. Please install a Stellar wallet extension.',
       };
       if (t[key]) return t[key];
-      // Fall back to the real English message for namespaces translated
-      // after this stub was written (e.g. `common` primitive labels, #1342),
-      // interpolating simple `{name}` placeholders.
-      const en = jest.requireActual('./messages/en.json') as Record<
-        string,
-        unknown
-      >;
-      const message = `${namespace ?? ''}.${key}`
-        .split('.')
-        .filter(Boolean)
-        .reduce<unknown>(
-          (node, part) => (node as Record<string, unknown> | undefined)?.[part],
-          en,
-        );
-      if (typeof message !== 'string' || namespace !== 'common') return key;
-      return message.replace(/\{(\w+)\}/g, (_, name) =>
-        String(values?.[name] ?? ''),
-      );
+      // Namespaces translated after this stub was written (#1340-#1342)
+      // resolve against the real English messages, ICU plurals included.
+      const root = namespace?.split('.')[0];
+      if (!root || !mockTranslatedNamespaces.includes(root)) return key;
+      const { createTranslator } = jest.requireActual('use-intl');
+      const translate = createTranslator({
+        locale: 'en',
+        messages: jest.requireActual('./messages/en.json'),
+        namespace,
+        onError: () => {},
+        getMessageFallback: () => key,
+      });
+      return translate(key, values);
     },
   useLocale: () => 'en',
   useMessages: () => ({}),

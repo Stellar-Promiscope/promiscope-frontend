@@ -407,5 +407,42 @@
     "accept": "Kubali",
     "decline": "Kataa",
     "privacy_link": "Sera ya Faragha"
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Unganisha pochi yako ili kuona vipindi vinavyotumika.",
+      "loading": "Inapakia vipindi…",
+      "load_error": "Imeshindwa kupakia vipindi vinavyotumika.",
+      "empty": "Hakuna vipindi vinavyotumika.",
+      "this_device": "Kifaa hiki",
+      "signed_in": "Iliingia {time}",
+      "last_active": "Mara ya mwisho kutumika {time}",
+      "revoke": "Batilisha",
+      "revoking": "Inabatilisha…",
+      "confirm_revoke_current": "Hiki ni kipindi chako cha sasa. Kukibatilisha kutakutoa mara moja. Endelea?",
+      "revoked_logged_out": "Kipindi kimebatilishwa — umetolewa",
+      "revoked": "Kipindi kimebatilishwa",
+      "revoke_error": "Imeshindwa kubatilisha kipindi",
+      "device_label": "{browser} kwenye {os}",
+      "unknown_device": "Kifaa kisichojulikana",
+      "unknown_browser": "Kivinjari kisichojulikana",
+      "unknown_os": "Mfumo usiojulikana"
+    }
+  },
+  "notifications": {
+    "title": "Arifa",
+    "bell_label": "{count, plural, =0 {Arifa} one {Arifa, arifa # haijasomwa} other {Arifa, arifa # hazijasomwa}}",
+    "mark_all_read": "Weka zote kama zimesomwa",
+    "loading": "Inapakia…",
+    "empty": "Bado hakuna arifa.",
+    "preferences": {
+      "connect_prompt": "Unganisha pochi yako ili kudhibiti mapendeleo ya arifa.",
+      "loading": "Inapakia mapendeleo…",
+      "saving": "Inahifadhi…",
+      "milestone_approvals_label": "Idhini za hatua",
+      "milestone_approvals_description": "Nijulishe mthibitishaji anapoidhinisha mojawapo ya hatua zangu.",
+      "contact_unlocks_label": "Kufungua mawasiliano",
+      "contact_unlocks_description": "Nijulishe ninapofungua maelezo ya mawasiliano ya mchezaji."
+    }
   }
 }

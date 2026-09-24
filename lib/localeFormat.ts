@@ -2,7 +2,7 @@
  * Locale-aware number and date formatting, using Intl.NumberFormat /
  * Intl.DateTimeFormat instead of plain string interpolation.
  *
- * Not yet wired into existing components - callers currently doing manual
+ * Used by the account and notification UI (#1341). Other callers doing manual
  * string formatting for fees, counts, and dates (milestone timestamps,
  * subscription expiry) can switch to these helpers to get correct
  * en/fr/sw output instead of English-style formatting everywhere.
@@ -52,4 +52,30 @@ export function formatDateTime(value: Date | number, locale: Locale): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(value);
+}
+
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 365 * 24 * 60 * 60 * 1000],
+  ['month', 30 * 24 * 60 * 60 * 1000],
+  ['week', 7 * 24 * 60 * 60 * 1000],
+  ['day', 24 * 60 * 60 * 1000],
+  ['hour', 60 * 60 * 1000],
+  ['minute', 60 * 1000],
+];
+
+/** "5 minutes ago" / "il y a 5 minutes" relative to `now` (ms epoch). */
+export function formatRelativeTime(
+  value: Date | number,
+  locale: Locale,
+  now: number = Date.now(),
+): string {
+  const diffMs = new Date(value).getTime() - now;
+  const rtf = new Intl.RelativeTimeFormat(toIntlLocale(locale), {
+    numeric: 'auto',
+  });
+  for (const [unit, ms] of RELATIVE_UNITS) {
+    if (Math.abs(diffMs) >= ms)
+      return rtf.format(Math.round(diffMs / ms), unit);
+  }
+  return rtf.format(Math.round(diffMs / 1000), 'second');
 }

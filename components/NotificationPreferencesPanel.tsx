@@ -1,25 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import type { NotificationPreferences } from '@/types';
 
+// `messageKey` indexes `notifications.preferences.<messageKey>_label` and
+// `_description` in messages/*.json.
 const CATEGORIES: {
   key: keyof NotificationPreferences;
-  label: string;
-  description: string;
+  messageKey: 'milestone_approvals' | 'contact_unlocks';
 }[] = [
-  {
-    key: 'milestoneApprovals',
-    label: 'Milestone approvals',
-    description: 'Notify me when a validator approves one of my milestones.',
-  },
-  {
-    key: 'contactUnlocks',
-    label: 'Contact unlocks',
-    description: 'Notify me when I unlock a player’s contact details.',
-  },
+  { key: 'milestoneApprovals', messageKey: 'milestone_approvals' },
+  { key: 'contactUnlocks', messageKey: 'contact_unlocks' },
 ];
 
 function Toggle({
@@ -67,6 +61,7 @@ export default function NotificationPreferencesPanel() {
   const [saving, setSaving] = useState<keyof NotificationPreferences | null>(
     null,
   );
+  const t = useTranslations('notifications.preferences');
 
   async function toggle(key: keyof NotificationPreferences) {
     setSaving(key);
@@ -78,39 +73,38 @@ export default function NotificationPreferencesPanel() {
   }
 
   if (!isAuthenticated) {
-    return (
-      <p className="text-xs text-gray-500">
-        Connect your wallet to manage notification preferences.
-      </p>
-    );
+    return <p className="text-xs text-gray-500">{t('connect_prompt')}</p>;
   }
 
   return (
     <div className="flex flex-col">
       <ul className="flex flex-col divide-y divide-gray-800">
-        {CATEGORIES.map(({ key, label, description }) => (
-          <li
-            key={key}
-            className="flex items-center justify-between gap-4 py-3"
-          >
-            <div>
-              <p className="text-sm font-medium text-white">{label}</p>
-              <p className="text-xs text-gray-400">{description}</p>
-            </div>
-            <Toggle
-              checked={preferences[key]}
-              onChange={() => toggle(key)}
-              label={label}
-            />
-          </li>
-        ))}
+        {CATEGORIES.map(({ key, messageKey }) => {
+          const label = t(`${messageKey}_label`);
+          return (
+            <li
+              key={key}
+              className="flex items-center justify-between gap-4 py-3"
+            >
+              <div>
+                <p className="text-sm font-medium text-white">{label}</p>
+                <p className="text-xs text-gray-400">
+                  {t(`${messageKey}_description`)}
+                </p>
+              </div>
+              <Toggle
+                checked={preferences[key]}
+                onChange={() => toggle(key)}
+                label={label}
+              />
+            </li>
+          );
+        })}
       </ul>
-      {loading && (
-        <p className="pt-3 text-xs text-gray-500">Loading preferences…</p>
-      )}
+      {loading && <p className="pt-3 text-xs text-gray-500">{t('loading')}</p>}
       {saving && (
         <p className="pt-3 text-xs text-gray-500" role="status">
-          Saving…
+          {t('saving')}
         </p>
       )}
     </div>

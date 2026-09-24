@@ -407,5 +407,42 @@
     "accept": "Accepter",
     "decline": "Refuser",
     "privacy_link": "Politique de confidentialité"
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Connectez votre portefeuille pour voir les sessions actives.",
+      "loading": "Chargement des sessions…",
+      "load_error": "Échec du chargement des sessions actives.",
+      "empty": "Aucune session active trouvée.",
+      "this_device": "Cet appareil",
+      "signed_in": "Connecté {time}",
+      "last_active": "Dernière activité {time}",
+      "revoke": "Révoquer",
+      "revoking": "Révocation…",
+      "confirm_revoke_current": "Ceci est votre session actuelle. La révoquer vous déconnectera immédiatement. Continuer ?",
+      "revoked_logged_out": "Session révoquée — vous avez été déconnecté",
+      "revoked": "Session révoquée",
+      "revoke_error": "Échec de la révocation de la session",
+      "device_label": "{browser} sur {os}",
+      "unknown_device": "Appareil inconnu",
+      "unknown_browser": "Navigateur inconnu",
+      "unknown_os": "Système inconnu"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell_label": "{count, plural, =0 {Notifications} one {Notifications, # notification non lue} other {Notifications, # notifications non lues}}",
+    "mark_all_read": "Tout marquer comme lu",
+    "loading": "Chargement…",
+    "empty": "Aucune notification pour le moment.",
+    "preferences": {
+      "connect_prompt": "Connectez votre portefeuille pour gérer vos préférences de notification.",
+      "loading": "Chargement des préférences…",
+      "saving": "Enregistrement…",
+      "milestone_approvals_label": "Validations de jalons",
+      "milestone_approvals_description": "M’avertir lorsqu’un validateur approuve l’un de mes jalons.",
+      "contact_unlocks_label": "Déblocages de contact",
+      "contact_unlocks_description": "M’avertir lorsque je débloque les coordonnées d’un joueur."
+    }
   }
 }

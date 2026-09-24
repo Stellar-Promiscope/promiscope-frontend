@@ -11,11 +11,25 @@
  * that question needs.
  */
 export function labelUserAgent(userAgent: string | null | undefined): string {
-  if (!userAgent) return 'Unknown device';
+  const parsed = parseUserAgent(userAgent);
+  if (!parsed) return 'Unknown device';
+  return `${parsed.browser ?? 'Unknown browser'} on ${parsed.os ?? 'Unknown OS'}`;
+}
+
+/**
+ * The browser and OS parts of labelUserAgent() without the English
+ * connector, so the UI can compose a translated "{browser} on {os}" label
+ * (#1341). Returns null when there is no User-Agent, and null parts for
+ * anything unrecognized.
+ */
+export function parseUserAgent(
+  userAgent: string | null | undefined,
+): { browser: string | null; os: string | null } | null {
+  if (!userAgent) return null;
 
   const ua = userAgent;
 
-  let os = 'Unknown OS';
+  let os: string | null = null;
   if (/iPhone/i.test(ua)) os = 'iPhone';
   else if (/iPad/i.test(ua)) os = 'iPad';
   else if (/Android/i.test(ua)) os = 'Android';
@@ -24,7 +38,7 @@ export function labelUserAgent(userAgent: string | null | undefined): string {
   else if (/CrOS/i.test(ua)) os = 'ChromeOS';
   else if (/Linux/i.test(ua)) os = 'Linux';
 
-  let browser = 'Unknown browser';
+  let browser: string | null = null;
   // Order matters: several browsers include "Safari" or "Chrome" tokens in
   // their own UA strings, so the more specific tokens must be checked first.
   if (/EdgA?\//i.test(ua)) browser = 'Edge';
@@ -35,5 +49,5 @@ export function labelUserAgent(userAgent: string | null | undefined): string {
   else if (/Chrome\//i.test(ua)) browser = 'Chrome';
   else if (/Safari\//i.test(ua)) browser = 'Safari';
 
-  return `${browser} on ${os}`;
+  return { browser, os };
 }
