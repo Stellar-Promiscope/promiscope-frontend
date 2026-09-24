@@ -50,12 +50,35 @@ process.env.NEXT_PUBLIC_SEP10_HOME_DOMAIN =
 // read.
 process.env.SESSION_SECRET = 'test-session-secret-do-not-use-in-production';
 
-const mockTranslatedNamespaces = ['common', 'account', 'notifications'];
+const mockTranslatedNamespaces = [
+  'common',
+  'account',
+  'notifications',
+  'scout',
+  'stats',
+];
+
+// Namespaces translated after the flat stub below was written (#1340-#1342)
+// resolve against the real English messages, ICU plurals and rich text
+// included; anything else falls back to the stub / the raw key.
+function mockEnglishTranslator(namespace?: string) {
+  const root = namespace?.split('.')[0];
+  if (!root || !mockTranslatedNamespaces.includes(root)) return null;
+  const { createTranslator } = jest.requireActual('use-intl');
+  return createTranslator({
+    locale: 'en',
+    messages: jest.requireActual('./messages/en.json'),
+    namespace,
+    onError: () => {},
+    getMessageFallback: ({ key }: { key: string }) => key,
+  });
+}
 
 jest.mock('next-intl', () => ({
-  useTranslations:
-    (namespace?: string) => (key: string, values?: Record<string, unknown>) => {
-      const t: Record<string, string> = {
+  useTranslations: (namespace?: string) => {
+    const english = mockEnglishTranslator(namespace);
+    const t = (key: string, values?: Record<string, unknown>) => {
+      const stub: Record<string, string> = {
         app_title: 'ScoutOff',
         'nav.scout_dashboard': 'Scout Dashboard',
         'nav.player_dashboard': 'Player Dashboard',
@@ -72,21 +95,13 @@ jest.mock('next-intl', () => ({
         noWalletDetected:
           'No wallet detected. Please install a Stellar wallet extension.',
       };
-      if (t[key]) return t[key];
-      // Namespaces translated after this stub was written (#1340-#1342)
-      // resolve against the real English messages, ICU plurals included.
-      const root = namespace?.split('.')[0];
-      if (!root || !mockTranslatedNamespaces.includes(root)) return key;
-      const { createTranslator } = jest.requireActual('use-intl');
-      const translate = createTranslator({
-        locale: 'en',
-        messages: jest.requireActual('./messages/en.json'),
-        namespace,
-        onError: () => {},
-        getMessageFallback: () => key,
-      });
-      return translate(key, values);
-    },
+      if (stub[key]) return stub[key];
+      return english ? english(key, values) : key;
+    };
+    t.rich = (key: string, values?: Record<string, unknown>) =>
+      english ? english.rich(key, values) : key;
+    return t;
+  },
   useLocale: () => 'en',
   useMessages: () => ({}),
   useNow: () => new Date(),

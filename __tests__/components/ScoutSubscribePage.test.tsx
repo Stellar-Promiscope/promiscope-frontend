@@ -127,7 +127,7 @@ describe('ScoutSubscribePage', () => {
       const banner = screen.getByRole('status', {
         name: /active subscription/i,
       });
-      expect(banner).toHaveTextContent('pro');
+      expect(banner).toHaveTextContent('Pro');
     });
 
     it('shows remaining days in banner', () => {

@@ -444,5 +444,102 @@
       "contact_unlocks_label": "Kufungua mawasiliano",
       "contact_unlocks_description": "Nijulishe ninapofungua maelezo ya mawasiliano ya mchezaji."
     }
+  },
+  "stats": {
+    "title": "Takwimu za mchezaji",
+    "loading": "Inapakia takwimu za mchezaji",
+    "goals": "Mabao",
+    "assists": "Pasi za mabao",
+    "appearances": "Mechi alizocheza",
+    "clean_sheets": "Mechi bila kufungwa"
+  },
+  "scout": {
+    "back_to_dashboard": "Rudi kwenye dashibodi",
+    "watchlist": {
+      "title": "Orodha yangu ya ufuatiliaji",
+      "empty_title": "Orodha yako ya ufuatiliaji haina kitu",
+      "empty_description": "Weka nyota kwa wachezaji kwenye matokeo ya utafutaji au wasifu wao ili kuwaongeza hapa."
+    },
+    "compare": {
+      "title": "Linganisha wachezaji",
+      "select_prompt": "Chagua wachezaji 2 hadi {max} wa kulinganisha.",
+      "load_error": "Imeshindwa kupakia wachezaji: {error}",
+      "no_players": "Hakuna wachezaji waliopatikana.",
+      "partial_failure": "{count, plural, one {Mchezaji # hakuweza kupakiwa.} other {Wachezaji # hawakuweza kupakiwa.}}",
+      "vitals": "Taarifa za msingi",
+      "vitals_label": "{name} – Taarifa za mchezaji",
+      "age": "Umri",
+      "position": "Nafasi",
+      "region": "Eneo",
+      "nationality": "Uraia",
+      "stats": "Takwimu",
+      "stats_label": "{name} – Takwimu za mchezaji",
+      "progress": "Maendeleo",
+      "progress_label": "{name} – Kiwango cha maendeleo",
+      "milestones": "Hatua",
+      "milestones_label": "{name} – Hatua",
+      "milestone_count": "{count, plural, one {hatua #} other {hatua #}}"
+    },
+    "profile": {
+      "title": "Wasifu wa skauti",
+      "description": "Tazama maelezo ya usajili na shughuli za hivi karibuni za skauti huyu.",
+      "not_found_title": "Skauti hakupatikana",
+      "not_found_description": "Wasifu wa skauti unaoutafuta haupo.",
+      "meta_title": "Wasifu wa skauti | ScoutOff",
+      "meta_description": "Tazama maelezo ya usajili na shughuli za hivi karibuni za skauti huyu kwenye ScoutOff."
+    },
+    "subscribe": {
+      "title": "Usajili wa skauti",
+      "subtitle": "Boresha ufikiaji wako na ufungue uwezo bora wa kusaka vipaji.",
+      "status_loading": "Inapakia usajili wako wa sasa...",
+      "status_none": "Hakuna usajili unaotumika.",
+      "status_expired": "Usajili wako wa {tier} uliisha tarehe {date}.",
+      "status_active": "Usajili wa sasa: {tier} — unatumika hadi {date}.",
+      "cta_confirming": "Inathibitisha kwenye mnyororo…",
+      "cta_processing": "Inachakata…",
+      "cta_renew": "Fanya upya",
+      "cta_upgrade": "Pandisha daraja",
+      "cta_subscribe": "Jisajili",
+      "success": "Umejisajili kwa {tier} kwa mafanikio",
+      "active_banner_label": "Usajili unaotumika",
+      "active_until": "Unatumika hadi <strong>{date}</strong>",
+      "days_remaining": "{count, plural, one {Siku # imebaki} other {Siku # zimebaki}}",
+      "referral_notice": "Umealikwa na mwenzako! Rufaa yako itawekwa kiotomatiki utakapojisajili.",
+      "active_subscription": "Usajili unaotumika",
+      "plan_name": "Mpango wa {tier}",
+      "expires": "Unaisha <strong>{date}</strong>",
+      "change_title": "Badilisha daraja la usajili",
+      "change_description": "Unakaribia kubadilisha usajili wako kutoka <strong>{from}</strong> kwenda <strong>{to}</strong>.",
+      "notice_title": "Taarifa muhimu kuhusu muda wako uliobaki",
+      "notice_body": "Kubadilisha daraja la usajili kutaanzisha kipindi kipya cha usajili wa {to} mara moja. {count, plural, one {Siku # iliyobaki} other {Siku # zilizobaki}} kwenye mpango wa sasa wa {from} hazitahamishwa wala kugawanywa.",
+      "notice_replace": "Usajili mpya wa {to} utaanza kutumika mara moja na utachukua nafasi ya usajili wako wa sasa wa {from}.",
+      "confirm_change": "Thibitisha mabadiliko",
+      "current_plan": "Mpango wa sasa",
+      "recommended": "Unapendekezwa",
+      "paused": "Mkataba umesimamishwa kwa sasa",
+      "tiers": {
+        "basic": {
+          "title": "Msingi",
+          "description": "Anza na ufikiaji muhimu wa skauti na uwezo wa msingi wa kuwasiliana na wachezaji.",
+          "features": {
+            "browse": "Vinjari wasifu wa wachezaji",
+            "connect": "Ungana na vipaji vilivyothibitishwa",
+            "pay_to_contact": "Lipa ili kupata maelezo ya mawasiliano ya mchezaji"
+          }
+        },
+        "pro": {
+          "title": "Pro",
+          "description": "Unapendekezwa kwa skauti hai wanaotaka ufikiaji wa kipaumbele na zana za hali ya juu.",
+          "features": {
+            "all_basic": "Vipengele vyote vya Msingi",
+            "priority_discovery": "Ugunduzi wa wachezaji kwa kipaumbele",
+            "faster_contact": "Ufikiaji wa haraka wa maelezo ya mawasiliano"
+          }
+        },
+        "elite": {
+          "title": "Elite"
+        }
+      }
+    }
   }
 }

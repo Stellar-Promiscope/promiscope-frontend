@@ -1,5 +1,6 @@
 'use client';
 import { Goal, Hand, CalendarDays, Shield } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { PlayerStats } from '@/types';
 
 interface StatCellProps {
@@ -25,12 +26,14 @@ export default function PlayerStatsCard({
   stats?: PlayerStats;
   position?: string;
 }) {
+  const t = useTranslations('stats');
+
   if (!stats) {
     return (
       <div
         className="bg-brand-card border border-gray-800 rounded-xl p-6 animate-pulse"
         aria-busy="true"
-        aria-label="Loading player stats"
+        aria-label={t('loading')}
       >
         <div className="h-5 w-36 rounded bg-gray-700 mb-4" />
         <div className="grid grid-cols-2 gap-4">
@@ -53,28 +56,28 @@ export default function PlayerStatsCard({
 
   return (
     <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
-      <h2 className="font-semibold text-white mb-4">Player Stats</h2>
+      <h2 className="font-semibold text-white mb-4">{t('title')}</h2>
       <div className="grid grid-cols-2 gap-4">
         <StatCell
           icon={<Goal className="h-5 w-5" />}
           value={stats.goals}
-          label="Goals"
+          label={t('goals')}
         />
         <StatCell
           icon={<Hand className="h-5 w-5" />}
           value={stats.assists}
-          label="Assists"
+          label={t('assists')}
         />
         <StatCell
           icon={<CalendarDays className="h-5 w-5" />}
           value={stats.appearances}
-          label="Appearances"
+          label={t('appearances')}
         />
         {isGK && (
           <StatCell
             icon={<Shield className="h-5 w-5" />}
             value={stats.clean_sheets ?? 0}
-            label="Clean Sheets"
+            label={t('clean_sheets')}
           />
         )}
       </div>

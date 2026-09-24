@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import useSWR from 'swr';
+import { useTranslations } from 'next-intl';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { getPlayer } from '@/lib/contract';
@@ -36,6 +37,7 @@ async function fetchWatchlistPlayers(
 export default function WatchlistPage() {
   const { walletAddress: publicKey } = useRequireWallet();
   const watchlist = useWatchlist(publicKey ?? null);
+  const t = useTranslations('scout');
 
   const { data: players, isValidating } = useSWR<Player[]>(
     watchlistPlayersKey(watchlist.entries),
@@ -52,12 +54,14 @@ export default function WatchlistPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">My Watchlist</h1>
+        <h1 className="text-2xl font-bold text-white">
+          {t('watchlist.title')}
+        </h1>
         <Link
           href="/scout"
           className="text-sm text-gray-400 hover:text-white transition"
         >
-          &larr; Back to Dashboard
+          &larr; {t('back_to_dashboard')}
         </Link>
       </div>
 
@@ -69,8 +73,8 @@ export default function WatchlistPage() {
         </div>
       ) : watchlist.entries.length === 0 ? (
         <EmptyState
-          title="Your watchlist is empty"
-          description="Star players from search results or their profile to add them here."
+          title={t('watchlist.empty_title')}
+          description={t('watchlist.empty_description')}
         />
       ) : (
         <div

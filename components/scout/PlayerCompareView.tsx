@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import type { Player } from '@/types';
 import { getProgressLabel } from '@/lib/progress';
 import { getMediaProxyUrl } from '@/lib/mediaUrl';
@@ -25,6 +26,10 @@ const POSITION_LABEL: Record<string, string> = Object.fromEntries(
 function CompareColumn({ player }: { player: Player }) {
   const levelLabel = getProgressLabel(player.progressLevel);
   const nameId = `compare-col-name-${player.id}`;
+  const t = useTranslations('scout.compare');
+  // Stat labels are shared with PlayerStatsCard.
+  const ts = useTranslations('stats');
+  const name = player.vitals.name;
 
   return (
     // Each column is a labelled group (not a landmark) so screen-reader users
@@ -64,15 +69,15 @@ function CompareColumn({ player }: { player: Player }) {
       </div>
 
       {/* Vitals */}
-      <section aria-label={`${player.vitals.name} – Player vitals`}>
+      <section aria-label={t('vitals_label', { name })}>
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-          Vitals
+          {t('vitals')}
         </h4>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-          <dt className="text-gray-400">Age</dt>
+          <dt className="text-gray-400">{t('age')}</dt>
           <dd className="text-white text-right">{player.vitals.age}</dd>
 
-          <dt className="text-gray-400">Position</dt>
+          <dt className="text-gray-400">{t('position')}</dt>
           <dd className="text-white text-right">
             <Tooltip
               content={
@@ -83,30 +88,30 @@ function CompareColumn({ player }: { player: Player }) {
             </Tooltip>
           </dd>
 
-          <dt className="text-gray-400">Region</dt>
+          <dt className="text-gray-400">{t('region')}</dt>
           <dd className="text-white text-right">{player.vitals.region}</dd>
 
-          <dt className="text-gray-400">Nationality</dt>
+          <dt className="text-gray-400">{t('nationality')}</dt>
           <dd className="text-white text-right">{player.vitals.nationality}</dd>
         </dl>
       </section>
 
       {/* Stats */}
       {player.stats && (
-        <section aria-label={`${player.vitals.name} – Player stats`}>
+        <section aria-label={t('stats_label', { name })}>
           <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-            Stats
+            {t('stats')}
           </h4>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
             {player.stats.goals !== undefined && (
               <>
-                <dt className="text-gray-400">Goals</dt>
+                <dt className="text-gray-400">{ts('goals')}</dt>
                 <dd className="text-white text-right">{player.stats.goals}</dd>
               </>
             )}
             {player.stats.assists !== undefined && (
               <>
-                <dt className="text-gray-400">Assists</dt>
+                <dt className="text-gray-400">{ts('assists')}</dt>
                 <dd className="text-white text-right">
                   {player.stats.assists}
                 </dd>
@@ -114,7 +119,7 @@ function CompareColumn({ player }: { player: Player }) {
             )}
             {player.stats.appearances !== undefined && (
               <>
-                <dt className="text-gray-400">Appearances</dt>
+                <dt className="text-gray-400">{ts('appearances')}</dt>
                 <dd className="text-white text-right">
                   {player.stats.appearances}
                 </dd>
@@ -122,7 +127,7 @@ function CompareColumn({ player }: { player: Player }) {
             )}
             {player.stats.clean_sheets !== undefined && (
               <>
-                <dt className="text-gray-400">Clean sheets</dt>
+                <dt className="text-gray-400">{ts('clean_sheets')}</dt>
                 <dd className="text-white text-right">
                   {player.stats.clean_sheets}
                 </dd>
@@ -133,21 +138,20 @@ function CompareColumn({ player }: { player: Player }) {
       )}
 
       {/* Progress */}
-      <section aria-label={`${player.vitals.name} – Progress level`}>
+      <section aria-label={t('progress_label', { name })}>
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-          Progress
+          {t('progress')}
         </h4>
         <ProgressBar level={player.progressLevel} />
       </section>
 
       {/* Milestones */}
-      <section aria-label={`${player.vitals.name} – Milestones`}>
+      <section aria-label={t('milestones_label', { name })}>
         <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-          Milestones
+          {t('milestones')}
         </h4>
         <p className="text-sm text-gray-300 mb-3">
-          {player.milestones.length} milestone
-          {player.milestones.length !== 1 ? 's' : ''}
+          {t('milestone_count', { count: player.milestones.length })}
         </p>
         <MilestoneTimeline
           milestones={player.milestones}

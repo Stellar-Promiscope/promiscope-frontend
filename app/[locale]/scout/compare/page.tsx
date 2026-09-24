@@ -2,6 +2,7 @@
 
 import { Suspense, useMemo } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useComparePlayers } from '@/hooks/useComparePlayers';
 import PlayerCompareView from '@/components/scout/PlayerCompareView';
@@ -12,6 +13,7 @@ const MAX_PLAYERS = 4;
 
 function ParseIds() {
   const searchParams = useSearchParams();
+  const t = useTranslations('scout');
   const raw = searchParams.get('ids') ?? '';
 
   const ids = useMemo(() => {
@@ -28,13 +30,13 @@ function ParseIds() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <p className="text-gray-400 text-lg">
-          Select 2 to {MAX_PLAYERS} players to compare.
+          {t('compare.select_prompt', { max: MAX_PLAYERS })}
         </p>
         <Link
           href="/scout"
           className="text-brand-green underline hover:opacity-80 transition"
         >
-          Back to Dashboard
+          {t('back_to_dashboard')}
         </Link>
       </div>
     );
@@ -51,12 +53,12 @@ function ParseIds() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <p className="text-red-400">Failed to load players: {error}</p>
+        <p className="text-red-400">{t('compare.load_error', { error })}</p>
         <Link
           href="/scout"
           className="text-brand-green underline hover:opacity-80 transition"
         >
-          Back to Dashboard
+          {t('back_to_dashboard')}
         </Link>
       </div>
     );
@@ -65,12 +67,12 @@ function ParseIds() {
   if (players.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <p className="text-gray-400">No players found.</p>
+        <p className="text-gray-400">{t('compare.no_players')}</p>
         <Link
           href="/scout"
           className="text-brand-green underline hover:opacity-80 transition"
         >
-          Back to Dashboard
+          {t('back_to_dashboard')}
         </Link>
       </div>
     );
@@ -79,18 +81,19 @@ function ParseIds() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Compare Players</h1>
+        <h1 className="text-2xl font-bold text-white">{t('compare.title')}</h1>
         <Link
           href="/scout"
           className="text-sm text-gray-400 hover:text-white transition"
         >
-          &larr; Back to Dashboard
+          &larr; {t('back_to_dashboard')}
         </Link>
       </div>
       {players.length < ids.length && (
         <p className="text-sm text-gray-500">
-          {ids.length - players.length} player
-          {ids.length - players.length !== 1 ? 's' : ''} could not be loaded.
+          {t('compare.partial_failure', {
+            count: ids.length - players.length,
+          })}
         </p>
       )}
       <PlayerCompareView players={players} />
