@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useRequireWallet } from '@/hooks/useRequireWallet';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AcademyOwnerRoster from '@/components/academy/AcademyOwnerRoster';
@@ -18,6 +19,7 @@ import AcademyOwnerRoster from '@/components/academy/AcademyOwnerRoster';
  * `AcademyOwnerRoster` querying `GET /api/admin/academies/mine`.
  */
 function AcademyRosterPageContent() {
+  const t = useTranslations('academy.rosterPage');
   const { walletAddress } = useRequireWallet();
 
   if (!walletAddress) {
@@ -27,10 +29,8 @@ function AcademyRosterPageContent() {
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-6 px-4 py-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">Academy Roster</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          Manage signer wallets for the academy you own.
-        </p>
+        <h1 className="text-2xl font-bold text-white">{t('title')}</h1>
+        <p className="text-sm text-gray-400 mt-1">{t('subtitle')}</p>
       </div>
       <AcademyOwnerRoster />
     </div>

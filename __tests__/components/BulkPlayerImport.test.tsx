@@ -1,10 +1,12 @@
+jest.unmock('next-intl');
+
 import {
   act,
   fireEvent,
   render,
   screen,
   waitFor,
-} from '@testing-library/react';
+} from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import BulkPlayerImport from '@/components/academy/BulkPlayerImport';
 import { useWallet } from '@/hooks/useWallet';
@@ -159,6 +161,28 @@ describe('BulkPlayerImport', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent(/not valid json/i);
     expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('translates coded row errors and counts in the French locale', async () => {
+    render(<BulkPlayerImport />, { locale: 'fr' });
+    const input = screen.getByLabelText(
+      'Fichier des joueurs (CSV ou JSON)',
+    ) as HTMLInputElement;
+    const file = makeFile(MIXED_CSV, 'players.csv');
+    Object.defineProperty(input, 'files', {
+      value: [file],
+      configurable: true,
+    });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
+    expect(
+      screen.getByText('2 valides · 1 invalides · 3 au total'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Nom: Nom est obligatoire/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Importer 2 joueurs valides' }),
+    ).toBeInTheDocument();
   });
 
   it('lets the admin choose another file to reset the preview', async () => {

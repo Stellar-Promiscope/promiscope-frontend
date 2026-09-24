@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/Toast';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
@@ -39,6 +40,7 @@ type DialogState =
   | null;
 
 export default function AcademyOwnerRoster() {
+  const t = useTranslations('academy.roster');
   const { show } = useToast();
 
   const [academies, setAcademies] = useState<Academy[]>([]);
@@ -92,10 +94,10 @@ export default function AcademyOwnerRoster() {
         list.map((a) => (a.id === academyId ? academy : a)),
       );
       setMemberInputs((s) => ({ ...s, [academyId]: '' }));
-      show({ message: 'Signer wallet added to academy.', variant: 'success' });
+      show({ message: t('addSuccess'), variant: 'success' });
     } catch (e: any) {
       show({
-        message: e?.message ?? 'Failed to add signer wallet.',
+        message: e?.message ?? t('addFailed'),
         variant: 'error',
       });
     } finally {
@@ -115,13 +117,10 @@ export default function AcademyOwnerRoster() {
             : a,
         ),
       );
-      show({
-        message: 'Signer wallet removed from academy.',
-        variant: 'success',
-      });
+      show({ message: t('removeSuccess'), variant: 'success' });
     } catch (e: any) {
       show({
-        message: e?.message ?? 'Failed to remove signer wallet.',
+        message: e?.message ?? t('removeFailed'),
         variant: 'error',
       });
     } finally {
@@ -131,41 +130,29 @@ export default function AcademyOwnerRoster() {
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-400">Loading your academy…</p>;
+    return <p className="text-sm text-gray-400">{t('loading')}</p>;
   }
 
   if (error) {
     return (
       <p className="text-sm text-red-400">
-        Failed to load your academy.{' '}
+        {t('loadFailed')}{' '}
         <button onClick={load} className="underline hover:text-red-300">
-          Retry
+          {t('retry')}
         </button>
       </p>
     );
   }
 
   if (academies.length === 0) {
-    return (
-      <p className="text-sm text-gray-400">
-        This wallet isn&rsquo;t recorded as the owner of any academy. Contact
-        the platform admin if you believe this is a mistake.
-      </p>
-    );
+    return <p className="text-sm text-gray-400">{t('noAcademy')}</p>;
   }
 
   return (
     <>
       <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">
-          Your Academy Roster
-        </h2>
-        <p className="text-xs text-gray-400">
-          Add or remove signer wallets for the academy/academies you own. Each
-          signer must still be added as a validator by the platform admin for
-          its milestone approvals to be authorized on-chain — this panel only
-          manages the off-chain roster label.
-        </p>
+        <h2 className="text-lg font-semibold text-white">{t('heading')}</h2>
+        <p className="text-xs text-gray-400">{t('description')}</p>
         <ul className="flex flex-col gap-6">
           {academies.map((academy) => (
             <li
@@ -176,7 +163,7 @@ export default function AcademyOwnerRoster() {
                 <div>
                   <p className="text-white font-semibold">{academy.name}</p>
                   <p className="text-xs text-gray-400">
-                    Owner:{' '}
+                    {t('owner')}{' '}
                     <TruncatedAddress
                       address={academy.ownerWallet}
                       className="text-gray-400"
@@ -184,8 +171,7 @@ export default function AcademyOwnerRoster() {
                   </p>
                 </div>
                 <span className="text-xs text-gray-400 shrink-0">
-                  {academy.members.length} signer
-                  {academy.members.length !== 1 ? 's' : ''}
+                  {t('signerCount', { count: academy.members.length })}
                 </span>
               </div>
 
@@ -204,9 +190,9 @@ export default function AcademyOwnerRoster() {
                         {onChainStatus[m.wallet] === false && (
                           <span
                             className="text-xs text-amber-400"
-                            title="Not currently authorized on-chain — ask the platform admin to add this wallet as a validator"
+                            title={t('notOnChainTitle')}
                           >
-                            not on-chain
+                            {t('notOnChain')}
                           </span>
                         )}
                       </div>
@@ -220,7 +206,7 @@ export default function AcademyOwnerRoster() {
                         }
                         className="text-red-400 hover:text-red-300 transition text-xs shrink-0"
                       >
-                        Remove
+                        {t('remove')}
                       </button>
                     </li>
                   ))}
@@ -230,7 +216,8 @@ export default function AcademyOwnerRoster() {
               <div className="flex gap-2">
                 <input
                   className="input flex-1 text-sm"
-                  placeholder="Add signer wallet (G...)"
+                  aria-label={t('addInputLabel')}
+                  placeholder={t('addPlaceholder')}
                   value={memberInputs[academy.id] ?? ''}
                   onChange={(e) =>
                     setMemberInputs((s) => ({
@@ -253,7 +240,7 @@ export default function AcademyOwnerRoster() {
                   }
                   className="px-4 py-2 rounded-lg bg-brand-green text-black text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 shrink-0"
                 >
-                  Add
+                  {t('add')}
                 </button>
               </div>
             </li>
@@ -266,16 +253,20 @@ export default function AcademyOwnerRoster() {
           isOpen
           title={
             dialog.action === 'add-member'
-              ? 'Add Signer Wallet'
-              : 'Remove Signer Wallet'
+              ? t('addDialogTitle')
+              : t('removeDialogTitle')
           }
           message={
             dialog.action === 'add-member'
-              ? `Add ${dialog.wallet} as a signer wallet for this academy?`
-              : `Remove ${dialog.wallet.slice(0, 4)}…${dialog.wallet.slice(-4)} from this academy?`
+              ? t('addDialogMessage', { wallet: dialog.wallet })
+              : t('removeDialogMessage', {
+                  wallet: `${dialog.wallet.slice(0, 4)}…${dialog.wallet.slice(-4)}`,
+                })
           }
           confirmLabel={
-            dialog.action === 'add-member' ? 'Add Signer' : 'Remove Signer'
+            dialog.action === 'add-member'
+              ? t('addConfirm')
+              : t('removeConfirm')
           }
           loading={actionLoading}
           onConfirm={() =>

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { Shield, Trash2, Key, AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
 import { useBackupWallet } from '@/hooks/useBackupWallet';
@@ -22,6 +23,7 @@ export default function BackupWalletModal({
   onClose,
   onSuccess,
 }: BackupWalletModalProps) {
+  const t = useTranslations('player.modals.backupWallet');
   const { link, remove, loading, error } = useBackupWallet();
   const { signAndSubmit } = useWallet();
   const [step, setStep] = useState<ModalStep>('view');
@@ -50,23 +52,21 @@ export default function BackupWalletModal({
   const handleProceedToConfirm = useCallback(() => {
     const trimmed = backupWalletInput.trim();
     if (!trimmed) {
-      setInputError('Please enter a wallet address');
+      setInputError(t('errorRequired'));
       return;
     }
     if (!validateWalletAddress(trimmed)) {
-      setInputError(
-        'Invalid Stellar address. Must be 56 characters starting with G.',
-      );
+      setInputError(t('errorInvalid'));
       return;
     }
     if (trimmed === player.wallet) {
-      setInputError('Backup wallet cannot be the same as your primary wallet');
+      setInputError(t('errorSameAsPrimary'));
       return;
     }
     setBackupWalletInput(trimmed);
     setInputError(null);
     setStep('confirm');
-  }, [backupWalletInput, player.wallet]);
+  }, [backupWalletInput, player.wallet, t]);
 
   const handleConfirmLink = useCallback(async () => {
     try {
@@ -115,31 +115,25 @@ export default function BackupWalletModal({
           <>
             <div className="flex items-center gap-3">
               <Key className="w-5 h-5 text-brand-green" />
-              <h2 className="text-lg font-semibold text-white">
-                Account Recovery
-              </h2>
+              <h2 className="text-lg font-semibold text-white">{t('title')}</h2>
             </div>
 
             <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 flex gap-3">
               <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
               <div className="text-sm text-blue-200">
-                <p className="font-semibold mb-1">What this protects:</p>
+                <p className="font-semibold mb-1">{t('protectsHeading')}</p>
                 <ul className="text-xs space-y-1 opacity-90">
-                  <li>• Loss of access to your primary wallet</li>
-                  <li>• Regaining access to your account and profile</li>
+                  <li>• {t('protectsLoss')}</li>
+                  <li>• {t('protectsRegain')}</li>
                 </ul>
               </div>
             </div>
 
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
               <p className="text-xs text-yellow-200">
-                <span className="font-semibold">
-                  What this does NOT protect:
-                </span>
+                <span className="font-semibold">{t('notProtectsHeading')}</span>
                 <br />
-                Backup wallets do not protect against loss of both wallets,
-                stolen backup addresses, or other security compromises. Use a
-                wallet backup phrase as your primary recovery method.
+                {t('notProtectsBody')}
               </p>
             </div>
 
@@ -147,17 +141,18 @@ export default function BackupWalletModal({
               <>
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
                   <p className="text-xs text-gray-400 mb-2">
-                    Current backup wallet:
+                    {t('currentLabel')}
                   </p>
                   <p className="text-sm font-mono text-gray-300 break-all">
                     {player.backupWallet}
                   </p>
                   {player.backupWalletVerifiedAt && (
                     <p className="text-xs text-gray-400 mt-2">
-                      Verified on{' '}
-                      {new Date(
-                        player.backupWalletVerifiedAt * 1000,
-                      ).toLocaleDateString()}
+                      {t('verifiedOn', {
+                        date: new Date(
+                          player.backupWalletVerifiedAt * 1000,
+                        ).toLocaleDateString(),
+                      })}
                     </p>
                   )}
                 </div>
@@ -167,37 +162,34 @@ export default function BackupWalletModal({
                     onClick={handleClose}
                     className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition"
                   >
-                    Close
+                    {t('close')}
                   </button>
                   <button
                     onClick={handleRemoveClick}
                     className="flex-1 px-4 py-2 rounded-lg bg-red-600/20 border border-red-600/50 text-red-300 hover:bg-red-600/30 transition flex items-center justify-center gap-2"
                   >
                     <Trash2 size={16} />
-                    Remove
+                    {t('remove')}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-300">
-                  No backup wallet configured. Link one to recover your account
-                  if you lose access to your primary wallet.
-                </p>
+                <p className="text-sm text-gray-300">{t('noneConfigured')}</p>
 
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={handleClose}
                     className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition"
                   >
-                    Close
+                    {t('close')}
                   </button>
                   <button
                     onClick={handleLinkClick}
                     className="flex-1 px-4 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition flex items-center justify-center gap-2"
                   >
                     <Shield size={16} />
-                    Link Backup Wallet
+                    {t('linkButton')}
                   </button>
                 </div>
               </>
@@ -210,18 +202,16 @@ export default function BackupWalletModal({
             <div className="flex items-center gap-3">
               <Shield className="w-5 h-5 text-brand-green" />
               <h3 className="text-lg font-semibold text-white">
-                Link Backup Wallet
+                {t('linkButton')}
               </h3>
             </div>
 
-            <p className="text-sm text-gray-300">
-              Enter a secondary wallet address to use as a recovery method.
-              You&apos;ll need to sign a confirmation with your primary wallet.
-            </p>
+            <p className="text-sm text-gray-300">{t('linkBody')}</p>
 
             <input
               type="text"
-              placeholder="G... (56-character Stellar public key)"
+              aria-label={t('inputLabel')}
+              placeholder={t('inputPlaceholder')}
               value={backupWalletInput}
               onChange={(e) => {
                 setBackupWalletInput(e.target.value);
@@ -238,7 +228,7 @@ export default function BackupWalletModal({
                 disabled={loading}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition disabled:opacity-50"
               >
-                Back
+                {t('back')}
               </button>
               <button
                 onClick={handleProceedToConfirm}
@@ -246,7 +236,7 @@ export default function BackupWalletModal({
                 className="flex-1 px-4 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading && <Spinner size="sm" />}
-                Continue
+                {t('continue')}
               </button>
             </div>
           </>
@@ -257,29 +247,26 @@ export default function BackupWalletModal({
             <div className="flex items-center gap-3">
               <Key className="w-5 h-5 text-brand-green" />
               <h3 className="text-lg font-semibold text-white">
-                Confirm & Sign
+                {t('confirmTitle')}
               </h3>
             </div>
 
             <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 space-y-3">
               <div>
-                <p className="text-xs text-gray-400">Primary wallet:</p>
+                <p className="text-xs text-gray-400">{t('primaryLabel')}</p>
                 <p className="text-sm font-mono text-gray-300 break-all">
                   {player.wallet}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Backup wallet:</p>
+                <p className="text-xs text-gray-400">{t('backupLabel')}</p>
                 <p className="text-sm font-mono text-gray-300 break-all">
                   {backupWalletInput}
                 </p>
               </div>
             </div>
 
-            <p className="text-sm text-gray-400">
-              Click &quot;Link &amp; Sign&quot; to confirm with your primary
-              wallet. This proves you own both addresses.
-            </p>
+            <p className="text-sm text-gray-400">{t('confirmBody')}</p>
 
             {error && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
@@ -293,7 +280,7 @@ export default function BackupWalletModal({
                 disabled={loading}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition disabled:opacity-50"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleConfirmLink}
@@ -301,7 +288,7 @@ export default function BackupWalletModal({
                 className="flex-1 px-4 py-2 rounded-lg bg-brand-green text-black font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading && <Spinner size="sm" />}
-                Link & Sign
+                {t('linkAndSign')}
               </button>
             </div>
           </>
@@ -312,23 +299,18 @@ export default function BackupWalletModal({
             <div className="flex items-center gap-3">
               <Trash2 className="w-5 h-5 text-red-500" />
               <h3 className="text-lg font-semibold text-white">
-                Remove Backup Wallet?
+                {t('removeTitle')}
               </h3>
             </div>
 
             <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-              <p className="text-xs text-gray-400 mb-2">
-                Current backup wallet:
-              </p>
+              <p className="text-xs text-gray-400 mb-2">{t('currentLabel')}</p>
               <p className="text-sm font-mono text-gray-300 break-all">
                 {player.backupWallet}
               </p>
             </div>
 
-            <p className="text-sm text-gray-300">
-              Removing your backup wallet means you won&apos;t be able to use it
-              to recover your account if you lose access to your primary wallet.
-            </p>
+            <p className="text-sm text-gray-300">{t('removeBody')}</p>
 
             <div className="flex gap-3 pt-2">
               <button
@@ -336,14 +318,14 @@ export default function BackupWalletModal({
                 disabled={loading}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition disabled:opacity-50"
               >
-                Keep It
+                {t('keep')}
               </button>
               <button
                 onClick={() => setStep('remove-confirm')}
                 disabled={loading}
                 className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
               >
-                Remove
+                {t('remove')}
               </button>
             </div>
           </>
@@ -354,14 +336,11 @@ export default function BackupWalletModal({
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-500" />
               <h3 className="text-lg font-semibold text-white">
-                Confirm Removal
+                {t('confirmRemovalTitle')}
               </h3>
             </div>
 
-            <p className="text-sm text-red-200">
-              Are you sure? This action cannot be undone. You&apos;ll have no
-              backup recovery method.
-            </p>
+            <p className="text-sm text-red-200">{t('confirmRemovalBody')}</p>
 
             <div className="flex gap-3 pt-2">
               <button
@@ -369,7 +348,7 @@ export default function BackupWalletModal({
                 disabled={loading}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition disabled:opacity-50"
               >
-                Go Back
+                {t('goBack')}
               </button>
               <button
                 onClick={handleConfirmRemove}
@@ -377,7 +356,7 @@ export default function BackupWalletModal({
                 className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading && <Spinner size="sm" />}
-                Yes, Remove
+                {t('yesRemove')}
               </button>
             </div>
           </>

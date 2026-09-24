@@ -1,5 +1,7 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/__tests__/setup-providers-intl';
 import userEvent from '@testing-library/user-event';
 import ArchiveProfileModal from '@/components/player/ArchiveProfileModal';
 import { useArchiveProfile } from '@/hooks/useArchiveProfile';
@@ -218,5 +220,22 @@ describe('ArchiveProfileModal', () => {
     expect(screen.getByText('Network error')).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('renders translated copy in French', () => {
+    render(
+      <ArchiveProfileModal
+        player={PLAYER}
+        isOpen
+        onClose={onClose}
+        onSuccess={onSuccess}
+      />,
+      { locale: 'fr' },
+    );
+
+    expect(screen.getByText('Archiver votre profil ?')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Archiver le profil' }),
+    ).toBeInTheDocument();
   });
 });

@@ -100,16 +100,6 @@ export interface ScoutStats {
 export const fetchScoutStats = (scoutId: string): Promise<ScoutStats> =>
   api.get(`/scouts/${scoutId}/stats`).then((r) => r.data);
 
-// Chat
-export const fetchChatHistory = (roomId: string) =>
-  api.get(`/chat/${roomId}`).then((r) => r.data);
-
-export const postChatMessage = (
-  roomId: string,
-  message: string,
-  sender: string,
-) => api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
-
 // Admin activity feed
 export type ActivityEventType =
   | 'player_registered'
