@@ -254,7 +254,9 @@ export default function Navbar() {
 
             <ThemeToggle />
             <AccountSwitcher />
-            <WalletButton />
+            <div data-tour="wallet-button">
+              <WalletButton />
+            </div>
           </div>
 
           {/* ── Hamburger button (mobile only) ── */}

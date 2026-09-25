@@ -239,3 +239,24 @@ describe('useOnboardingTour', () => {
     expect(result.current.isVisible).toBe(true);
   });
 });
+
+describe('useOnboardingTour — progress persistence', () => {
+  it('persists the current step per wallet and resumes from it', () => {
+    const { result, unmount } = renderHook(() =>
+      useOnboardingTour(TOUR_ID, STEPS, WALLET),
+    );
+    act(() => result.current.goToStep(2));
+    unmount();
+
+    const { result: resumed } = renderHook(() =>
+      useOnboardingTour(TOUR_ID, STEPS, WALLET),
+    );
+    expect(resumed.current.currentStep).toBe(2);
+    expect(resumed.current.isVisible).toBe(true);
+
+    const { result: otherWallet } = renderHook(() =>
+      useOnboardingTour(TOUR_ID, STEPS, 'GOTHERWALLET'),
+    );
+    expect(otherWallet.current.currentStep).toBe(0);
+  });
+});

@@ -25,7 +25,8 @@ import EmptyState from '@/components/ui/EmptyState';
 import ReferralPanel from '@/components/scout/ReferralPanel';
 import SpendingSummary from '@/components/scout/SpendingSummary';
 import OnboardingTour from '@/components/ui/OnboardingTour';
-import { scoutTourSteps, SCOUT_TOUR_ID } from '@/lib/tourSteps';
+import { getTourSteps, SCOUT_TOUR_ID } from '@/lib/tourSteps';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import type { Player, PlayerFilter } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import ScrollToTop from '@/components/ui/ScrollToTop';
@@ -71,9 +72,14 @@ export default function ScoutDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const isMobile = useIsMobile();
+  const tourSteps = useMemo(
+    () => getTourSteps('scout', { isMobile }),
+    [isMobile],
+  );
   const tour = useOnboardingTour(
     SCOUT_TOUR_ID,
-    scoutTourSteps,
+    tourSteps,
     publicKey ?? undefined,
   );
 
@@ -344,6 +350,7 @@ export default function ScoutDashboardContent() {
         onDismiss={tour.dismissTour}
         onSkip={tour.skipTour}
         onComplete={tour.completeTour}
+        onGoToStep={tour.goToStep}
       />
       <div className="flex flex-col gap-8">
         <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
