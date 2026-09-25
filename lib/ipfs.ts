@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { IPFS_FALLBACK_GATEWAYS } from './ipfsGateways';
 
 const PRIMARY_GATEWAY =
   process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs';
@@ -9,10 +10,7 @@ const PRIMARY_GATEWAY =
  *
  * Exported so consumers and test suites can reference or override the list.
  */
-export const DEFAULT_IPFS_FALLBACKS: string[] = [
-  'https://ipfs.io/ipfs',
-  'https://cloudflare-ipfs.com/ipfs',
-];
+export const DEFAULT_IPFS_FALLBACKS: string[] = [...IPFS_FALLBACK_GATEWAYS];
 
 /** Timeout per gateway attempt in milliseconds. */
 const ATTEMPT_TIMEOUT_MS = 8_000;
@@ -139,6 +137,16 @@ async function uploadChunkWithRetry(
           0, // totalChunks not known at this point
           retryAfterSec,
         );
+      }
+      // Other 4xx responses (bad chunk index, unknown/expired session) won't
+      // succeed on retry — surface them immediately.
+      if (
+        axios.isAxiosError(err) &&
+        err.response &&
+        err.response.status >= 400 &&
+        err.response.status < 500
+      ) {
+        throw err;
       }
     }
   }

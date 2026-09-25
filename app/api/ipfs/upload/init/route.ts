@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initSession } from '@/lib/chunkedUploadStore';
 import { getSessionWallet } from '@/lib/session';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { createRequestLogger } from '@/lib/logger';
+import {
+  getPinataCredentials,
+  getMissingPinataEnvVars,
+  PINATA_NOT_CONFIGURED_ERROR,
+} from '@/lib/pinataConfig';
 
 export const runtime = 'nodejs';
 
@@ -25,6 +31,16 @@ const MIN_CHUNK_SIZE_BYTES = 64 * 1024;
 const MAX_CHUNKS = 5000;
 
 export async function POST(req: NextRequest) {
+  const log = createRequestLogger(req);
+  if (!getPinataCredentials()) {
+    log.error('Pinata credentials missing; IPFS uploads disabled', {
+      missing: getMissingPinataEnvVars().join(', '),
+    });
+    return NextResponse.json(
+      { error: PINATA_NOT_CONFIGURED_ERROR },
+      { status: 503 },
+    );
+  }
   const ip = getClientIp(req);
   const rl = checkRateLimit(ip);
   if (rl.limited) {

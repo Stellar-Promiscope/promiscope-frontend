@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
+import { IPFS_FALLBACK_GATEWAYS } from '@/lib/ipfsGateways';
 
 /**
  * GET /api/media/[cid]
@@ -36,10 +37,7 @@ const PRIMARY_GATEWAY =
   process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs';
 
 /** Same fallback order as lib/ipfs.ts's client-side gateway fallback. */
-const FALLBACK_GATEWAYS = [
-  'https://ipfs.io/ipfs',
-  'https://cloudflare-ipfs.com/ipfs',
-];
+const FALLBACK_GATEWAYS = IPFS_FALLBACK_GATEWAYS;
 
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 

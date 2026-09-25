@@ -5,6 +5,11 @@ import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { createRequestLogger } from '@/lib/logger';
 import {
+  getPinataCredentials,
+  getMissingPinataEnvVars,
+  PINATA_NOT_CONFIGURED_ERROR,
+} from '@/lib/pinataConfig';
+import {
   verifyUploadedContent,
   UploadVerificationError,
 } from '@/lib/uploadVerification';
@@ -27,6 +32,16 @@ const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
 export async function POST(req: NextRequest) {
   const log = createRequestLogger(req);
+  const pinata = getPinataCredentials();
+  if (!pinata) {
+    log.error('Pinata credentials missing; IPFS uploads disabled', {
+      missing: getMissingPinataEnvVars().join(', '),
+    });
+    return NextResponse.json(
+      { error: PINATA_NOT_CONFIGURED_ERROR },
+      { status: 503 },
+    );
+  }
   const ip = getClientIp(req);
   const rl = checkRateLimit(ip);
   if (rl.limited) {
@@ -111,8 +126,8 @@ export async function POST(req: NextRequest) {
       pinataForm,
       {
         headers: {
-          pinata_api_key: process.env.PINATA_API_KEY!,
-          pinata_secret_api_key: process.env.PINATA_SECRET!,
+          pinata_api_key: pinata.apiKey,
+          pinata_secret_api_key: pinata.secret,
         },
       },
     );

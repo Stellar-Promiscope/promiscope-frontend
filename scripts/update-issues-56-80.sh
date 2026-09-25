@@ -46,7 +46,7 @@ Improve \`lib/ipfs.ts\` to retry with fallback gateways when the primary gateway
 - Add an 8-second timeout per attempt using \`AbortController\`
 
 ## Additional Requirements
-- Default fallback list: \`['https://ipfs.io/ipfs', 'https://cloudflare-ipfs.com/ipfs']\`
+- Default fallback list: \`['https://ipfs.io/ipfs', 'https://dweb.link/ipfs']\`
 - Log a warning to the console when falling back to a secondary gateway
 - Export the fallback list as \`DEFAULT_IPFS_FALLBACKS\` for testing
 

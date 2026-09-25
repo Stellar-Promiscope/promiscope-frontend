@@ -80,7 +80,6 @@ const nextConfig = {
      * Pinata dedicated gateway:  https://gateway.pinata.cloud/ipfs/<cid>
      * Pinata dedicated gateway (custom subdomain): https://<name>.mypinata.cloud/ipfs/<cid>
      * Public IPFS gateway:       https://ipfs.io/ipfs/<cid>
-     * Cloudflare IPFS gateway:   https://cloudflare-ipfs.com/ipfs/<cid>
      * Dweb.link gateway:         https://dweb.link/ipfs/<cid>
      *
      * Adding a new gateway only requires a new entry here — no other changes needed.
@@ -99,11 +98,6 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'ipfs.io',
-        pathname: '/ipfs/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cloudflare-ipfs.com',
         pathname: '/ipfs/**',
       },
       {

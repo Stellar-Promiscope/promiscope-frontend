@@ -46,7 +46,20 @@ describe('POST /api/ipfs/upload/complete', () => {
   afterEach(() => {
     delete process.env.PINATA_API_KEY;
     delete process.env.PINATA_SECRET;
+    jest.restoreAllMocks();
     __resetForTests();
+  });
+
+  it('returns 503 before doing any work when Pinata credentials are missing', async () => {
+    delete process.env.PINATA_SECRET;
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const sessionId = await seedSession(JPEG_HEADER, 'ip-complete-nocreds');
+    const res = await POST(makeRequest({ sessionId }, 'ip-complete-nocreds'));
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'IPFS uploads are not configured',
+    });
   });
 
   it('returns 400 for invalid JSON', async () => {

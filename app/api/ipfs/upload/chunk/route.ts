@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeChunk } from '@/lib/chunkedUploadStore';
+import {
+  writeChunk,
+  UploadSessionNotFoundError,
+  ChunkIndexOutOfRangeError,
+} from '@/lib/chunkedUploadStore';
+import { createRequestLogger } from '@/lib/logger';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 
 export const runtime = 'nodejs';
@@ -63,9 +68,18 @@ export async function POST(req: NextRequest) {
     const status = await writeChunk(sessionId, chunkIndex, buffer);
     return NextResponse.json(status);
   } catch (err) {
+    if (err instanceof ChunkIndexOutOfRangeError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    if (err instanceof UploadSessionNotFoundError) {
+      return NextResponse.json({ error: err.message }, { status: 404 });
+    }
+    createRequestLogger(req).error('Failed to write upload chunk', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to write chunk' },
-      { status: 404 },
+      { error: 'Failed to write chunk' },
+      { status: 500 },
     );
   }
 }

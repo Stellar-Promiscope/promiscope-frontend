@@ -11,9 +11,38 @@ function makeRequest(body: unknown, ip = 'ip-init-default'): NextRequest {
   });
 }
 
-afterEach(() => __resetForTests());
+beforeEach(() => {
+  process.env.PINATA_API_KEY = 'test-api-key';
+  process.env.PINATA_SECRET = 'test-secret';
+});
+
+afterEach(() => {
+  delete process.env.PINATA_API_KEY;
+  delete process.env.PINATA_SECRET;
+  jest.restoreAllMocks();
+  __resetForTests();
+});
 
 describe('POST /api/ipfs/upload/init', () => {
+  it('returns 503 before doing any work when Pinata credentials are missing', async () => {
+    delete process.env.PINATA_SECRET;
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const res = await POST(
+      makeRequest(
+        {
+          filename: 'clip.mp4',
+          fileType: 'video/mp4',
+          fileSize: 100,
+          totalChunks: 1,
+        },
+        'ip-init-nocreds',
+      ),
+    );
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'IPFS uploads are not configured',
+    });
+  });
   it('returns 201 with a sessionId for a valid request', async () => {
     const res = await POST(
       makeRequest({
