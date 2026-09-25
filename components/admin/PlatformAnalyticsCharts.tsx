@@ -15,6 +15,9 @@ import {
 import { usePlatformAnalytics } from '@/hooks/usePlatformAnalytics';
 import type { DailyPoint, WeeklyPoint } from '@/hooks/usePlatformAnalytics';
 import EmptyState from '@/components/ui/EmptyState';
+import ChartDataTable from '@/components/admin/ChartDataTable';
+import { summarizeCumulative, summarizeWeekly } from '@/lib/chartSummary';
+import { formatNumber } from '@/lib/localeFormat';
 
 const BRAND_GREEN = '#00C853';
 const BRAND_BLUE = '#3B82F6';
@@ -65,83 +68,116 @@ function CumulativeChart({
   color: string;
 }) {
   return (
-    <div className="flex flex-col gap-2">
+    <figure className="flex flex-col gap-2">
       <h3 className="text-sm font-medium text-gray-300">{title}</h3>
+      <figcaption className="text-xs text-gray-400">
+        {summarizeCumulative(title, data)}
+      </figcaption>
       {data.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center">
           No data in this range.
         </p>
       ) : (
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart
-            data={data}
-            margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-            <XAxis
-              dataKey="date"
-              tick={{ fill: '#9CA3AF', fontSize: 11 }}
-              minTickGap={24}
-            />
-            <YAxis
-              tick={{ fill: '#9CA3AF', fontSize: 11 }}
-              allowDecimals={false}
-              width={40}
-            />
-            <Tooltip
-              contentStyle={TOOLTIP_STYLE}
-              labelStyle={{ color: '#E5E7EB' }}
-            />
-            <Line
-              type="monotone"
-              dataKey="count"
-              stroke={color}
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart
+              data={data}
+              margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+              accessibilityLayer
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                minTickGap={24}
+              />
+              <YAxis
+                tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                allowDecimals={false}
+                width={40}
+              />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                labelStyle={{ color: '#E5E7EB' }}
+              />
+              <Line
+                type="monotone"
+                dataKey="count"
+                stroke={color}
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+          <ChartDataTable
+            caption={title}
+            rows={data}
+            rowKey={(p) => p.date}
+            columns={[
+              { header: 'Date', render: (p) => p.date },
+              { header: 'Total', render: (p) => formatNumber(p.count, 'en') },
+            ]}
+          />
+        </>
       )}
-    </div>
+    </figure>
   );
 }
 
+const MILESTONES_TITLE = 'Milestones Approved Per Week';
+
 function MilestonesPerWeekChart({ data }: { data: WeeklyPoint[] }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-medium text-gray-300">
-        Milestones Approved Per Week
-      </h3>
+    <figure className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium text-gray-300">{MILESTONES_TITLE}</h3>
+      <figcaption className="text-xs text-gray-400">
+        {summarizeWeekly(MILESTONES_TITLE, data)}
+      </figcaption>
       {data.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center">
           No data in this range.
         </p>
       ) : (
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart
-            data={data}
-            margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-            <XAxis
-              dataKey="weekStart"
-              tick={{ fill: '#9CA3AF', fontSize: 11 }}
-              minTickGap={24}
-            />
-            <YAxis
-              tick={{ fill: '#9CA3AF', fontSize: 11 }}
-              allowDecimals={false}
-              width={40}
-            />
-            <Tooltip
-              contentStyle={TOOLTIP_STYLE}
-              labelStyle={{ color: '#E5E7EB' }}
-            />
-            <Bar dataKey="count" fill={BRAND_GREEN} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart
+              data={data}
+              margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+              accessibilityLayer
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
+              <XAxis
+                dataKey="weekStart"
+                tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                minTickGap={24}
+              />
+              <YAxis
+                tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                allowDecimals={false}
+                width={40}
+              />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                labelStyle={{ color: '#E5E7EB' }}
+              />
+              <Bar dataKey="count" fill={BRAND_GREEN} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          <ChartDataTable
+            caption={MILESTONES_TITLE}
+            rows={data}
+            rowKey={(p) => p.weekStart}
+            columns={[
+              { header: 'Week starting', render: (p) => p.weekStart },
+              {
+                header: 'Approved',
+                render: (p) => formatNumber(p.count, 'en'),
+              },
+            ]}
+          />
+        </>
       )}
-    </div>
+    </figure>
   );
 }
 
