@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 /**
  * Skip link for keyboard/screen-reader users to bypass the repeated Navbar
  * links and jump straight to a page's main content. Visually hidden until
@@ -11,12 +13,14 @@ export default function SkipToContent({
 }: {
   targetId?: string;
 }) {
+  const t = useTranslations('common');
+
   return (
     <a
       href={`#${targetId}`}
-      className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:rounded focus:shadow-lg"
+      className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-brand-green focus:text-black focus:px-6 focus:py-3 focus:rounded-lg focus:font-semibold"
     >
-      Skip to main content
+      {t('skipToContent')}
     </a>
   );
 }

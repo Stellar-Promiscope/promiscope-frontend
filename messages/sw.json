@@ -71,7 +71,8 @@
     "search": "Tafuta",
     "filter": "Kuchuja",
     "sort": "Panga",
-    "clear": "Futa"
+    "clear": "Futa",
+    "skipToContent": "Ruka hadi maudhui makuu"
   },
   "language": {
     "select_language": "Chagua Lugha",
@@ -391,5 +392,8 @@
     "accept": "Kubali",
     "decline": "Kataa",
     "privacy_link": "Sera ya Faragha"
+  },
+  "offline": {
+    "bannerMessage": "Uko nje ya mtandao. Baadhi ya vipengele huenda visipatikane hadi muunganisho urudi."
   }
 }

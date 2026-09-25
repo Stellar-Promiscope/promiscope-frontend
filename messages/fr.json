@@ -27,7 +27,8 @@
     "search": "Rechercher",
     "filter": "Filtrer",
     "sort": "Trier",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "skipToContent": "Aller au contenu principal"
   },
   "language": {
     "select_language": "Sélectionner la langue",
@@ -391,5 +392,8 @@
     "accept": "Accepter",
     "decline": "Refuser",
     "privacy_link": "Politique de confidentialité"
+  },
+  "offline": {
+    "bannerMessage": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles jusqu'au retour de la connexion."
   }
 }
