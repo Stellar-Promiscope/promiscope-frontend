@@ -1,5 +1,20 @@
 /** @jest-environment node */
+import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/admin/health/route';
+import { requireAdminWallet } from '@/lib/adminAuth';
+
+jest.mock('@/lib/adminAuth', () => ({
+  requireAdminWallet: jest.fn(() => 'GADMIN'),
+}));
+
+// Dependency checks are covered in __tests__/lib/healthChecks.test.ts.
+jest.mock('@/lib/healthChecks', () => ({
+  runDependencyChecks: jest.fn(async () => ({
+    redis: { status: 'not_configured', latencyMs: 0 },
+  })),
+}));
+
+const req = () => new NextRequest('http://localhost/api/admin/health');
 
 const originalFetch = global.fetch;
 const originalIndexerUrl = process.env.NEXT_PUBLIC_INDEXER_API_URL;
@@ -27,12 +42,30 @@ afterEach(() => {
 });
 
 describe('GET /api/admin/health', () => {
+  it('rejects non-admin sessions with 401', async () => {
+    (requireAdminWallet as jest.Mock).mockReturnValueOnce(null);
+    global.fetch = jest.fn();
+    const res = await GET(req());
+    expect(res.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('includes the per-dependency checks', async () => {
+    global.fetch = jest
+      .fn()
+      .mockImplementation(async () => jsonResponse(200, { status: 'ok' }));
+    const body = await (await GET(req())).json();
+    expect(body.checks).toEqual({
+      redis: { status: 'not_configured', latencyMs: 0 },
+    });
+  });
+
   it('reports ok for both subsystems when their /health endpoints succeed', async () => {
     global.fetch = jest
       .fn()
       .mockImplementation(async () => jsonResponse(200, { status: 'ok' }));
 
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.indexer).toEqual({ status: 'ok', detail: { status: 'ok' } });
@@ -47,7 +80,7 @@ describe('GET /api/admin/health', () => {
         jsonResponse(200, { status: 'degraded' }),
       );
 
-    const res = await GET();
+    const res = await GET(req());
     const body = await res.json();
     expect(body.indexer.status).toBe('degraded');
     expect(body.backend.status).toBe('degraded');
@@ -56,7 +89,7 @@ describe('GET /api/admin/health', () => {
   it('reports unreachable with the HTTP status when a subsystem responds non-ok', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonResponse(503, {}));
 
-    const res = await GET();
+    const res = await GET(req());
     const body = await res.json();
     expect(body.indexer).toEqual({ status: 'unreachable', error: 'HTTP 503' });
   });
@@ -64,7 +97,7 @@ describe('GET /api/admin/health', () => {
   it('reports unreachable with the error message when fetch throws', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
 
-    const res = await GET();
+    const res = await GET(req());
     const body = await res.json();
     expect(body.indexer).toEqual({
       status: 'unreachable',
@@ -83,7 +116,7 @@ describe('GET /api/admin/health', () => {
       return Promise.reject(err);
     });
 
-    const res = await GET();
+    const res = await GET(req());
     const body = await res.json();
     expect(body.indexer).toEqual({
       status: 'unreachable',
@@ -97,7 +130,7 @@ describe('GET /api/admin/health', () => {
       .fn()
       .mockResolvedValue(jsonResponse(200, { status: 'ok' }));
 
-    const res = await GET();
+    const res = await GET(req());
     const body = await res.json();
     expect(body.indexer).toEqual({
       status: 'unreachable',
@@ -113,7 +146,7 @@ describe('GET /api/admin/health', () => {
       .mockResolvedValue(jsonResponse(200, { status: 'ok' }));
     global.fetch = fetchMock;
 
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(200);
     const backendCall = fetchMock.mock.calls.find((call) =>
       String(call[0]).startsWith('http://public-backend.example.com'),
@@ -129,7 +162,7 @@ describe('GET /api/admin/health', () => {
       }),
     );
 
-    const res = await GET();
+    const res = await GET(req());
     const body = await res.json();
     expect(body.indexer.status).toBe('ok');
   });

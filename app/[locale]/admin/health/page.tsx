@@ -9,6 +9,7 @@ import type {
   AggregateHealthResponse,
   SubsystemHealth,
 } from '@/app/api/admin/health/route';
+import type { DependencyCheck } from '@/lib/healthChecks';
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 
@@ -16,12 +17,18 @@ const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS;
 // so every section of this page refreshes on a consistent cadence.
 const REFRESH_INTERVAL_MS = 60_000;
 
-type CheckStatus = 'ok' | 'degraded' | 'unreachable' | 'loading';
+type CheckStatus =
+  | 'ok'
+  | 'degraded'
+  | 'unreachable'
+  | 'not_configured'
+  | 'loading';
 
 const STATUS_LABEL: Record<CheckStatus, string> = {
   ok: 'Healthy',
   degraded: 'Degraded',
   unreachable: 'Unreachable',
+  not_configured: 'Not configured',
   loading: 'Checking…',
 };
 
@@ -29,6 +36,7 @@ const STATUS_CLASS: Record<CheckStatus, string> = {
   ok: 'text-brand-green',
   degraded: 'text-yellow-400',
   unreachable: 'text-red-400',
+  not_configured: 'text-gray-400',
   loading: 'text-gray-400',
 };
 
@@ -37,6 +45,40 @@ function StatusBadge({ status }: { status: CheckStatus }) {
     <span className={`font-medium ${STATUS_CLASS[status]}`}>
       {STATUS_LABEL[status]}
     </span>
+  );
+}
+
+const DEPENDENCY_LABELS: Record<string, string> = {
+  redis: 'Redis',
+  pinata: 'Pinata',
+  sessionStore: 'Session Store',
+  sorobanRpc: 'Soroban RPC',
+  contract: 'Contract Version',
+};
+
+function DependencyChecks({
+  checks,
+}: {
+  checks: Record<string, DependencyCheck>;
+}) {
+  return (
+    <>
+      {Object.entries(checks).map(([name, check]) => (
+        <HealthSection
+          key={name}
+          title={DEPENDENCY_LABELS[name] ?? name}
+          status={check.status}
+        >
+          <p className="text-sm text-gray-400">
+            Latency: <span className="text-gray-200">{check.latencyMs} ms</span>
+          </p>
+          {check.error && <p className="text-sm text-red-400">{check.error}</p>}
+          {check.status !== 'ok' && check.hint && (
+            <p className="text-sm text-gray-400">{check.hint}</p>
+          )}
+        </HealthSection>
+      ))}
+    </>
   );
 }
 
@@ -103,6 +145,7 @@ function HealthDashboardContent() {
       setRemoteHealth({
         indexer: emptySubsystem(message),
         backend: emptySubsystem(message),
+        checks: {},
         checkedAt: Date.now(),
       });
     } finally {
@@ -217,6 +260,10 @@ function HealthDashboardContent() {
           </pre>
         )}
       </HealthSection>
+
+      {remoteHealth?.checks && (
+        <DependencyChecks checks={remoteHealth.checks} />
+      )}
 
       {remoteFetchError && (
         <p className="text-xs text-gray-400">

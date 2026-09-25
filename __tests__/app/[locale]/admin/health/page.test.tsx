@@ -37,7 +37,6 @@ jest.mock('@/hooks/useContractHealth', () => ({
 
 process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN_ADDRESS;
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const HealthDashboard = require('@/app/[locale]/admin/health/page')
   .default as React.ComponentType;
 
@@ -195,6 +194,37 @@ describe('Admin System Health page', () => {
     expect(
       screen.getByText(/last failed with: network error/),
     ).toBeInTheDocument();
+  });
+
+  it('renders per-dependency checks with status, latency and a remediation hint', async () => {
+    mockPublicKey = ADMIN_ADDRESS;
+    mockUseContractHealth.mockReturnValue({
+      healthy: true,
+      paused: false,
+      loading: false,
+    });
+    mockFetchOnce({
+      ...healthyRemoteBody(),
+      checks: {
+        redis: { status: 'ok', latencyMs: 12 },
+        pinata: {
+          status: 'degraded',
+          latencyMs: 80,
+          error: 'Pinata returned HTTP 401',
+          hint: 'Check PINATA_API_KEY and PINATA_SECRET',
+        },
+      },
+    });
+
+    render(<HealthDashboard />);
+
+    const redis = await screen.findByTestId('health-section-redis');
+    expect(redis).toHaveTextContent('Healthy');
+    expect(redis).toHaveTextContent('12 ms');
+    const pinata = screen.getByTestId('health-section-pinata');
+    expect(pinata).toHaveTextContent('Degraded');
+    expect(pinata).toHaveTextContent('Pinata returned HTTP 401');
+    expect(pinata).toHaveTextContent('Check PINATA_API_KEY and PINATA_SECRET');
   });
 
   it('shows the paused/degraded state for the contract section when the circuit breaker is engaged', async () => {
