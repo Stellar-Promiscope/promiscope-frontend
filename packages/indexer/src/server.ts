@@ -37,6 +37,9 @@ function handleMetrics(res: http.ServerResponse): void {
     ...Object.entries(snap.eventCounts).map(
       ([type, count]) => `indexer_events_total{type="${type}"} ${count}`,
     ),
+    '# HELP indexer_unknown_events_total Total events with an unknown topic or contract version',
+    '# TYPE indexer_unknown_events_total counter',
+    `indexer_unknown_events_total ${snap.unknownEvents}`,
     '# HELP indexer_processed_total Total events processed (all types)',
     '# TYPE indexer_processed_total counter',
     `indexer_processed_total ${snap.totalProcessed}`,

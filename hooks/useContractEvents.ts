@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  decodeHorizonOperation,
+  type EventType,
+} from '@scoutoff/contract-events';
 
-export type EventType =
-  | 'player_registered'
-  | 'milestone_approved'
-  | 'milestone_revoked'
-  | 'scout_subscribed'
-  | 'player_contacted'
-  | 'trial_offer_logged'
-  | 'fees_withdrawn';
+export type { EventType } from '@scoutoff/contract-events';
 
 export interface FeedEvent {
   id: string;
   type: EventType;
+  version: number;
   createdAt: string | number;
   payload?: Record<string, unknown>;
 }
@@ -36,7 +34,7 @@ export const MAX_RECONNECT_DELAY_MS = 30_000;
 export const MAX_PAGES_PER_POLL = 10;
 const PAGE_LIMIT = 20;
 
-/** Map a raw Horizon operation record to the FeedEvent schema. */
+/** Map a raw Horizon operation through the shared versioned event schema. */
 function toFeedEvent(op: Record<string, unknown>): FeedEvent | null {
   const raw = op as {
     id?: string;
@@ -47,28 +45,15 @@ function toFeedEvent(op: Record<string, unknown>): FeedEvent | null {
   };
   if (!raw.id) return null;
 
-  // Derive a FeedEvent type from the Horizon operation type string.
-  let type: EventType;
-  switch (raw.type) {
-    case 'invoke_host_function':
-      // Heuristic: inspect function name hints if present, fall back to milestone_approved
-      if (String(raw.function ?? '').includes('register')) {
-        type = 'player_registered';
-      } else if (String(raw.function ?? '').includes('trial')) {
-        type = 'trial_offer_logged';
-      } else {
-        type = 'milestone_approved';
-      }
-      break;
-    default:
-      return null; // Skip non-contract operations
-  }
+  if (raw.type !== 'invoke_host_function') return null;
+  const decoded = decodeHorizonOperation({ operation: raw });
 
   return {
     id: String(raw.id),
-    type,
+    type: decoded.type,
+    version: decoded.version,
     createdAt: raw.created_at ?? new Date().toISOString(),
-    payload: { txHash: raw.transaction_hash },
+    payload: { ...decoded.data, txHash: raw.transaction_hash },
   };
 }
 

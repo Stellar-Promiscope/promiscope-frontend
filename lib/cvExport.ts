@@ -1,7 +1,12 @@
 import type { Player, Milestone } from '@/types';
 import type { PDFFont } from 'pdf-lib';
+import QRCode from 'qrcode';
 import { getProgressLabel } from '@/lib/progress';
 import { fetchAcademyForWallet } from '@/lib/api';
+import {
+  buildCvContent,
+  hashCvContent,
+} from '@/lib/cvVerification';
 
 const PAGE_WIDTH = 595.28; // A4, points
 const PAGE_HEIGHT = 841.89;
@@ -26,6 +31,45 @@ export const CV_EXPORT_LARGE_MILESTONE_WARNING_THRESHOLD = 150;
  * after the whole PDF is built.
  */
 const PDF_GENERATION_YIELD_INTERVAL = 40;
+
+export interface CvVerification {
+  token: string;
+  url: string;
+  contentHash: string;
+}
+
+/** Requests a server signature bound to the currently displayed chain data. */
+export async function requestCvVerification(
+  player: Player,
+  milestones: Milestone[],
+): Promise<CvVerification> {
+  const contentHash = await hashCvContent(buildCvContent(player, milestones));
+  const response = await fetch('/api/cv/sign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playerId: player.id, contentHash }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(body?.error ?? 'Unable to sign CV data');
+  }
+
+  const result = (await response.json()) as {
+    token: string;
+    contentHash: string;
+  };
+  if (result.contentHash !== contentHash) {
+    throw new Error('The signed CV content does not match the exported content');
+  }
+
+  const locale = window.location.pathname.split('/')[1] || 'en';
+  return {
+    ...result,
+    url: `${window.location.origin}/${locale}/verify/${result.token}`,
+  };
+}
 
 function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
@@ -99,11 +143,16 @@ async function resolveValidatorNames(
 export async function generatePlayerCvPdf(
   player: Player,
   milestones: Milestone[],
+  verification?: CvVerification,
 ): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
   const validatorNames = await resolveValidatorNames(milestones);
 
   const doc = await PDFDocument.create();
+  if (verification) {
+    doc.setSubject(`ScoutOff verification token: ${verification.token}`);
+    doc.setKeywords([verification.token, verification.contentHash]);
+  }
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
 
@@ -207,7 +256,39 @@ export async function generatePlayerCvPdf(
     }
   }
 
-  ensureSpace(20);
+  ensureSpace(65);
+  if (verification) {
+    const qrDataUrl = await QRCode.toDataURL(verification.url, {
+      width: 52,
+      margin: 1,
+    });
+    const qrImage = await doc.embedPng(qrDataUrl);
+    page.drawImage(qrImage, { x: MARGIN, y: y - 52, width: 52, height: 52 });
+    page.drawText('Verify this CV', {
+      x: MARGIN + 62,
+      y: y - 14,
+      size: 9,
+      font: boldFont,
+      color: INK,
+    });
+    page.drawText(verification.url, {
+      x: MARGIN + 62,
+      y: y - 30,
+      size: 7,
+      font,
+      color: MUTED,
+      maxWidth: PAGE_WIDTH - MARGIN * 2 - 62,
+    });
+    page.drawText(`Token: ${verification.token.slice(0, 24)}…`, {
+      x: MARGIN + 62,
+      y: y - 44,
+      size: 7,
+      font,
+      color: MUTED,
+      maxWidth: PAGE_WIDTH - MARGIN * 2 - 62,
+    });
+    y -= 60;
+  }
   drawText(`Generated ${new Date().toLocaleDateString()} · scoutoff.app`, {
     size: 8,
     color: MUTED,

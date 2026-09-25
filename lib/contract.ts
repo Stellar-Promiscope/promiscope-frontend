@@ -12,6 +12,7 @@
  * helpers must therefore pass the same key as both arguments.
  */
 import {
+  SorobanRpc,
   Contract,
   nativeToScVal,
   scValToNative,
@@ -27,7 +28,11 @@ import {
   signAndSubmitTx,
   isValidStellarAddress,
 } from './stellar';
-import { ValidationError, ContractIncompatibleError } from './errors';
+import {
+  ArchivedEntryError,
+  ValidationError,
+  ContractIncompatibleError,
+} from './errors';
 import { CONTACT_FEE_XLM } from './feeSchedule';
 import type {
   PlayerVitals,
@@ -132,6 +137,8 @@ export const EXPECTED_CONTRACT_VERSION = 1;
 
 /** How long a compatibility result is trusted before being re-checked. */
 const COMPATIBILITY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type TransactionSigner = (xdr: string) => Promise<string>;
 
 export type CompatibilityStatus = 'compatible' | 'incompatible' | 'unknown';
 
@@ -273,6 +280,7 @@ async function buildTx(
   args: xdr.ScVal[],
   sourcePublicKey: string,
   authSigner: string = sourcePublicKey,
+  restoreSignFn?: TransactionSigner,
 ) {
   await assertContractCompatible();
   assertSourceMatchesSigner(sourcePublicKey, authSigner);
@@ -282,6 +290,23 @@ async function buildTx(
     .addOperation(contract.call(method, ...args))
     .setTimeout(30)
     .build();
+
+  const simulation = await rpc.simulateTransaction(tx);
+  if (SorobanRpc.Api.isSimulationRestore(simulation)) {
+    if (!restoreSignFn) throw new ArchivedEntryError();
+
+    const restoreTx = new TB(account, {
+      fee: simulation.restorePreamble.minResourceFee,
+      networkPassphrase: NETWORK,
+    })
+      .setSorobanData(simulation.restorePreamble.transactionData.build())
+      .addOperation(xdr.Operation.restoreFootprint({}))
+      .setTimeout(30)
+      .build();
+
+    await signAndSubmitTx(restoreTx.toXDR(), restoreSignFn);
+  }
+
   try {
     const prepared = await rpc.prepareTransaction(tx);
     return prepared.toXDR();
@@ -303,6 +328,9 @@ async function simulateTx(method: string, args: xdr.ScVal[]) {
     .setTimeout(30)
     .build();
   const result = await rpc.simulateTransaction(tx);
+  if (SorobanRpc.Api.isSimulationRestore(result)) {
+    throw new ArchivedEntryError();
+  }
   if ('result' in result) return scValToNative(result.result!.retval);
   const errMsg = (result as { error?: string }).error ?? 'Simulation failed';
   throw parseContractError(errMsg);
@@ -331,6 +359,7 @@ export async function buildRegisterPlayer(
   wallet: string,
   vitals: PlayerVitals,
   ipfsHash: string,
+  restoreSignFn?: TransactionSigner,
 ) {
   if (!isValidStellarAddress(wallet)) {
     throw new ValidationError(
@@ -345,6 +374,8 @@ export async function buildRegisterPlayer(
       nativeToScVal(ipfsHash, { type: 'string' }),
     ],
     wallet,
+    wallet,
+    restoreSignFn,
   );
 }
 
@@ -365,6 +396,7 @@ export async function buildUpdateProfile(
   wallet: string,
   playerId: string,
   ipfsHash: string,
+  restoreSignFn?: TransactionSigner,
 ) {
   return buildTx(
     'update_profile',
@@ -373,6 +405,8 @@ export async function buildUpdateProfile(
       nativeToScVal(ipfsHash, { type: 'string' }),
     ],
     wallet,
+    wallet,
+    restoreSignFn,
   );
 }
 
@@ -431,6 +465,7 @@ export async function buildApproveMilestone(
   validatorKey: string,
   playerId: string,
   milestone: string,
+  restoreSignFn?: TransactionSigner,
 ) {
   if (!isValidStellarAddress(validatorKey)) {
     throw new ValidationError(
@@ -445,6 +480,8 @@ export async function buildApproveMilestone(
       nativeToScVal(validatorKey, { type: 'address' }),
     ],
     validatorKey,
+    validatorKey,
+    restoreSignFn,
   );
 }
 
@@ -588,6 +625,8 @@ export async function registerPlayer(
       nativeToScVal(ipfsHash, { type: 'string' }),
     ],
     wallet,
+    wallet,
+    signFn,
   );
   const result = await signAndSubmitTx(xdrTx, signFn);
   if ('returnValue' in result)
@@ -616,6 +655,8 @@ export async function updateProfile(
       nativeToScVal(ipfsHash, { type: 'string' }),
     ],
     wallet,
+    wallet,
+    signFn,
   );
   await signAndSubmitTx(xdrTx, signFn);
 }
@@ -660,7 +701,11 @@ export const SCOUT_ERROR_CODES = {
  *                                                    contract is administratively paused.
  * @throws {Error} If the RPC node cannot fetch the source account or prepare the transaction.
  */
-export async function buildPayToContact(scoutKey: string, playerId: string) {
+export async function buildPayToContact(
+  scoutKey: string,
+  playerId: string,
+  restoreSignFn?: TransactionSigner,
+) {
   if (!isValidStellarAddress(scoutKey)) {
     throw new ValidationError(
       `scoutKey "${scoutKey}" is not a valid Stellar address`,
@@ -673,6 +718,8 @@ export async function buildPayToContact(scoutKey: string, playerId: string) {
       nativeToScVal(playerId, { type: 'string' }),
     ],
     scoutKey,
+    scoutKey,
+    restoreSignFn,
   );
 }
 
@@ -701,6 +748,7 @@ export async function buildLogTrialOffer(
   scoutKey: string,
   playerId: string,
   details: TrialOfferDetails,
+  restoreSignFn?: TransactionSigner,
 ): Promise<string> {
   if (!isValidStellarAddress(scoutKey)) {
     throw new ValidationError(
@@ -718,6 +766,8 @@ export async function buildLogTrialOffer(
       nativeToScVal(details),
     ],
     scoutKey,
+    scoutKey,
+    restoreSignFn,
   );
 }
 
@@ -769,7 +819,12 @@ export async function logTrialOffer(
   details: TrialOfferDetails,
   signFn: (xdr: string) => Promise<string>,
 ): Promise<void> {
-  const xdrTx = await buildLogTrialOffer(scoutKey, playerId, details);
+  const xdrTx = await buildLogTrialOffer(
+    scoutKey,
+    playerId,
+    details,
+    signFn,
+  );
   await signAndSubmitTx(xdrTx, signFn);
 }
 
@@ -804,6 +859,8 @@ export async function subscribe(
       nativeToScVal(tier, { type: 'string' }),
     ],
     scout,
+    scout,
+    signFn,
   );
   await signAndSubmitTx(xdrTx, signFn);
 }
@@ -838,6 +895,8 @@ export async function payToContact(
       nativeToScVal(playerID, { type: 'string' }),
     ],
     scout,
+    scout,
+    signFn,
   );
   const result = await signAndSubmitTx(xdrTx, signFn);
   if ('returnValue' in result) {
@@ -950,6 +1009,7 @@ export async function buildRevokeMilestone(
   validatorKey: string,
   playerId: string,
   milestoneId: string,
+  restoreSignFn?: TransactionSigner,
 ) {
   return buildTx(
     'revoke_milestone',
@@ -958,6 +1018,8 @@ export async function buildRevokeMilestone(
       nativeToScVal(milestoneId, { type: 'string' }),
     ],
     validatorKey,
+    validatorKey,
+    restoreSignFn,
   );
 }
 
@@ -1142,7 +1204,12 @@ export async function submitAndConfirmRevokeMilestone(
   milestoneId: string,
   signFn: (xdr: string) => Promise<string>,
 ): Promise<ConfirmedRevokeResult> {
-  const xdr = await buildRevokeMilestone(validatorKey, playerId, milestoneId);
+  const xdr = await buildRevokeMilestone(
+    validatorKey,
+    playerId,
+    milestoneId,
+    signFn,
+  );
   const result = await signAndSubmitTx(xdr, signFn);
 
   return {

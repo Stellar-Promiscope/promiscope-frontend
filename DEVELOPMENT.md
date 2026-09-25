@@ -304,6 +304,37 @@ This happens when one component of the stack is on the wrong network.
 npm run dev
 ```
 
+### Soroban state archival and player TTLs
+
+Soroban persistent ledger entries are protected by a time-to-live (TTL). When
+the TTL expires, the entry is archived and ordinary contract simulations can
+no longer read it. `lib/contract.ts` detects the RPC `restorePreamble` response
+and maps read attempts to `ArchivedEntryError`, so player pages explain that
+the owner must sign in to restore the profile instead of showing a misleading
+"Player not found" state.
+
+Write helpers simulate before preparing. If the simulation requests a restore,
+the helper builds a separate `RestoreFootprint` transaction using the returned
+Soroban transaction data and minimum resource fee. The connected wallet signs
+that transaction first; after confirmation, the original write is prepared and
+submitted normally. This costs a network fee and the restoration fee, so the
+frontend only performs it when Soroban says it is necessary.
+
+The operational TTL strategy is deliberately two-tiered:
+
+- The indexer should periodically identify active player records and submit a
+   low-frequency `extendFootprintTtl` transaction for those footprints using a
+   funded maintenance wallet. Extend only records that have recent profile or
+   milestone activity; extending every historical record indefinitely creates a
+   recurring XLM cost with no product value.
+- The wallet restoration path remains the fallback for long-inactive players.
+   It is user-authorized, pays only when a player is actually accessed or
+   updated, and does not require the platform to hold player-wallet keys.
+
+The indexer maintenance job must monitor its last successful ledger and XLM
+balance. If it is unavailable, archival is expected behavior rather than a
+silent data-loss condition: the next owner write can restore the footprint.
+
 ---
 
 ### Error 4: Husky pre-commit hook fails (`lint-staged` cannot parse a file)
@@ -491,6 +522,32 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 - **Bandwidth/cost measurement**: this repo has no production traffic to measure against yet. Once deployed, compare Pinata's bandwidth/request dashboard before and after this change goes live — a meaningful drop in Pinata-side requests for repeatedly-viewed CIDs is the signal this is working; if the CDN in front of `/api/media` isn't caching (e.g. `x-vercel-cache: MISS` on repeat requests), the edge config needs adjusting, not this route.
 
 ---
+
+## Versioned contract event schemas
+
+Contract events are decoded through the shared `@scoutoff/contract-events`
+workspace package. `schema/v1.ts` owns the v1 topic symbols and payload
+decoders; both `packages/indexer` and `hooks/useContractEvents.ts` call that
+package instead of maintaining independent topic heuristics. Indexed rows
+store `contract_version` so historical events remain interpretable after a
+contract upgrade.
+
+When the contract event ABI changes:
+
+1. Add `schema/v2.ts` with the new topic and `ScVal` payload definitions.
+2. Extend the package dispatcher and select v2 using the emission contract
+   version or ledger-range configuration. Do not change v1 decoders in place.
+3. Capture real testnet topic/value XDR under
+   `packages/contract-events/src/__fixtures__` and add golden tests for every
+   event type in the new schema.
+4. Deploy the indexer with the matching `CONTRACT_VERSION`, then verify the
+   `contract_version` column and unknown-event metric before switching the
+   frontend's expected version.
+
+Unknown topics and unsupported versions are stored as `type="unknown"` with
+their raw XDR payload and counted by `indexer_unknown_events_total`; they must
+never stop polling or disappear silently. This preserves evidence for adding a
+future decoder and makes schema drift observable.
 
 ## Indexer HTTP API (Issue #29)
 
