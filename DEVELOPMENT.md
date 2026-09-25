@@ -131,6 +131,26 @@ node scripts/validate-env.js
 
 Expected output: `✓ All N env vars declared in .env.example`
 
+#### Required secrets for local auth
+
+SEP-10 wallet login needs three server-side secrets in `.env.local`. Without them `lib/session.ts` throws `SESSION_SECRET is not configured` and wallet sign-in fails with an opaque `401`/`500`.
+
+| Variable            | Purpose                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `SESSION_SECRET`    | Signs the session cookie issued after a successful SEP-10 login (32+ random bytes).                     |
+| `SEP10_SERVER_KEY`  | Stellar secret key used to sign SEP-10 challenge transactions. Use a throwaway testnet keypair locally. |
+| `SEP10_HOME_DOMAIN` | Home domain embedded in the SEP-10 challenge (`localhost:3000` for local dev).                          |
+
+```bash
+# 32+ random bytes
+echo "SESSION_SECRET=$(openssl rand -base64 48)" >> .env.local
+# A throwaway testnet keypair for signing SEP-10 challenges
+node -e "const {Keypair}=require('@stellar/stellar-sdk');const k=Keypair.random();console.log('SEP10_SERVER_KEY='+k.secret())" >> .env.local
+echo "SEP10_HOME_DOMAIN=localhost:3000" >> .env.local
+```
+
+> `scripts/validate-env.js` only checks that variables are declared in `.env.example`; it does not currently verify these secrets have values, so double-check them manually.
+
 **SEP-10 origin allow-list:** `SEP10_ALLOWED_ORIGINS` can be left blank for local dev — `app/api/auth/sep10/route.ts` falls back to `http://<NEXT_PUBLIC_DOMAIN>` (default `http://localhost:3000`) when `NODE_ENV !== 'production'`. It **must** be set before deploying to any non-local environment: a comma-separated list of full origins allowed to call the SEP-10 POST endpoint, e.g. `SEP10_ALLOWED_ORIGINS=https://scoutoff.app,https://www.scoutoff.app`. In production, if this (and `NEXT_PUBLIC_BASE_URL`, honored as a convenience single-origin entry) are both unset, the route fails closed with `403` rather than trusting the request's own `Host` header.
 
 ### 4. Create and fund a Stellar testnet account
@@ -404,6 +424,12 @@ required `## Summary` / `## Validation` sections intact — the CI guard
    (extremely rare — only for archival of a closed PR), call that out
    in the PR description and bypass via `[skip-docs-validation]` in
    the PR title so the maintainer can drop the guard once.
+
+### Error 7: Wallet connects but I'm never logged in
+
+**Symptom:** Freighter connects and signs the SEP-10 challenge, but the app stays logged out, or `/api/auth/sep10` returns `401`/`500`. The server log shows `SESSION_SECRET is not configured`.
+
+**Fix:** Set `SESSION_SECRET` (and `SEP10_SERVER_KEY` / `SEP10_HOME_DOMAIN`) in `.env.local` as described in [Required secrets for local auth](#required-secrets-for-local-auth), then restart `npm run dev`.
 
 ## Verification Checklist
 

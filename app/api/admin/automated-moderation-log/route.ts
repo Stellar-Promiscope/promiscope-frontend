@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { AdminAuditStore } from '@/lib/adminAuditStore';
 import type { AdminAuditActionType } from '@/lib/adminAudit';
+import { createRequestLogger, withRequestId } from '@/lib/logger';
 
 // Automated moderation entries are persisted in the shared admin audit log
 // but aren't part of its closed `AdminAuditActionType` union (they're an
@@ -24,6 +25,7 @@ const AUTOMATED_MODERATION_ACTION_TYPE =
  * metadata (user IDs, thread ID, rule that triggered, timestamp).
  */
 export async function POST(request: NextRequest): Promise<Response> {
+  const log = createRequestLogger(request);
   try {
     const body = await request.json();
     const {
@@ -68,8 +70,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Failed to record automated moderation entry:', error);
-    return new Response('Internal server error', { status: 500 });
+    log.error('Failed to record automated moderation entry', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      new NextResponse('Internal server error', { status: 500 }),
+      log.requestId,
+    );
   }
 }
 
@@ -80,6 +87,7 @@ export async function POST(request: NextRequest): Promise<Response> {
  * Supports filtering by user, date range, and category prefix.
  */
 export async function GET(request: NextRequest): Promise<Response> {
+  const log = createRequestLogger(request);
   const url = new URL(request.url);
   const userId = url.searchParams.get('userId');
   const from = url.searchParams.get('from');
@@ -112,7 +120,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Failed to fetch automated moderation entries:', error);
-    return new Response('Internal server error', { status: 500 });
+    log.error('Failed to fetch automated moderation entries', {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return withRequestId(
+      new NextResponse('Internal server error', { status: 500 }),
+      log.requestId,
+    );
   }
 }
