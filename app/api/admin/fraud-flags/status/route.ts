@@ -25,12 +25,20 @@ export async function GET(req: NextRequest) {
       evaluatedAt: null,
       highSeverityCount: 0,
       trigger: null,
+      eventsProcessed: 0,
+      durationMs: 0,
+      lastLedger: 0,
     });
   }
+
+  const checkpoint = FraudFlagsStore.getInstance().getCheckpoint();
 
   return NextResponse.json({
     evaluatedAt: latest.evaluatedAt,
     highSeverityCount: latest.highSeverityCount,
     trigger: latest.trigger,
+    eventsProcessed: latest.eventsProcessed ?? 0,
+    durationMs: latest.durationMs ?? 0,
+    lastLedger: checkpoint?.lastLedger ?? 0,
   });
 }

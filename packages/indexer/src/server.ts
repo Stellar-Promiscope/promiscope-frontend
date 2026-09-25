@@ -113,6 +113,18 @@ function parseQueryFilter(
     filter.before = before;
   }
 
+  const afterParam = searchParams.get('after');
+  if (afterParam !== null) {
+    const after = Number(afterParam);
+    if (!Number.isInteger(after) || after < 0) {
+      return {
+        ok: false,
+        error: 'after must be a non-negative integer ledger sequence',
+      };
+    }
+    filter.after = after;
+  }
+
   return { ok: true, filter };
 }
 

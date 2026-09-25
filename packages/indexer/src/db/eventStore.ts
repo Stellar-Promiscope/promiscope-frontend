@@ -91,6 +91,8 @@ export interface QueryFilter {
   validator?: string;
   /** Keyset cursor: only return events with ledger strictly less than this. */
   before?: number;
+  /** Keyset cursor: only return events with ledger strictly greater than this. */
+  after?: number;
   /** Page size, capped at MAX_LIMIT. */
   limit?: number;
 }
@@ -303,11 +305,20 @@ export class EventStore {
       clauses.push('ledger < @before');
       params.before = filter.before;
     }
+    if (filter.after !== undefined) {
+      clauses.push('ledger > @after');
+      params.after = filter.after;
+    }
+
+    const order =
+      filter.after !== undefined && filter.before === undefined
+        ? 'ORDER BY ledger ASC, id ASC'
+        : 'ORDER BY ledger DESC, id DESC';
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
     const rows = this.db
       .prepare(
-        `SELECT * FROM events ${where} ORDER BY ledger DESC, id DESC LIMIT @limit`,
+        `SELECT * FROM events ${where} ${order} LIMIT @limit`,
       )
       .all(params) as EventRow[];
 

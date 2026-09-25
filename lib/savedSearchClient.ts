@@ -9,6 +9,18 @@ export async function fetchSavedSearches(): Promise<SavedSearch[]> {
   return res.json();
 }
 
+export class SavedSearchConflictError extends Error {
+  readonly current?: SavedSearch;
+  readonly currentVersion?: number;
+
+  constructor(message: string, current?: SavedSearch, currentVersion?: number) {
+    super(message);
+    this.name = 'SavedSearchConflictError';
+    this.current = current;
+    this.currentVersion = currentVersion;
+  }
+}
+
 // saveSearch/renameSavedSearch/removeSavedSearch deliberately use a bare
 // `fetch`, not `fetchWithRetry`: these are mutations with no idempotency
 // key, so an automatic retry after a lost response risks e.g. creating a
@@ -29,31 +41,80 @@ export async function saveSearch(
 export async function renameSavedSearch(
   id: number,
   name: string,
+  version?: number,
 ): Promise<SavedSearch> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (version !== undefined) {
+    headers['If-Match'] = `"${version}"`;
+  }
   const res = await fetch('/api/saved-searches', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ id, name }),
   });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    throw new SavedSearchConflictError(
+      'Saved search was modified elsewhere',
+      body.current,
+      body.currentVersion,
+    );
+  }
   if (!res.ok) throw new Error('Failed to rename saved search');
   return res.json();
 }
 
-export async function markSavedSearchViewed(id: number): Promise<SavedSearch> {
+export async function markSavedSearchViewed(
+  id: number,
+  version?: number,
+): Promise<SavedSearch> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (version !== undefined) {
+    headers['If-Match'] = `"${version}"`;
+  }
   const res = await fetch('/api/saved-searches', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ id, markViewed: true }),
   });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    throw new SavedSearchConflictError(
+      'Saved search was modified elsewhere',
+      body.current,
+      body.currentVersion,
+    );
+  }
   if (!res.ok) throw new Error('Failed to mark saved search viewed');
   return res.json();
 }
 
-export async function removeSavedSearch(id: number): Promise<void> {
+export async function removeSavedSearch(
+  id: number,
+  version?: number,
+): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (version !== undefined) {
+    headers['If-Match'] = `"${version}"`;
+  }
   const res = await fetch('/api/saved-searches', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ id }),
   });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    throw new SavedSearchConflictError(
+      'Saved search was modified elsewhere',
+      body.current,
+      body.currentVersion,
+    );
+  }
   if (!res.ok) throw new Error('Failed to remove saved search');
 }

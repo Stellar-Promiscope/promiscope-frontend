@@ -1,8 +1,12 @@
 /**
  * @jest-environment node
  */
-import { runFraudFlagEvaluation } from '@/lib/fraudFlagsRunner';
+import {
+  runFraudFlagEvaluation,
+  runIncrementalFraudFlagEvaluation,
+} from '@/lib/fraudFlagsRunner';
 import { FraudThrottleStore } from '@/lib/fraudThrottleStore';
+import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
 import { clearFeatureFlagCache } from '@/lib/featureFlags';
 import type { ReferralCode } from '@/types';
 
@@ -97,3 +101,76 @@ describe('runFraudFlagEvaluation — auto-throttle (issue #1174)', () => {
     expect(FraudThrottleStore.getInstance().listAll()).toHaveLength(0);
   });
 });
+
+describe('runIncrementalFraudFlagEvaluation', () => {
+  beforeEach(() => {
+    FraudThrottleStore.resetInstance();
+    FraudFlagsStore.resetInstance();
+    mockedFetchAllReferralCodes.mockResolvedValue([]);
+    mockedFetchActivityEvents.mockResolvedValue({ events: [], total: 0 });
+  });
+
+  afterEach(() => {
+    FraudThrottleStore.resetInstance();
+    FraudFlagsStore.resetInstance();
+  });
+
+  it('records checkpoint and per-wallet aggregates after incremental evaluation', async () => {
+    mockedFetchActivityEvents.mockResolvedValue({
+      total: 10,
+      events: Array.from({ length: 8 }, (_, i) => ({
+        id: `contact-${i}`,
+        type: 'player_contacted' as const,
+        actor: 'GBURST',
+        timestamp: 1_700_000_000 + i * 10,
+        ledger: 100 + i,
+      })),
+    });
+
+    const result = await runIncrementalFraudFlagEvaluation({
+      timeBudgetMs: 10_000,
+    });
+
+    expect(result.eventsProcessed).toBe(8);
+    expect(result.flags.some((f) => f.heuristic === 'rapid_contact_burst')).toBe(
+      true,
+    );
+
+    const store = FraudFlagsStore.getInstance();
+    const checkpoint = store.getCheckpoint();
+    expect(checkpoint).not.toBeNull();
+    expect(checkpoint?.lastLedger).toBe(107);
+
+    const agg = store.getWalletAggregate('GBURST');
+    expect(agg).not.toBeNull();
+    expect(agg?.payToContact.contactTimestamps).toHaveLength(8);
+
+    const activeFlags = store.getActiveFlags();
+    expect(activeFlags.some((f) => f.heuristic === 'rapid_contact_burst')).toBe(
+      true,
+    );
+  });
+
+  it('halts and saves progress when time budget is nearly exhausted', async () => {
+    mockedFetchActivityEvents.mockResolvedValue({
+      total: 2,
+      events: [
+        {
+          id: 'c-1',
+          type: 'player_contacted' as const,
+          actor: 'G1',
+          timestamp: 1_000,
+          ledger: 10,
+        },
+      ],
+    });
+
+    const result = await runIncrementalFraudFlagEvaluation({
+      timeBudgetMs: 0, // forces immediate budget hit
+      safetyMarginMs: 0,
+    });
+
+    expect(result.hitTimeBudget).toBe(true);
+  });
+});
+

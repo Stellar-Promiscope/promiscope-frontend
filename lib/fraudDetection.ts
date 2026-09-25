@@ -453,3 +453,18 @@ export function analyzePayToContactAbuse(
     ),
   ];
 }
+
+export {
+  type WalletReferralAggregate,
+  type WalletPayToContactAggregate,
+  type WalletFraudAggregate,
+  type IncrementalFraudState,
+  type IncrementalStepResult,
+  createInitialIncrementalState,
+  createEmptyWalletAggregate,
+  applyReferralCode,
+  applyActivityEvent,
+  evaluateRulesForWallet,
+  updateActiveFlagsForChangedWallets,
+  runIncrementalStep,
+} from './fraudIncremental';

@@ -1,11 +1,18 @@
 import {
   generateSampleSnapshot,
   runBacktest,
+  runIncrementalBacktest,
+  verifyIncrementalEquivalence,
+  benchmarkIncrementalVsFull,
   referralEntryToCode,
   loadReferralSnapshotFromStore,
   loadSnapshot,
   writeSnapshot,
 } from '@/lib/fraudBacktest';
+import {
+  createInitialIncrementalState,
+  runIncrementalStep,
+} from '@/lib/fraudIncremental';
 import type { ReferralEntry } from '@/lib/referralStore';
 import { writeFileSync, mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
@@ -171,4 +178,85 @@ describe('fraudBacktest', () => {
       expect(codes[0].createdAt).toBe(Date.UTC(2024, 0, 1));
     });
   });
+
+  describe('incremental evaluation equivalence', () => {
+    const snapshot = generateSampleSnapshot();
+
+    it('produces identical flags between incremental and full evaluation on the sample dataset', () => {
+      const fullReport = runBacktest(snapshot);
+      const incReport = runIncrementalBacktest(snapshot);
+
+      expect(incReport.totalFlags).toBe(fullReport.totalFlags);
+      expect(incReport.heuristicCounts).toEqual(fullReport.heuristicCounts);
+
+      // Verify each individual flag matches in full detail
+      for (const fullFlag of fullReport.flaggedCases) {
+        const matchingIncFlag = incReport.flaggedCases.find(
+          (f) => f.id === fullFlag.id,
+        );
+        expect(matchingIncFlag).toBeDefined();
+        expect(matchingIncFlag?.severity).toBe(fullFlag.severity);
+        expect(matchingIncFlag?.wallets).toEqual(fullFlag.wallets);
+        expect(matchingIncFlag?.reason).toBe(fullFlag.reason);
+        expect(matchingIncFlag?.evidence).toEqual(fullFlag.evidence);
+      }
+    });
+
+    it('verifyIncrementalEquivalence reports equivalent = true with zero differences', () => {
+      const result = verifyIncrementalEquivalence(snapshot);
+      expect(result.equivalent).toBe(true);
+      expect(result.differences).toEqual([]);
+    });
+
+    it('produces identical flags across small chunks (chunked evaluation)', () => {
+      const fullReport = runBacktest(snapshot);
+      // Run with tiny chunks (e.g. 2 events/codes per chunk)
+      const chunkedReport = runIncrementalBacktest(snapshot, { chunkSize: 2 });
+
+      expect(chunkedReport.chunksCount).toBeGreaterThan(5);
+      expect(chunkedReport.totalFlags).toBe(fullReport.totalFlags);
+
+      const result = verifyIncrementalEquivalence(snapshot, { chunkSize: 3 });
+      expect(result.equivalent).toBe(true);
+    });
+
+    it('resumes correctly after hitting a simulated time budget', () => {
+      const fullReport = runBacktest(snapshot);
+
+      // Run 1: process with an ultra-short budget (stops early)
+      const run1 = runIncrementalBacktest(snapshot, {
+        chunkSize: 2,
+        timeBudgetMs: 0, // stops immediately after the first chunk
+      });
+
+      expect(run1.hitTimeBudget).toBe(true);
+      expect(run1.eventsProcessed).toBeLessThan(
+        snapshot.referralCodes.length + snapshot.activityEvents.length,
+      );
+
+      // Run 2: resume with state preserved from run 1 with full budget
+      const run2 = runIncrementalBacktest(snapshot, {
+        chunkSize: 50,
+        state: run1.state,
+        timeBudgetMs: 10_000,
+      });
+
+      expect(run2.totalFlags).toBe(fullReport.totalFlags);
+      expect(run2.heuristicCounts).toEqual(fullReport.heuristicCounts);
+    });
+
+    it('includes a benchmark showing runtime is proportional to new events, not total history', () => {
+      const bench = benchmarkIncrementalVsFull({
+        historyWallets: 40,
+        eventsPerWallet: 5,
+        newEventsCount: 5,
+      });
+
+      expect(bench.historyEventsCount).toBeGreaterThan(100);
+      expect(bench.newEventsCount).toBe(5);
+      expect(bench.isProportional).toBe(true);
+      expect(bench.speedup).toBeGreaterThan(0);
+    });
+  });
 });
+

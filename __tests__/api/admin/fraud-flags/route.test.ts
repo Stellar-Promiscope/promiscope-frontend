@@ -8,7 +8,7 @@ jest.mock('@/lib/fraudDetection', () => ({
   analyzePayToContactAbuse: jest.fn(),
 }));
 
-import { GET } from '@/app/api/admin/fraud-flags/route';
+import { GET, POST } from '@/app/api/admin/fraud-flags/route';
 import { NextRequest } from 'next/server';
 import { fetchAllReferralCodes, fetchActivityEvents } from '@/lib/api';
 import { FraudFlagsStore } from '@/lib/fraudFlagsStore';
@@ -194,3 +194,22 @@ describe('GET /api/admin/fraud-flags', () => {
     expect(mockAnalyzeReferralAbuse).not.toHaveBeenCalled();
   });
 });
+
+describe('POST /api/admin/fraud-flags', () => {
+  it('returns 403 without an admin session cookie', async () => {
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(403);
+  });
+
+  it('triggers incremental evaluation and returns flags with run stats', async () => {
+    const res = await POST(makeRequest(ADMIN));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.flags)).toBe(true);
+    expect(Array.isArray(body.warnings)).toBe(true);
+    expect(typeof body.evaluatedAt).toBe('number');
+    expect(typeof body.eventsProcessed).toBe('number');
+    expect(typeof body.durationMs).toBe('number');
+  });
+});
+

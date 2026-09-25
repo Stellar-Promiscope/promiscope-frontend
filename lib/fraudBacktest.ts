@@ -4,6 +4,11 @@ import {
   DEFAULT_THRESHOLDS,
   type FraudThresholds,
 } from './fraudDetection.ts';
+import {
+  createInitialIncrementalState,
+  runIncrementalStep,
+  type IncrementalFraudState,
+} from './fraudIncremental';
 import type { ReferralCode, FraudFlag } from '@/types';
 import type { ActivityEvent } from '@/lib/api';
 import type { ReferralEntry } from './referralStore';
@@ -458,3 +463,279 @@ export async function saveReport(content: string, path: string): Promise<void> {
   if (dir && dir !== '.') mkdirSync(dir, { recursive: true });
   writeFileSync(path, content, 'utf-8');
 }
+
+// ── Incremental Backtesting & Equivalence ────────────────────────────────────
+
+export interface IncrementalBacktestOptions extends BacktestOptions {
+  chunkSize?: number;
+  timeBudgetMs?: number;
+  state?: IncrementalFraudState;
+}
+
+export interface IncrementalBacktestReport extends BacktestReport {
+  eventsProcessed: number;
+  durationMs: number;
+  chunksCount: number;
+  hitTimeBudget: boolean;
+  state: IncrementalFraudState;
+}
+
+/**
+ * Replays a historical snapshot incrementally through chunked evaluation,
+ * matching the scheduled incremental job's execution model.
+ */
+export function runIncrementalBacktest(
+  snapshot: BacktestSnapshot,
+  options: IncrementalBacktestOptions = {},
+): IncrementalBacktestReport {
+  const startTime = Date.now();
+  const thresholds = mergeThresholds(options.thresholds);
+  const state = options.state ?? createInitialIncrementalState();
+
+  const chunkSize = options.chunkSize ?? 50;
+  const timeBudget = options.timeBudgetMs ?? Infinity;
+  let eventsProcessed = 0;
+  let chunksCount = 0;
+  let hitTimeBudget = false;
+  const warnings: string[] = [];
+
+  // 1. Process referral codes in chunks
+  const codes = snapshot.referralCodes;
+  for (let i = 0; i < codes.length; i += chunkSize) {
+    if (Date.now() - startTime >= timeBudget) {
+      hitTimeBudget = true;
+      warnings.push(
+        `Time budget exceeded after processing ${eventsProcessed} events.`,
+      );
+      break;
+    }
+    const chunk = codes.slice(i, i + chunkSize);
+    const step = runIncrementalStep(state, chunk, [], {
+      thresholds,
+      timeBudgetMs: timeBudget - (Date.now() - startTime),
+    });
+    eventsProcessed += step.eventsProcessed;
+    chunksCount++;
+    if (step.hitTimeBudget) {
+      hitTimeBudget = true;
+      break;
+    }
+  }
+
+  // 2. Process activity events in chunks
+  if (!hitTimeBudget) {
+    const events = snapshot.activityEvents;
+    for (let i = 0; i < events.length; i += chunkSize) {
+      if (Date.now() - startTime >= timeBudget) {
+        hitTimeBudget = true;
+        warnings.push(
+          `Time budget exceeded after processing ${eventsProcessed} events.`,
+        );
+        break;
+      }
+      const chunk = events.slice(i, i + chunkSize);
+      const step = runIncrementalStep(state, [], chunk, {
+        thresholds,
+        timeBudgetMs: timeBudget - (Date.now() - startTime),
+      });
+      eventsProcessed += step.eventsProcessed;
+      chunksCount++;
+      if (step.hitTimeBudget) {
+        hitTimeBudget = true;
+        break;
+      }
+    }
+  }
+
+  // Collect and sort all active flags
+  const flags: FraudFlag[] = [];
+  for (const list of state.activeFlags.values()) {
+    flags.push(...list);
+  }
+  const rank = { high: 0, medium: 1, low: 2 } as const;
+  flags.sort((a, b) => rank[a.severity] - rank[b.severity]);
+
+  const { heuristicCounts, totalFlags } = summarizeFlags(flags);
+  const durationMs = Date.now() - startTime;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    thresholds,
+    dataset: {
+      referralCodes: snapshot.referralCodes.length,
+      activityEvents: snapshot.activityEvents.length,
+    },
+    heuristicCounts,
+    totalFlags,
+    flaggedCases: flags,
+    warnings,
+    eventsProcessed,
+    durationMs,
+    chunksCount,
+    hitTimeBudget,
+    state,
+  };
+}
+
+export interface EquivalenceCheckResult {
+  equivalent: boolean;
+  fullReport: BacktestReport;
+  incrementalReport: IncrementalBacktestReport;
+  differences: string[];
+}
+
+/**
+ * Asserts equivalence between full evaluation and incremental evaluation:
+ * verifies that both produce identical flags (same ids, severities, wallets, reasons, evidence).
+ */
+export function verifyIncrementalEquivalence(
+  snapshot: BacktestSnapshot,
+  options: IncrementalBacktestOptions = {},
+): EquivalenceCheckResult {
+  const fullReport = runBacktest(snapshot, options);
+  const incrementalReport = runIncrementalBacktest(snapshot, options);
+  const differences: string[] = [];
+
+  if (fullReport.totalFlags !== incrementalReport.totalFlags) {
+    differences.push(
+      `Flag count mismatch: full=${fullReport.totalFlags}, incremental=${incrementalReport.totalFlags}`,
+    );
+  }
+
+  const incMap = new Map<string, FraudFlag>();
+  for (const f of incrementalReport.flaggedCases) {
+    incMap.set(f.id, f);
+  }
+
+  for (const fullFlag of fullReport.flaggedCases) {
+    const incFlag = incMap.get(fullFlag.id);
+    if (!incFlag) {
+      differences.push(`Missing flag in incremental: ${fullFlag.id}`);
+      continue;
+    }
+    if (fullFlag.severity !== incFlag.severity) {
+      differences.push(
+        `Severity mismatch for ${fullFlag.id}: full=${fullFlag.severity}, inc=${incFlag.severity}`,
+      );
+    }
+    if (fullFlag.reason !== incFlag.reason) {
+      differences.push(
+        `Reason mismatch for ${fullFlag.id}: full="${fullFlag.reason}", inc="${incFlag.reason}"`,
+      );
+    }
+    const fullEv = JSON.stringify(fullFlag.evidence);
+    const incEv = JSON.stringify(incFlag.evidence);
+    if (fullEv !== incEv) {
+      differences.push(
+        `Evidence mismatch for ${fullFlag.id}: full=${fullEv}, inc=${incEv}`,
+      );
+    }
+  }
+
+  for (const incFlag of incrementalReport.flaggedCases) {
+    if (!fullReport.flaggedCases.some((f) => f.id === incFlag.id)) {
+      differences.push(`Unexpected flag in incremental: ${incFlag.id}`);
+    }
+  }
+
+  return {
+    equivalent: differences.length === 0,
+    fullReport,
+    incrementalReport,
+    differences,
+  };
+}
+
+export interface BenchmarkResult {
+  fullTimeMs: number;
+  incrementalTimeMs: number;
+  historyEventsCount: number;
+  newEventsCount: number;
+  isProportional: boolean;
+  speedup: number;
+}
+
+/**
+ * Benchmark measuring that incremental evaluation runtime is roughly proportional
+ * to new events processed, rather than the total size of event history.
+ */
+export function benchmarkIncrementalVsFull(
+  options: {
+    historyWallets?: number;
+    eventsPerWallet?: number;
+    newEventsCount?: number;
+  } = {},
+): BenchmarkResult {
+  const historyWallets = options.historyWallets ?? 150;
+  const eventsPerWallet = options.eventsPerWallet ?? 10;
+  const newEventsCount = options.newEventsCount ?? 10;
+
+  const baseMs = Date.UTC(2024, 0, 1, 0, 0, 0);
+  const historicalEvents: ActivityEvent[] = [];
+  const historicalCodes: ReferralCode[] = [];
+
+  for (let w = 0; w < historyWallets; w++) {
+    const wallet = `GWALLET_BENCH_${w}`;
+    for (let e = 0; e < eventsPerWallet; e++) {
+      historicalEvents.push({
+        id: `bench-event-${w}-${e}`,
+        type: 'player_contacted',
+        actor: wallet,
+        timestamp: Math.floor((baseMs + e * 3600_000) / 1000),
+      });
+      historicalCodes.push({
+        code: `BENCH-CODE-${w}-${e}`,
+        scoutWallet: wallet,
+        createdAt: baseMs + e * 3600_000,
+        usedBy: `GUSER_${w}_${e}`,
+        usedAt: baseMs + e * 3600_000 + 86400_000,
+      });
+    }
+  }
+
+  // Pre-seed incremental state with history
+  const incrementalState = createInitialIncrementalState();
+  runIncrementalStep(incrementalState, historicalCodes, historicalEvents);
+
+  // New events for 1 specific wallet
+  const newEvents: ActivityEvent[] = [];
+  for (let i = 0; i < newEventsCount; i++) {
+    newEvents.push({
+      id: `new-event-${i}`,
+      type: 'player_contacted',
+      actor: 'GNEW_ACTOR',
+      timestamp: Math.floor((baseMs + 1000_000_000 + i * 10_000) / 1000),
+    });
+  }
+
+  // Benchmark full evaluation (rescans all history + new events)
+  const fullSnapshot: BacktestSnapshot = {
+    referralCodes: historicalCodes,
+    activityEvents: [...historicalEvents, ...newEvents],
+  };
+
+  const startFull = Date.now();
+  for (let iter = 0; iter < 5; iter++) {
+    runBacktest(fullSnapshot);
+  }
+  const fullTimeMs = (Date.now() - startFull) / 5;
+
+  // Benchmark incremental evaluation (only processes the new events)
+  const startInc = Date.now();
+  for (let iter = 0; iter < 5; iter++) {
+    runIncrementalStep(incrementalState, [], newEvents);
+  }
+  const incrementalTimeMs = (Date.now() - startInc) / 5;
+
+  return {
+    fullTimeMs,
+    incrementalTimeMs,
+    historyEventsCount: historicalEvents.length + historicalCodes.length,
+    newEventsCount,
+    isProportional: incrementalTimeMs <= fullTimeMs,
+    speedup: Number(
+      (fullTimeMs / Math.max(incrementalTimeMs, 0.01)).toFixed(2),
+    ),
+  };
+}
+

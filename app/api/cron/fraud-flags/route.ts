@@ -32,28 +32,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { flags, warnings } = await runFraudFlagEvaluation();
-  const evaluatedAt = Date.now();
+  const result = await runFraudFlagEvaluation({
+    mode: 'incremental',
+    trigger: 'cron',
+    timeBudgetMs: 45_000,
+  });
+  const evaluatedAt = result.evaluatedAt ?? Date.now();
+  const eventsProcessed = result.eventsProcessed ?? 0;
+  const durationMs = result.durationMs ?? 0;
   const run = FraudFlagsStore.getInstance().recordRun(
     'cron',
-    flags,
-    warnings,
+    result.flags,
+    result.warnings,
     evaluatedAt,
+    eventsProcessed,
+    durationMs,
   );
 
-  // At minimum-viable "proactive surfacing" absent any existing outbound
-  // notification channel (email/Slack/push — none exist in this codebase
-  // today, verified during investigation): a high-severity run is at least
-  // observable in the cron invocation's own logs/response, and drives the
-  // staleness/high-severity badge in the admin dashboard
-  // (GET /api/admin/fraud-flags/status). A fuller integration (e.g. paging
-  // an on-call channel when highSeverityCount crosses a threshold) is a
-  // follow-up that requires picking a notification provider — out of scope
-  // here; see docs/fraud-detection.md.
   return NextResponse.json({
     evaluatedAt,
-    flagCount: flags.length,
+    flagCount: result.flags.length,
     highSeverityCount: run.highSeverityCount,
-    warnings,
+    eventsProcessed,
+    durationMs,
+    warnings: result.warnings,
   });
 }
+

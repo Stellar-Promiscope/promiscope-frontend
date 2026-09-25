@@ -19,6 +19,7 @@ interface SavedSearchRow {
   filter: string;
   created_at: number;
   last_viewed_at: number;
+  version: number;
 }
 
 function rowToEntry(row: SavedSearchRow): SavedSearch {
@@ -29,7 +30,20 @@ function rowToEntry(row: SavedSearchRow): SavedSearch {
     filter: JSON.parse(row.filter),
     createdAt: row.created_at,
     lastViewedAt: row.last_viewed_at,
+    version: row.version ?? 1,
   };
+}
+
+export class SavedSearchConflictError extends Error {
+  readonly current: SavedSearch;
+  readonly currentVersion: number;
+
+  constructor(current: SavedSearch) {
+    super('Saved search was modified elsewhere');
+    this.name = 'SavedSearchConflictError';
+    this.current = current;
+    this.currentVersion = current.version ?? 1;
+  }
 }
 
 export class SavedSearchStore {
@@ -54,13 +68,40 @@ export class SavedSearchStore {
     return SavedSearchStore._instance;
   }
 
-  rename(scoutWallet: string, id: number, newName: string): SavedSearch | null {
-    const result = this.db
-      .prepare(
-        'UPDATE saved_search SET name = ? WHERE id = ? AND scout_wallet = ?',
-      )
-      .run(newName, id, scoutWallet);
-    if (result.changes === 0) return null;
+  get(scoutWallet: string, id: number): SavedSearch | null {
+    const row = this.db
+      .prepare('SELECT * FROM saved_search WHERE id = ? AND scout_wallet = ?')
+      .get(id, scoutWallet) as SavedSearchRow | undefined;
+    return row ? rowToEntry(row) : null;
+  }
+
+  rename(
+    scoutWallet: string,
+    id: number,
+    newName: string,
+    expectedVersion?: number,
+  ): SavedSearch | null {
+    if (expectedVersion !== undefined) {
+      const result = this.db
+        .prepare(
+          'UPDATE saved_search SET name = ?, version = version + 1 WHERE id = ? AND scout_wallet = ? AND version = ?',
+        )
+        .run(newName, id, scoutWallet, expectedVersion);
+      if (result.changes === 0) {
+        const existing = this.get(scoutWallet, id);
+        if (existing) {
+          throw new SavedSearchConflictError(existing);
+        }
+        return null;
+      }
+    } else {
+      const result = this.db
+        .prepare(
+          'UPDATE saved_search SET name = ?, version = version + 1 WHERE id = ? AND scout_wallet = ?',
+        )
+        .run(newName, id, scoutWallet);
+      if (result.changes === 0) return null;
+    }
 
     const row = this.db
       .prepare('SELECT * FROM saved_search WHERE id = ?')
@@ -80,8 +121,8 @@ export class SavedSearchStore {
     const now = Date.now();
     const result = this.db
       .prepare(
-        `INSERT INTO saved_search (scout_wallet, name, filter, created_at, last_viewed_at)
-         VALUES (@scout_wallet, @name, @filter, @created_at, @last_viewed_at)`,
+        `INSERT INTO saved_search (scout_wallet, name, filter, created_at, last_viewed_at, version)
+         VALUES (@scout_wallet, @name, @filter, @created_at, @last_viewed_at, 1)`,
       )
       .run({
         scout_wallet: scoutWallet,
@@ -102,13 +143,32 @@ export class SavedSearchStore {
    * scout opens/applies a saved search, so the "new since last viewed" count
    * resets against the current result set.
    */
-  markViewed(scoutWallet: string, id: number): SavedSearch | null {
-    const result = this.db
-      .prepare(
-        'UPDATE saved_search SET last_viewed_at = ? WHERE id = ? AND scout_wallet = ?',
-      )
-      .run(Date.now(), id, scoutWallet);
-    if (result.changes === 0) return null;
+  markViewed(
+    scoutWallet: string,
+    id: number,
+    expectedVersion?: number,
+  ): SavedSearch | null {
+    if (expectedVersion !== undefined) {
+      const result = this.db
+        .prepare(
+          'UPDATE saved_search SET last_viewed_at = ?, version = version + 1 WHERE id = ? AND scout_wallet = ? AND version = ?',
+        )
+        .run(Date.now(), id, scoutWallet, expectedVersion);
+      if (result.changes === 0) {
+        const existing = this.get(scoutWallet, id);
+        if (existing) {
+          throw new SavedSearchConflictError(existing);
+        }
+        return null;
+      }
+    } else {
+      const result = this.db
+        .prepare(
+          'UPDATE saved_search SET last_viewed_at = ?, version = version + 1 WHERE id = ? AND scout_wallet = ?',
+        )
+        .run(Date.now(), id, scoutWallet);
+      if (result.changes === 0) return null;
+    }
 
     const row = this.db
       .prepare('SELECT * FROM saved_search WHERE id = ?')
@@ -117,7 +177,23 @@ export class SavedSearchStore {
   }
 
   /** Deletes an entry scoped to its owner. Returns false if not found or not owned by scoutWallet. */
-  remove(scoutWallet: string, id: number): boolean {
+  remove(scoutWallet: string, id: number, expectedVersion?: number): boolean {
+    if (expectedVersion !== undefined) {
+      const result = this.db
+        .prepare(
+          'DELETE FROM saved_search WHERE id = ? AND scout_wallet = ? AND version = ?',
+        )
+        .run(id, scoutWallet, expectedVersion);
+      if (result.changes === 0) {
+        const existing = this.get(scoutWallet, id);
+        if (existing) {
+          throw new SavedSearchConflictError(existing);
+        }
+        return false;
+      }
+      return true;
+    }
+
     const result = this.db
       .prepare('DELETE FROM saved_search WHERE id = ? AND scout_wallet = ?')
       .run(id, scoutWallet);

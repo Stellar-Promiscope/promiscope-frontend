@@ -211,6 +211,10 @@ export default function FraudFlagsPanel() {
   const [flags, setFlags] = useState<FraudFlag[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [evaluatedAt, setEvaluatedAt] = useState<number | null>(null);
+  const [runStats, setRunStats] = useState<{
+    eventsProcessed?: number;
+    durationMs?: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [refreshCooldownMs, setRefreshCooldownMs] = useState(0);
@@ -239,12 +243,17 @@ export default function FraudFlagsPanel() {
     setLoading(true);
     setError(false);
     fetchFraudFlags()
-      .then(({ flags, warnings, evaluatedAt }) => {
-        if (cancelled) return;
-        setFlags(flags);
-        setWarnings(warnings);
-        setEvaluatedAt(evaluatedAt);
-      })
+      .then(
+        ({ flags, warnings, evaluatedAt, eventsProcessed, durationMs }) => {
+          if (cancelled) return;
+          setFlags(flags);
+          setWarnings(warnings);
+          setEvaluatedAt(evaluatedAt);
+          if (eventsProcessed !== undefined || durationMs !== undefined) {
+            setRunStats({ eventsProcessed, durationMs });
+          }
+        },
+      )
       .catch(() => {
         if (!cancelled) setError(true);
       })
@@ -329,6 +338,16 @@ export default function FraudFlagsPanel() {
             {evaluatedAt !== null && (
               <p className="text-xs text-gray-500 mt-2">
                 As of {new Date(evaluatedAt).toLocaleString()}
+                {runStats && (
+                  <>
+                    {runStats.eventsProcessed !== undefined &&
+                      runStats.eventsProcessed > 0 &&
+                      ` · ${runStats.eventsProcessed} events processed`}
+                    {runStats.durationMs !== undefined &&
+                      runStats.durationMs > 0 &&
+                      ` in ${(runStats.durationMs / 1000).toFixed(1)}s`}
+                  </>
+                )}
               </p>
             )}
           </div>

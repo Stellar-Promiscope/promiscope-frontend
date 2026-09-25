@@ -8,7 +8,9 @@ import {
   removeSavedSearch,
   renameSavedSearch,
   saveSearch,
+  SavedSearchConflictError,
 } from '@/lib/savedSearchClient';
+import { useToast } from '@/components/ui/Toast';
 import { filterPlayers } from '@/lib/contract';
 import { scoutSearchKey } from './useScout';
 import { useUndoableRemoval } from './useUndoableRemoval';
@@ -35,6 +37,7 @@ export function useSavedSearches(scoutWallet: string | null) {
     },
   );
 
+  const { show } = useToast();
   const undoableRemove = useUndoableRemoval();
 
   const save = useCallback(
@@ -47,20 +50,53 @@ export function useSavedSearches(scoutWallet: string | null) {
 
   const rename = useCallback(
     async (id: number, newName: string) => {
-      await renameSavedSearch(id, newName);
-      mutate();
+      const currentEntry = (data ?? []).find((e) => e.id === id);
+      try {
+        await renameSavedSearch(id, newName, currentEntry?.version);
+        mutate();
+      } catch (err) {
+        if (
+          err instanceof SavedSearchConflictError ||
+          (err as { name?: string })?.name === 'SavedSearchConflictError'
+        ) {
+          show({
+            message:
+              'Saved search was updated on another device. Reload to view changes.',
+            variant: 'warning',
+            action: {
+              label: 'Reload',
+              onClick: () => {
+                mutate();
+              },
+            },
+          });
+          return;
+        }
+        throw err;
+      }
     },
-    [mutate],
+    [data, mutate, show],
   );
 
   const markViewed = useCallback(
     async (entry: SavedSearch) => {
-      const updated = await markSavedSearchViewed(entry.id);
-      mutate(
-        (current) =>
-          (current ?? []).map((e) => (e.id === updated.id ? updated : e)),
-        false,
-      );
+      try {
+        const updated = await markSavedSearchViewed(entry.id, entry.version);
+        mutate(
+          (current) =>
+            (current ?? []).map((e) => (e.id === updated.id ? updated : e)),
+          false,
+        );
+      } catch (err) {
+        if (
+          err instanceof SavedSearchConflictError ||
+          (err as { name?: string })?.name === 'SavedSearchConflictError'
+        ) {
+          mutate();
+          return;
+        }
+        throw err;
+      }
     },
     [mutate],
   );
@@ -79,14 +115,31 @@ export function useSavedSearches(scoutWallet: string | null) {
           mutate((current) => [entry, ...(current ?? [])], false),
         onCommit: async () => {
           try {
-            await removeSavedSearch(entry.id);
+            await removeSavedSearch(entry.id, entry.version);
+          } catch (err) {
+            if (
+              err instanceof SavedSearchConflictError ||
+              (err as { name?: string })?.name === 'SavedSearchConflictError'
+            ) {
+              show({
+                message:
+                  'Saved search was modified elsewhere. Reload to view current state.',
+                variant: 'warning',
+                action: {
+                  label: 'Reload',
+                  onClick: () => {
+                    mutate();
+                  },
+                },
+              });
+            }
           } finally {
             mutate();
           }
         },
       });
     },
-    [undoableRemove, mutate],
+    [undoableRemove, mutate, show],
   );
 
   return {
