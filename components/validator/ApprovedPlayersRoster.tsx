@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useApprovedPlayers } from '@/hooks/useApprovedPlayers';
 import PlayerCard from '@/components/PlayerCard';
 import EmptyState from '@/components/ui/EmptyState';
+import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 import Button from '@/components/ui/Button';
 
 interface ApprovedPlayersRosterProps {
@@ -87,6 +88,7 @@ export default function ApprovedPlayersRoster({
         </h2>
         <span className="text-sm text-gray-400">{countLabel}</span>
       </div>
+      <DataFreshnessBadge className="mb-4" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {players.map((player) => (

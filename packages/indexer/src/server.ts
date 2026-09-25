@@ -21,6 +21,8 @@ function handleHealth(res: http.ServerResponse): void {
   const body = JSON.stringify({
     status: stale ? 'degraded' : 'ok',
     lastLedger,
+    lastUpdated: timestamp > 0 ? timestamp : null,
+    ledgerLag: getLedgerLag(),
     uptime: uptimeSec,
   });
   res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -1,15 +1,18 @@
 import {
   fetchAllReferralCodes,
   fetchActivityEvents,
+  fetchPlayerProfile,
   type ActivityEvent,
 } from '@/lib/api';
 import {
   analyzeReferralAbuse,
   analyzePayToContactAbuse,
+  analyzeValidatorAbuse,
+  type ValidatorApproval,
 } from '@/lib/fraudDetection';
 import { isFeatureEnabled } from '@/lib/featureFlags';
 import { FraudThrottleStore } from '@/lib/fraudThrottleStore';
-import type { FraudFlag } from '@/types';
+import type { FraudFlag, Player, ReferralCode } from '@/types';
 
 /**
  * Heuristics the doc explicitly names as safe auto-throttle candidates —
@@ -83,6 +86,56 @@ async function fetchAllActivityEvents(): Promise<{
   return { events, truncated: events.length < total };
 }
 
+/** Cap on player-profile lookups used to enrich approvals with a region. */
+const MAX_PLAYER_LOOKUPS = 100;
+
+/**
+ * Turns `milestone_approved` activity into ValidatorApprovals, enriched
+ * best-effort with each player's region (for the spread heuristic) and
+ * referring scout (for the circular heuristic). A failed profile lookup
+ * just leaves that approval un-enriched.
+ */
+async function buildValidatorApprovals(
+  events: ActivityEvent[],
+  referralCodes: ReferralCode[],
+): Promise<ValidatorApproval[]> {
+  const approvals = events.filter(
+    (e) => e.type === 'milestone_approved' && e.subjectId,
+  );
+  const playerIds = [
+    ...new Set(approvals.map((e) => e.subjectId as string)),
+  ].slice(0, MAX_PLAYER_LOOKUPS);
+  const profiles = new Map<string, Player>();
+  await Promise.all(
+    playerIds.map(async (id) => {
+      try {
+        const profile: Player | undefined = await fetchPlayerProfile(id);
+        if (profile) profiles.set(id, profile);
+      } catch {
+        // Best-effort enrichment only.
+      }
+    }),
+  );
+  const referrerByRedeemer = new Map(
+    referralCodes
+      .filter((c) => c.usedBy)
+      .map((c) => [c.usedBy as string, c.scoutWallet]),
+  );
+
+  return approvals.map((e) => {
+    const playerId = e.subjectId as string;
+    const profile = profiles.get(playerId);
+    return {
+      validator: e.actor,
+      playerId,
+      timestamp: e.timestamp,
+      region: profile?.vitals?.region,
+      referrerWallet:
+        referrerByRedeemer.get(profile?.wallet ?? playerId) ?? null,
+    };
+  });
+}
+
 export interface FraudFlagEvaluationResult {
   flags: FraudFlag[];
   warnings: string[];
@@ -98,9 +151,11 @@ export interface FraudFlagEvaluationResult {
  */
 export async function runFraudFlagEvaluation(): Promise<FraudFlagEvaluationResult> {
   let referralFlags: FraudFlag[] = [];
+  let referralCodes: ReferralCode[] = [];
   const warnings: string[] = [];
   try {
-    referralFlags = analyzeReferralAbuse(await fetchAllReferralCodes());
+    referralCodes = await fetchAllReferralCodes();
+    referralFlags = analyzeReferralAbuse(referralCodes);
   } catch {
     warnings.push(
       'Referral backend is unavailable — referral heuristics were skipped. Pay-to-contact heuristics below are unaffected.',
@@ -108,9 +163,22 @@ export async function runFraudFlagEvaluation(): Promise<FraudFlagEvaluationResul
   }
 
   let payToContactFlags: FraudFlag[] = [];
+  let validatorFlags: FraudFlag[] = [];
   try {
     const { events, truncated } = await fetchAllActivityEvents();
     payToContactFlags = analyzePayToContactAbuse(events);
+    try {
+      // Wallets co-flagged by a referral heuristic are treated as one
+      // cluster for the circular-approval check.
+      validatorFlags = analyzeValidatorAbuse(
+        await buildValidatorApprovals(events, referralCodes ?? []),
+        { walletClusters: referralFlags.map((f) => f.wallets) },
+      );
+    } catch {
+      warnings.push(
+        'Validator heuristics could not be evaluated — other heuristics below are unaffected.',
+      );
+    }
     if (truncated) {
       warnings.push(
         `Activity feed has more than ${MAX_ACTIVITY_PAGES * ACTIVITY_PAGE_SIZE} events; pay-to-contact analysis only covers the most recent ones.`,
@@ -122,7 +190,11 @@ export async function runFraudFlagEvaluation(): Promise<FraudFlagEvaluationResul
     );
   }
 
-  const flags = [...referralFlags, ...payToContactFlags].sort((a, b) => {
+  const flags = [
+    ...referralFlags,
+    ...payToContactFlags,
+    ...validatorFlags,
+  ].sort((a, b) => {
     const severityRank = { high: 0, medium: 1, low: 2 } as const;
     return severityRank[a.severity] - severityRank[b.severity];
   });

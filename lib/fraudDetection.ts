@@ -41,6 +41,19 @@ export const MIN_SUBSCRIPTIONS_FOR_CYCLING_CHECK = 3;
 /** Average contacts per subscription at/below this looks like buying access just to churn. */
 export const CYCLING_MAX_CONTACTS_PER_SUBSCRIPTION = 1.5;
 
+/** More than this many approvals by one validator inside the window is a burst. */
+export const VALIDATOR_BURST_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+export const VALIDATOR_BURST_MIN_COUNT = 10;
+/** Approvals spanning at least this many regions within a day... */
+export const VALIDATOR_SPREAD_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const VALIDATOR_SPREAD_MIN_REGIONS = 3;
+/** ...only count as anomalous for a validator whose history is localized. */
+export const VALIDATOR_LOCALIZED_MIN_HISTORY = 5;
+export const VALIDATOR_LOCALIZED_REGION_SHARE = 0.8;
+/** Taking a player from level 0 to 3 (three approvals) within this window. */
+export const VALIDATOR_LEVEL_JUMP_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const VALIDATOR_LEVEL_JUMP_MIN_PLAYERS = 3;
+
 // ── Threshold bundle ──────────────────────────────────────────────────────────
 // A single object capturing every tunable threshold above. Passing a partial
 // override into the `analyze*` entry points lets callers (e.g. the offline
@@ -57,6 +70,14 @@ export interface FraudThresholds {
   CONTACT_BURST_MIN_COUNT: number;
   MIN_SUBSCRIPTIONS_FOR_CYCLING_CHECK: number;
   CYCLING_MAX_CONTACTS_PER_SUBSCRIPTION: number;
+  VALIDATOR_BURST_WINDOW_MS: number;
+  VALIDATOR_BURST_MIN_COUNT: number;
+  VALIDATOR_SPREAD_WINDOW_MS: number;
+  VALIDATOR_SPREAD_MIN_REGIONS: number;
+  VALIDATOR_LOCALIZED_MIN_HISTORY: number;
+  VALIDATOR_LOCALIZED_REGION_SHARE: number;
+  VALIDATOR_LEVEL_JUMP_WINDOW_MS: number;
+  VALIDATOR_LEVEL_JUMP_MIN_PLAYERS: number;
 }
 
 /** The shipped defaults — every threshold constant above, bundled. */
@@ -71,6 +92,14 @@ export const DEFAULT_THRESHOLDS: FraudThresholds = {
   CONTACT_BURST_MIN_COUNT,
   MIN_SUBSCRIPTIONS_FOR_CYCLING_CHECK,
   CYCLING_MAX_CONTACTS_PER_SUBSCRIPTION,
+  VALIDATOR_BURST_WINDOW_MS,
+  VALIDATOR_BURST_MIN_COUNT,
+  VALIDATOR_SPREAD_WINDOW_MS,
+  VALIDATOR_SPREAD_MIN_REGIONS,
+  VALIDATOR_LOCALIZED_MIN_HISTORY,
+  VALIDATOR_LOCALIZED_REGION_SHARE,
+  VALIDATOR_LEVEL_JUMP_WINDOW_MS,
+  VALIDATOR_LEVEL_JUMP_MIN_PLAYERS,
 };
 
 /**
@@ -451,5 +480,238 @@ export function analyzePayToContactAbuse(
       contactsByScout,
       thresholds,
     ),
+  ];
+}
+
+// ── Validator heuristics ────────────────────────────────────────────────────────
+// A single compromised validator key can approve milestones for any player
+// (see #1359). These watch for approval patterns that don't look like a
+// validator reviewing their own players one at a time.
+
+export interface ValidatorApproval {
+  validator: string;
+  playerId: string;
+  /** Unix seconds, like ActivityEvent.timestamp. */
+  timestamp: number;
+  /** Player's region, when known (enables the spread heuristic). */
+  region?: string;
+  /** Wallet of the scout whose referral the player redeemed, when known. */
+  referrerWallet?: string | null;
+}
+
+export interface ValidatorAnalysisContext {
+  /**
+   * Groups of wallets believed to be controlled by one party (e.g. the
+   * wallets of a referral-ring flag). A validator approving a player referred
+   * by any wallet in its own cluster is flagged as circular.
+   */
+  walletClusters?: string[][];
+}
+
+function approvalMs(a: ValidatorApproval): number {
+  return a.timestamp * 1000;
+}
+
+function describeApproval(a: ValidatorApproval): string {
+  return `${a.playerId}@${new Date(approvalMs(a)).toISOString()}`;
+}
+
+/** Largest run of items whose timestamps fit inside `windowMs`. */
+function maxWindow(
+  sorted: ValidatorApproval[],
+  windowMs: number,
+): ValidatorApproval[] {
+  let best: ValidatorApproval[] = sorted.slice(0, 1);
+  let start = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    while (approvalMs(sorted[i]) - approvalMs(sorted[start]) > windowMs) {
+      start++;
+    }
+    if (i - start + 1 > best.length) best = sorted.slice(start, i + 1);
+  }
+  return best;
+}
+
+function detectApprovalBursts(
+  byValidator: Map<string, ValidatorApproval[]>,
+  t: FraudThresholds,
+): FraudFlag[] {
+  const flags: FraudFlag[] = [];
+  for (const [validator, approvals] of byValidator) {
+    const burst = maxWindow(approvals, t.VALIDATOR_BURST_WINDOW_MS);
+    if (burst.length <= t.VALIDATOR_BURST_MIN_COUNT) continue;
+    const minutes = t.VALIDATOR_BURST_WINDOW_MS / 60000;
+    flags.push(
+      makeFlag(
+        'validator',
+        'validator_approval_burst',
+        [validator],
+        burst.length > t.VALIDATOR_BURST_MIN_COUNT * 2 ? 'high' : 'medium',
+        `${burst.length} milestone approvals within ${minutes} minutes.`,
+        {
+          maxInWindow: burst.length,
+          windowMinutes: minutes,
+          totalApprovals: approvals.length,
+          events: burst.map(describeApproval),
+        },
+      ),
+    );
+  }
+  return flags;
+}
+
+function detectRegionSpread(
+  byValidator: Map<string, ValidatorApproval[]>,
+  t: FraudThresholds,
+): FraudFlag[] {
+  const flags: FraudFlag[] = [];
+  for (const [validator, all] of byValidator) {
+    const approvals = all.filter((a) => a.region);
+    if (approvals.length === 0) continue;
+
+    // Only anomalous against a localized history: take the window with the
+    // most distinct regions, and compare with everything before it.
+    let best: ValidatorApproval[] = [];
+    let bestRegions = 0;
+    let start = 0;
+    for (let i = 0; i < approvals.length; i++) {
+      while (
+        approvalMs(approvals[i]) - approvalMs(approvals[start]) >
+        t.VALIDATOR_SPREAD_WINDOW_MS
+      ) {
+        start++;
+      }
+      const window = approvals.slice(start, i + 1);
+      const regions = new Set(window.map((a) => a.region)).size;
+      if (regions > bestRegions) {
+        best = window;
+        bestRegions = regions;
+      }
+    }
+    if (bestRegions < t.VALIDATOR_SPREAD_MIN_REGIONS) continue;
+
+    const history = approvals.filter(
+      (a) => approvalMs(a) < approvalMs(best[0]),
+    );
+    if (history.length < t.VALIDATOR_LOCALIZED_MIN_HISTORY) continue;
+    const regionCounts = groupBy(history, (a) => a.region as string);
+    const [homeRegion, homeApprovals] = [...regionCounts].sort(
+      (a, b) => b[1].length - a[1].length,
+    )[0];
+    const homeShare = homeApprovals.length / history.length;
+    if (homeShare < t.VALIDATOR_LOCALIZED_REGION_SHARE) continue;
+
+    flags.push(
+      makeFlag(
+        'validator',
+        'validator_region_spread',
+        [validator],
+        bestRegions >= t.VALIDATOR_SPREAD_MIN_REGIONS * 2 ? 'high' : 'medium',
+        `Approved players in ${bestRegions} regions within a day, despite a history localized to ${homeRegion}.`,
+        {
+          regions: [...new Set(best.map((a) => a.region as string))],
+          homeRegion,
+          homeRegionShare: Number(homeShare.toFixed(2)),
+          events: best.map((a) => `${describeApproval(a)} (${a.region})`),
+        },
+      ),
+    );
+  }
+  return flags;
+}
+
+function detectCircularApprovals(
+  byValidator: Map<string, ValidatorApproval[]>,
+  context: ValidatorAnalysisContext,
+): FraudFlag[] {
+  const flags: FraudFlag[] = [];
+  for (const [validator, approvals] of byValidator) {
+    const cluster = new Set([validator]);
+    for (const group of context.walletClusters ?? []) {
+      if (group.includes(validator)) group.forEach((w) => cluster.add(w));
+    }
+    const circular = approvals.filter(
+      (a) => a.referrerWallet && cluster.has(a.referrerWallet),
+    );
+    if (circular.length === 0) continue;
+
+    const referrers = [
+      ...new Set(circular.map((a) => a.referrerWallet as string)),
+    ];
+    flags.push(
+      makeFlag(
+        'validator',
+        'validator_circular_approval',
+        [validator, ...referrers.filter((w) => w !== validator)],
+        'high',
+        `Approved ${circular.length} player(s) referred by a wallet in the validator's own cluster.`,
+        {
+          circularApprovals: circular.length,
+          referrers,
+          events: circular.map(describeApproval),
+        },
+      ),
+    );
+  }
+  return flags;
+}
+
+function detectLevelJumps(
+  byValidator: Map<string, ValidatorApproval[]>,
+  firstApprovalMs: Map<string, number>,
+  t: FraudThresholds,
+): FraudFlag[] {
+  // Each approval raises a player one progress level, so a validator giving
+  // one player their first three approvals quickly took them from 0 to 3.
+  const flags: FraudFlag[] = [];
+  for (const [validator, approvals] of byValidator) {
+    const jumped: string[] = [];
+    for (const [playerId, forPlayer] of groupBy(approvals, (a) => a.playerId)) {
+      if (forPlayer.length < 3) continue;
+      const [first, , third] = forPlayer;
+      const fromZero = firstApprovalMs.get(playerId) === approvalMs(first);
+      const quick =
+        approvalMs(third) - approvalMs(first) <=
+        t.VALIDATOR_LEVEL_JUMP_WINDOW_MS;
+      if (fromZero && quick) jumped.push(playerId);
+    }
+    if (jumped.length < t.VALIDATOR_LEVEL_JUMP_MIN_PLAYERS) continue;
+
+    const hours = t.VALIDATOR_LEVEL_JUMP_WINDOW_MS / 3_600_000;
+    flags.push(
+      makeFlag(
+        'validator',
+        'validator_level_jump',
+        [validator],
+        jumped.length >= t.VALIDATOR_LEVEL_JUMP_MIN_PLAYERS * 2
+          ? 'high'
+          : 'medium',
+        `Took ${jumped.length} players from level 0 to 3 within ${hours} hours each.`,
+        { players: jumped, windowHours: hours },
+      ),
+    );
+  }
+  return flags;
+}
+
+export function analyzeValidatorAbuse(
+  approvals: ValidatorApproval[],
+  context: ValidatorAnalysisContext = {},
+  thresholds: FraudThresholds = DEFAULT_THRESHOLDS,
+): FraudFlag[] {
+  const sorted = [...approvals].sort((a, b) => a.timestamp - b.timestamp);
+  const byValidator = groupBy(sorted, (a) => a.validator);
+  const firstApprovalMs = new Map<string, number>();
+  for (const a of sorted) {
+    if (!firstApprovalMs.has(a.playerId)) {
+      firstApprovalMs.set(a.playerId, approvalMs(a));
+    }
+  }
+
+  return [
+    ...detectApprovalBursts(byValidator, thresholds),
+    ...detectRegionSpread(byValidator, thresholds),
+    ...detectCircularApprovals(byValidator, context),
+    ...detectLevelJumps(byValidator, firstApprovalMs, thresholds),
   ];
 }

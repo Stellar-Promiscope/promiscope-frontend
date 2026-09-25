@@ -5,6 +5,7 @@ import { useFeeDriftDetection } from '@/hooks/useFeeDriftDetection';
 import { formatXlm } from '@/lib/formatXlm';
 import XlmFiatDisplay from '@/components/ui/XlmFiatDisplay';
 import Spinner from '@/components/ui/Spinner';
+import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 
 /**
  * Spending Summary section displayed on the scout's dashboard.
@@ -47,6 +48,7 @@ export default function SpendingSummary() {
   return (
     <section className="bg-brand-card border border-gray-800 rounded-xl p-6 flex flex-col gap-6">
       <h2 className="text-lg font-semibold text-white">Spending Summary</h2>
+      <DataFreshnessBadge className="self-start" />
 
       {hasDrift && warningMessage && (
         <div

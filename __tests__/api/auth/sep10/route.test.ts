@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { POST, DELETE } from '../../../../app/api/auth/sep10/route';
+import { POST, DELETE, GET } from '../../../../app/api/auth/sep10/route';
 import { GET as SESSION_GET } from '../../../../app/api/auth/session/route';
 import { NextRequest } from 'next/server';
 import { SessionStore } from '@/lib/sessionStore';
@@ -20,6 +20,11 @@ jest.mock('@stellar/stellar-sdk', () => ({
     fromSecret: jest.fn((secret: string) => ({
       publicKey: () => secret,
     })),
+  },
+  // Treat any G-prefixed key as valid so the fixture keys below pass
+  // without needing real checksummed addresses.
+  StrKey: {
+    isValidEd25519PublicKey: (key: string) => key.startsWith('G'),
   },
 }));
 
@@ -170,8 +175,65 @@ describe('POST /api/auth/sep10 — SEP-10 verification failures', () => {
 
     expect(res.status).toBe(401);
     const body = await res.json();
-    expect(body).toEqual({ error: 'Transaction not signed by client' });
+    expect(body).toEqual({ error: 'Challenge verification failed' });
   });
+});
+
+describe('POST /api/auth/sep10 — input and config validation', () => {
+  test('returns 400 when publicKey is not a valid G-address', async () => {
+    const res = await POST(
+      makeRequest(ALLOWED_ORIGIN, {
+        signedXdr: SIGNED_XDR,
+        publicKey: 'MBADMUXEDACCOUNT',
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Invalid publicKey' });
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  test.each(['SEP10_SERVER_KEY', 'SEP10_HOME_DOMAIN'])(
+    'returns 500 without calling the SDK when %s is missing',
+    async (name) => {
+      delete process.env[name];
+      const res = await POST(makeRequest(ALLOWED_ORIGIN));
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'Server not configured' });
+      expect(mockVerify).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe('GET /api/auth/sep10 — challenge', () => {
+  function makeGet(account?: string): NextRequest {
+    const qs = account === undefined ? '' : `?account=${account}`;
+    return new NextRequest(`http://localhost:3000/api/auth/sep10${qs}`);
+  }
+
+  test('returns 400 when account is missing', async () => {
+    const res = await GET(makeGet());
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 400 for an invalid or muxed account', async () => {
+    for (const account of ['not-an-address', 'MBADMUXEDACCOUNT']) {
+      const res = await GET(makeGet(account));
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({
+        error: 'Invalid account parameter',
+      });
+    }
+  });
+
+  test.each(['SEP10_SERVER_KEY', 'SEP10_HOME_DOMAIN'])(
+    'returns 500 when %s is missing',
+    async (name) => {
+      delete process.env[name];
+      const res = await GET(makeGet(VALID_PUBLIC_KEY));
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'Server not configured' });
+    },
+  );
 });
 
 describe('POST /api/auth/sep10 — malformed request body', () => {

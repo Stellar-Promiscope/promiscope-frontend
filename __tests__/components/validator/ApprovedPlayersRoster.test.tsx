@@ -13,6 +13,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('next-intl', () => ({
+  useLocale: () => 'en',
   useTranslations: () => (key: string, values?: { count?: number }) => {
     const messages: Record<string, string> = {
       roster_title: 'My Approved Players',

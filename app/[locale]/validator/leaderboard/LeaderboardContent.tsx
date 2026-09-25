@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import EmptyState from '@/components/ui/EmptyState';
+import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 import type { LeaderboardEntry } from './data';
 import {
   parseValidatorLeaderboardRange,
@@ -51,6 +52,7 @@ export default function LeaderboardContent({
   return (
     <>
       <RangeSelector range={range} onChange={changeRange} />
+      <DataFreshnessBadge className="self-start" />
       <div className="bg-brand-card border border-gray-800 rounded-xl overflow-x-auto">
         <table className="w-full text-sm text-left">
           <caption className="sr-only">

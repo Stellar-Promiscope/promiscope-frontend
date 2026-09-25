@@ -2,6 +2,7 @@
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
+import { getChunkedUploadStatus } from '@/lib/ipfs';
 import Spinner from '@/components/ui/Spinner';
 
 /** Accepted MIME types for client-side validation */
@@ -74,8 +75,30 @@ export default function VideoUpload({
     canResume,
     upload,
     resume,
+    persistedSession,
+    promptResume,
   } = useChunkedUpload();
   const isProcessing = isUploading && phase === 'processing';
+
+  // After a reload, an interrupted upload persisted by useChunkedUpload can be
+  // resumed by re-selecting the same file (see #1003). Show how far it got.
+  const [resumedChunks, setResumedChunks] = useState<number | null>(null);
+  const persistedSessionId = persistedSession?.sessionId;
+  useEffect(() => {
+    setResumedChunks(null);
+    if (!persistedSessionId) return;
+    let cancelled = false;
+    getChunkedUploadStatus(persistedSessionId)
+      .then((status) => {
+        if (!cancelled) setResumedChunks(status.receivedChunks.length);
+      })
+      .catch(() => {
+        // Expired or unreachable — promptResume reports it on re-selection.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [persistedSessionId]);
 
   useEffect(() => {
     onUploadingChange?.(isUploading);
@@ -120,7 +143,14 @@ export default function VideoUpload({
     setFileName(file.name);
     onUploadStart?.();
 
-    const outcome = await upload(file);
+    const matchesPersisted =
+      persistedSession &&
+      !canResume &&
+      file.name === persistedSession.filename &&
+      file.size === persistedSession.fileSize;
+    const outcome = matchesPersisted
+      ? await promptResume(file)
+      : await upload(file);
     handleUploadResult(outcome.cid, outcome.error);
   };
 
@@ -144,6 +174,14 @@ export default function VideoUpload({
       >
         Accepted: {ACCEPTED_TYPES_LABEL} · Max {MAX_FILE_SIZE_LABEL}
       </p>
+      {persistedSession && !canResume && !isUploading && (
+        <p role="status" className="text-xs text-yellow-500">
+          Resume upload
+          {resumedChunks !== null &&
+            ` (${resumedChunks} of ${persistedSession.totalChunks} chunks uploaded)`}
+          : select {persistedSession.filename} again to continue.
+        </p>
+      )}
       <div className="relative">
         <input
           id="video-upload-input"
