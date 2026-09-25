@@ -29,7 +29,7 @@ export default function XlmFiatDisplay({
   className = '',
 }: XlmFiatDisplayProps) {
   const { currency } = useCurrencyPreference();
-  const { rate, loading } = useXlmUsdRate(currency);
+  const { rate, loading, stale, updatedAt } = useXlmUsdRate(currency);
   const fiatAmount = convertXlmToFiat(xlmAmount, rate);
 
   return (
@@ -38,8 +38,21 @@ export default function XlmFiatDisplay({
         {formatXlm(xlmAmount)} XLM
       </span>
       {!loading && fiatAmount !== null && (
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span
+          className="text-xs text-gray-500 dark:text-gray-400"
+          title={
+            stale
+              ? `Exchange rate may be outdated${updatedAt ? ` (last updated ${new Date(updatedAt).toLocaleString()})` : ''}`
+              : undefined
+          }
+        >
           ≈ {formatFiat(fiatAmount, currency)}
+          {stale && (
+            <>
+              <span aria-hidden="true"> *</span>
+              <span className="sr-only"> (exchange rate may be outdated)</span>
+            </>
+          )}
         </span>
       )}
       {/* When loading or rate unavailable: show nothing extra — graceful fallback */}

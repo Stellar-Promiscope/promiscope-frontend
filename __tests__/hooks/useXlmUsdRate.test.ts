@@ -3,8 +3,8 @@
  *
  * Covers:
  * - Basic fetch success/loading/error state transitions
- * - CoinGecko currency-code mapping and the lowercase fallback for
- *   unmapped codes
+ * - The /api/rates/xlm proxy URL, lowercased currency codes, and the
+ *   stale/updatedAt/source metadata
  * - HTTP error, malformed-payload, and network-error failure paths
  * - The module-level `rateCache` Map: reused across hook instances and
  *   respects the 5-minute TTL
@@ -38,7 +38,7 @@ function mockRateResponse(vsCurrency: string, rate: number) {
   (global.fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
     status: 200,
-    json: async () => ({ stellar: { [vsCurrency]: rate } }),
+    json: async () => ({ rate: rate }),
   });
 }
 
@@ -84,12 +84,10 @@ describe('useXlmUsdRate — basic fetch', () => {
     expect(result.current.error).toBeNull();
 
     // Same request also verifies the default currency ('USD') produces the
-    // correctly-formed CoinGecko URL.
+    // correctly-formed rate proxy URL.
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /^https:\/\/api\.coingecko\.com\/api\/v3\/simple\/price\?ids=stellar&vs_currencies=usd$/,
-      ),
+      expect.stringMatching(/^\/api\/rates\/xlm\?vs=usd$/),
       expect.objectContaining({ cache: 'no-cache' }),
     );
   });
@@ -108,7 +106,7 @@ describe('useXlmUsdRate — currency mapping', () => {
     ['CAD', 'cad'],
     ['AUD', 'aud'],
     ['BRL', 'brl'],
-  ])('maps %s to CoinGecko vs_currency %s', async (code, vsCurrency) => {
+  ])('requests the proxy with %s as vs=%s', async (code, vsCurrency) => {
     mockRateResponse(vsCurrency, 7);
 
     const { result } = renderHook(() => useXlmUsdRate(code));
@@ -116,7 +114,7 @@ describe('useXlmUsdRate — currency mapping', () => {
 
     expect(result.current.rate).toBe(7);
     expect(global.fetch).toHaveBeenLastCalledWith(
-      expect.stringContaining(`vs_currencies=${vsCurrency}`),
+      expect.stringContaining(`vs=${vsCurrency}`),
       expect.anything(),
     );
   });
@@ -129,7 +127,7 @@ describe('useXlmUsdRate — currency mapping', () => {
 
     expect(result.current.rate).toBe(650);
     expect(global.fetch).toHaveBeenLastCalledWith(
-      expect.stringContaining('vs_currencies=xof'),
+      expect.stringContaining('vs=xof'),
       expect.anything(),
     );
   });
@@ -145,11 +143,11 @@ describe('useXlmUsdRate — failure paths', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.rate).toBeNull();
-    expect(result.current.error).toBe('CoinGecko returned 500');
+    expect(result.current.error).toBe('Rate service returned 500');
   });
 
-  it('sets an error when the target currency is missing from the payload', async () => {
-    mockMalformedPayload({ stellar: {} });
+  it('sets an error when the rate is not a number', async () => {
+    mockMalformedPayload({ rate: 'abc' });
 
     const { result } = renderHook(() => useXlmUsdRate('TCUR_MISSING'));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -158,7 +156,7 @@ describe('useXlmUsdRate — failure paths', () => {
     expect(result.current.error).toBe('Invalid rate in response');
   });
 
-  it('sets an error when the payload has no `stellar` key at all', async () => {
+  it('sets an error when the payload has no `rate` key at all', async () => {
     mockMalformedPayload({});
 
     const { result } = renderHook(() => useXlmUsdRate('TCUR_NO_STELLAR'));
@@ -167,8 +165,28 @@ describe('useXlmUsdRate — failure paths', () => {
     expect(result.current.error).toBe('Invalid rate in response');
   });
 
+  it('exposes stale/updatedAt/source metadata from the proxy', async () => {
+    mockMalformedPayload({
+      rate: 0.3,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      stale: true,
+      source: 'stellar-dex',
+    });
+
+    const { result } = renderHook(() => useXlmUsdRate('TCUR_STALE'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current).toMatchObject({
+      rate: 0.3,
+      stale: true,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      source: 'stellar-dex',
+      error: null,
+    });
+  });
+
   it('sets an error when the reported rate is zero or negative', async () => {
-    mockMalformedPayload({ stellar: { tcur_zero: 0 } });
+    mockMalformedPayload({ rate: 0 });
 
     const { result } = renderHook(() => useXlmUsdRate('TCUR_ZERO'));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -316,7 +334,7 @@ describe('useXlmUsdRate — in-flight de-duplication', () => {
       resolveFetch({
         ok: true,
         status: 200,
-        json: async () => ({ stellar: { tcur_inflight: 3.3 } }),
+        json: async () => ({ rate: 3.3 }),
       });
       await flushPromises();
     });
@@ -377,7 +395,7 @@ describe('useXlmUsdRate — unmount safety', () => {
       resolveFetch({
         ok: true,
         status: 200,
-        json: async () => ({ stellar: { tcur_unmount: 4.4 } }),
+        json: async () => ({ rate: 4.4 }),
       });
       await flushPromises();
     });
@@ -406,7 +424,7 @@ describe('useXlmUsdRate — unmount safety', () => {
       resolveFetch({
         ok: true,
         status: 200,
-        json: async () => ({ stellar: { tcur_unmount_cache: 5.5 } }),
+        json: async () => ({ rate: 5.5 }),
       });
       await flushPromises();
     });

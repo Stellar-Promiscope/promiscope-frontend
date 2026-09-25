@@ -11,6 +11,16 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 interface CachedRate {
   rate: number;
   fetchedAt: number;
+  updatedAt: string | null;
+  stale: boolean;
+  source: string | null;
+}
+
+interface FetchedRate {
+  rate: number;
+  updatedAt: string | null;
+  stale: boolean;
+  source: string | null;
 }
 
 /**
@@ -20,53 +30,44 @@ interface CachedRate {
 const rateCache = new Map<string, CachedRate>();
 
 /** In-flight requests keyed by currency so concurrent callers share one fetch. */
-const inFlight = new Map<string, Promise<number>>();
+const inFlight = new Map<string, Promise<FetchedRate>>();
 
 // ── API ────────────────────────────────────────────────────────────────────────
 
-const COINGECKO_URL = 'https://api.coingecko.com/api/v3';
+/** Same-origin proxy (app/api/rates/xlm) that caches the upstream price. */
+const RATE_ENDPOINT = '/api/rates/xlm';
 
-/**
- * Maps our internal currency code to CoinGecko's VS currency parameter.
- * CoinGecko free API only supports a subset; we map common ones.
- */
-const CG_VS_CURRENCY: Record<string, string> = {
-  USD: 'usd',
-  EUR: 'eur',
-  GBP: 'gbp',
-  NGN: 'ngn',
-  KES: 'kes',
-  ZAR: 'zar',
-  JPY: 'jpy',
-  CAD: 'cad',
-  AUD: 'aud',
-  BRL: 'brl',
-};
-
-async function fetchXlmRate(targetCurrency: string): Promise<number> {
-  const vsCurrency =
-    CG_VS_CURRENCY[targetCurrency] ?? targetCurrency.toLowerCase();
-  const url = `${COINGECKO_URL}/simple/price?ids=stellar&vs_currencies=${encodeURIComponent(vsCurrency)}`;
+async function fetchXlmRate(targetCurrency: string): Promise<FetchedRate> {
+  const vsCurrency = targetCurrency.toLowerCase();
+  const url = `${RATE_ENDPOINT}?vs=${encodeURIComponent(vsCurrency)}`;
 
   const resp = await fetch(url, {
-    // Prevent caching proxies from serving stale data
+    // The server route owns caching; always revalidate against it.
     cache: 'no-cache',
   });
 
   if (!resp.ok) {
-    throw new Error(`CoinGecko returned ${resp.status}`);
+    throw new Error(`Rate service returned ${resp.status}`);
   }
 
   const data = (await resp.json()) as {
-    stellar?: Record<string, number>;
+    rate?: unknown;
+    updatedAt?: unknown;
+    stale?: unknown;
+    source?: unknown;
   };
 
-  const rate = data.stellar?.[vsCurrency];
+  const rate = data.rate;
   if (typeof rate !== 'number' || rate <= 0) {
     throw new Error('Invalid rate in response');
   }
 
-  return rate;
+  return {
+    rate,
+    updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : null,
+    stale: data.stale === true,
+    source: typeof data.source === 'string' ? data.source : null,
+  };
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
@@ -78,19 +79,25 @@ export interface XlmRateState {
   loading: boolean;
   /** Non-null when the most recent fetch failed (so callers can show fallback). */
   error: string | null;
+  /** True when the server could only return the last known (outdated) rate. */
+  stale: boolean;
+  /** ISO timestamp of when the rate was fetched upstream, if known. */
+  updatedAt: string | null;
+  /** Upstream provider of the rate (e.g. `coingecko`, `stellar-dex`). */
+  source: string | null;
 }
 
 /**
- * Fetches the current XLM → targetCurrency exchange rate from CoinGecko's free
- * public API, cached for 5 minutes in an in-memory Map shared across all
+ * Fetches the current XLM → targetCurrency exchange rate from our
+ * `/api/rates/xlm` proxy (never CoinGecko directly), cached for 5 minutes in an in-memory Map shared across all
  * instances of this hook. Concurrent callers during a cache miss share a single
  * in-flight request.
  *
  * Falls back gracefully — keeps `rate` null and sets `error` — so callers
  * can hide the fiat figure and keep showing XLM-only.
  *
- * @param targetCurrency - ISO 4217 code (default `'USD'`). See CG_VS_CURRENCY
- *   for supported values.
+ * @param targetCurrency - ISO 4217 code (default `'USD'`). See
+ *   SUPPORTED_CURRENCIES for supported values.
  */
 export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
   const cacheKey = `xlm:${targetCurrency}`;
@@ -110,6 +117,20 @@ export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
     return true;
   });
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<Omit<FetchedRate, 'rate'>>(() => {
+    const cached = rateCache.get(cacheKey);
+    return {
+      updatedAt: cached?.updatedAt ?? null,
+      stale: cached?.stale ?? false,
+      source: cached?.source ?? null,
+    };
+  });
+  const apply = (r: FetchedRate) => {
+    setRate(r.rate);
+    setMeta({ updatedAt: r.updatedAt, stale: r.stale, source: r.source });
+    setLoading(false);
+    setError(null);
+  };
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -117,8 +138,7 @@ export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
 
     const cached = rateCache.get(cacheKey);
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-      setRate(cached.rate);
-      setLoading(false);
+      apply(cached);
       return;
     }
 
@@ -127,11 +147,7 @@ export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
     if (existing) {
       existing
         .then((r) => {
-          if (mountedRef.current) {
-            setRate(r);
-            setLoading(false);
-            setError(null);
-          }
+          if (mountedRef.current) apply(r);
         })
         .catch((e) => {
           if (mountedRef.current) {
@@ -145,7 +161,7 @@ export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
     // Start a new request.
     const promise = fetchXlmRate(targetCurrency)
       .then((r) => {
-        rateCache.set(cacheKey, { rate: r, fetchedAt: Date.now() });
+        rateCache.set(cacheKey, { ...r, fetchedAt: Date.now() });
         return r;
       })
       .finally(() => {
@@ -156,11 +172,7 @@ export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
 
     promise
       .then((r) => {
-        if (mountedRef.current) {
-          setRate(r);
-          setLoading(false);
-          setError(null);
-        }
+        if (mountedRef.current) apply(r);
       })
       .catch((e) => {
         if (mountedRef.current) {
@@ -175,7 +187,7 @@ export function useXlmUsdRate(targetCurrency: string = 'USD'): XlmRateState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey]);
 
-  return { rate, loading, error };
+  return { rate, loading, error, ...meta };
 }
 
 /**
