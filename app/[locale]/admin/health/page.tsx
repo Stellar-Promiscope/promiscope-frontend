@@ -88,6 +88,9 @@ function HealthDashboardContent() {
     setRemoteLoading(true);
     try {
       const res = await fetch('/api/admin/health', { cache: 'no-store' });
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Admin session required');
+      }
       if (!res.ok) {
         throw new Error(`Health check request failed (HTTP ${res.status})`);
       }

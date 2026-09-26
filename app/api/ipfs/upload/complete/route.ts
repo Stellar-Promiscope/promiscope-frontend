@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import axios from 'axios';
-import { assembleFile, cleanupSession } from '@/lib/chunkedUploadStore';
+import {
+  assembleFile,
+  cleanupSession,
+  getSessionStatus,
+} from '@/lib/chunkedUploadStore';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { createRequestLogger } from '@/lib/logger';
@@ -56,11 +61,25 @@ export async function POST(req: NextRequest) {
   try {
     assembled = await assembleFile(sessionId);
   } catch (err) {
-    return NextResponse.json(
-      {
-        error: err instanceof Error ? err.message : 'Failed to assemble upload',
-      },
-      { status: 400 },
+    log.warn('Failed to assemble upload', {
+      sessionId,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    const session = await getSessionStatus(sessionId).catch(() => null);
+    if (session) {
+      const received = session.receivedChunks.length;
+      const total = session.totalChunks;
+      return apiError(
+        ApiErrorCode.UPLOAD_INCOMPLETE,
+        400,
+        `Incomplete upload: received ${received}/${total} chunks`,
+        { received, total },
+      );
+    }
+    return apiError(
+      ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
+      400,
+      'Upload session not found or expired',
     );
   }
 

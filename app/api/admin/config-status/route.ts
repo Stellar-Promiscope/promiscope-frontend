@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminWallet } from '@/lib/adminAuth';
+import { getSessionWallet } from '@/lib/session';
 
 // Define the list of environment variables we care about
 type ConfigVar = {
@@ -32,7 +34,13 @@ const CONFIG_VARS: ConfigVar[] = [
   { name: 'SEP10_HOME_DOMAIN', required: false },
 ];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!requireAdminWallet(req)) {
+    return getSessionWallet(req)
+      ? NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      : NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const result = CONFIG_VARS.map((v) => {
     const value = process.env[v.name];
     const present = typeof value === 'string' && value.trim().length > 0;

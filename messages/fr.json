@@ -391,5 +391,18 @@
     "accept": "Accepter",
     "decline": "Refuser",
     "privacy_link": "Politique de confidentialité"
+  },
+  "apiErrors": {
+    "RATE_LIMITED": "Trop de requêtes. Veuillez ralentir et réessayer dans un instant.",
+    "INVALID_REQUEST": "La requête est invalide. Vérifiez vos informations et réessayez.",
+    "QUERY_TOO_LONG": "Le texte de recherche doit comporter au plus {max} caractères.",
+    "UPSTREAM_FAILED": "Le service est temporairement indisponible. Veuillez réessayer.",
+    "INVALID_SIGNATURE": "La vérification du portefeuille a échoué. Veuillez vous reconnecter.",
+    "UPLOAD_SESSION_NOT_FOUND": "Session de téléversement introuvable ou expirée. Veuillez recommencer le téléversement.",
+    "CHUNK_INDEX_OUT_OF_RANGE": "Une partie du téléversement est invalide. Veuillez réessayer.",
+    "UPLOAD_INCOMPLETE": "Téléversement incomplet : {received} parties reçues sur {total}.",
+    "DISPUTE_ALREADY_PENDING": "Ce jalon fait déjà l'objet d'une contestation en attente.",
+    "MILESTONE_NOT_FOUND": "Jalon introuvable.",
+    "UNKNOWN": "Une erreur s'est produite. Veuillez réessayer."
   }
 }

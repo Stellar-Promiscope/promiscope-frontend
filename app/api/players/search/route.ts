@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import axios from 'axios';
 import { createRequestLogger } from '@/lib/logger';
 import { getClientIp, checkRateLimit } from '@/lib/rateLimit';
@@ -43,18 +44,23 @@ export async function GET(req: NextRequest) {
   if (rl.limited) {
     log.warn('Rate limit exceeded', { ip });
     const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
-    return NextResponse.json(
-      { error: 'Too many search requests. Please slow down.' },
-      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    return apiError(
+      ApiErrorCode.RATE_LIMITED,
+      429,
+      'Too many search requests. Please slow down.',
+      undefined,
+      { headers: { 'Retry-After': String(retryAfter) } },
     );
   }
 
   const name = req.nextUrl.searchParams.get('name') ?? '';
 
   if (name.length > PLAYER_SEARCH_NAME_MAX) {
-    return NextResponse.json(
-      { error: `name must be at most ${PLAYER_SEARCH_NAME_MAX} characters` },
-      { status: 400 },
+    return apiError(
+      ApiErrorCode.QUERY_TOO_LONG,
+      400,
+      `name must be at most ${PLAYER_SEARCH_NAME_MAX} characters`,
+      { max: PLAYER_SEARCH_NAME_MAX },
     );
   }
 
@@ -67,6 +73,10 @@ export async function GET(req: NextRequest) {
       status,
       reason: e instanceof Error ? e.message : String(e),
     });
-    return NextResponse.json({ error: 'Failed to search players' }, { status });
+    return apiError(
+      ApiErrorCode.UPSTREAM_FAILED,
+      status,
+      'Failed to search players',
+    );
   }
 }

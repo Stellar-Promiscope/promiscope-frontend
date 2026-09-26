@@ -391,5 +391,18 @@
     "accept": "Accept",
     "decline": "Decline",
     "privacy_link": "Privacy Policy"
+  },
+  "apiErrors": {
+    "RATE_LIMITED": "Too many requests. Please slow down and try again shortly.",
+    "INVALID_REQUEST": "The request was invalid. Please check your input and try again.",
+    "QUERY_TOO_LONG": "Search text must be at most {max} characters.",
+    "UPSTREAM_FAILED": "The service is temporarily unavailable. Please try again.",
+    "INVALID_SIGNATURE": "Wallet verification failed. Please sign in again.",
+    "UPLOAD_SESSION_NOT_FOUND": "Upload session not found or expired. Please start the upload again.",
+    "CHUNK_INDEX_OUT_OF_RANGE": "Part of the upload was invalid. Please try again.",
+    "UPLOAD_INCOMPLETE": "Upload incomplete: received {received} of {total} parts.",
+    "DISPUTE_ALREADY_PENDING": "This milestone already has a pending dispute.",
+    "MILESTONE_NOT_FOUND": "Milestone not found.",
+    "UNKNOWN": "Something went wrong. Please try again."
   }
 }

@@ -86,7 +86,9 @@ describe('POST /api/ipfs/upload/complete', () => {
 
     const res = await POST(makeRequest({ sessionId }, 'ip-incomplete'));
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/incomplete/i);
+    const body = await res.json();
+    expect(body.error.code).toBe('UPLOAD_INCOMPLETE');
+    expect(body.error.message).toMatch(/incomplete/i);
   });
 
   it('returns 400 when the assembled file content does not match its declared MIME type', async () => {

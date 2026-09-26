@@ -391,5 +391,18 @@
     "accept": "Kubali",
     "decline": "Kataa",
     "privacy_link": "Sera ya Faragha"
+  },
+  "apiErrors": {
+    "RATE_LIMITED": "Maombi ni mengi mno. Tafadhali punguza kasi na ujaribu tena baada ya muda mfupi.",
+    "INVALID_REQUEST": "Ombi si sahihi. Tafadhali kagua maelezo yako na ujaribu tena.",
+    "QUERY_TOO_LONG": "Maandishi ya utafutaji yasizidi herufi {max}.",
+    "UPSTREAM_FAILED": "Huduma haipatikani kwa muda. Tafadhali jaribu tena.",
+    "INVALID_SIGNATURE": "Uthibitishaji wa pochi umeshindwa. Tafadhali ingia tena.",
+    "UPLOAD_SESSION_NOT_FOUND": "Kipindi cha kupakia hakijapatikana au kimeisha muda. Tafadhali anza kupakia upya.",
+    "CHUNK_INDEX_OUT_OF_RANGE": "Sehemu ya upakiaji si sahihi. Tafadhali jaribu tena.",
+    "UPLOAD_INCOMPLETE": "Upakiaji haujakamilika: sehemu {received} kati ya {total} zimepokelewa.",
+    "DISPUTE_ALREADY_PENDING": "Hatua hii tayari ina pingamizi linalosubiri.",
+    "MILESTONE_NOT_FOUND": "Hatua haijapatikana.",
+    "UNKNOWN": "Hitilafu imetokea. Tafadhali jaribu tena."
   }
 }

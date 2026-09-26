@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import { writeChunk } from '@/lib/chunkedUploadStore';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 
@@ -23,9 +24,12 @@ export async function POST(req: NextRequest) {
   const rl = checkRateLimit(ip);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    return apiError(
+      ApiErrorCode.RATE_LIMITED,
+      429,
+      'Too many requests',
+      undefined,
+      { headers: { 'Retry-After': String(retryAfter) } },
     );
   }
 
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'Invalid form data');
   }
 
   const sessionId = form.get('sessionId');
@@ -41,19 +45,17 @@ export async function POST(req: NextRequest) {
   const chunk = form.get('chunk');
 
   if (typeof sessionId !== 'string' || !sessionId) {
-    return NextResponse.json(
-      { error: 'sessionId is required' },
-      { status: 400 },
-    );
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'sessionId is required');
   }
   if (typeof chunkIndexRaw !== 'string' || !/^\d+$/.test(chunkIndexRaw)) {
-    return NextResponse.json(
-      { error: 'chunkIndex must be a non-negative integer' },
-      { status: 400 },
+    return apiError(
+      ApiErrorCode.INVALID_REQUEST,
+      400,
+      'chunkIndex must be a non-negative integer',
     );
   }
   if (!(chunk instanceof Blob)) {
-    return NextResponse.json({ error: 'chunk is required' }, { status: 400 });
+    return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'chunk is required');
   }
 
   const chunkIndex = Number(chunkIndexRaw);
@@ -63,9 +65,18 @@ export async function POST(req: NextRequest) {
     const status = await writeChunk(sessionId, chunkIndex, buffer);
     return NextResponse.json(status);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to write chunk' },
-      { status: 404 },
+    // An out-of-range index is a validation error, not a missing session.
+    if (err instanceof Error && err.message === 'Chunk index out of range') {
+      return apiError(
+        ApiErrorCode.CHUNK_INDEX_OUT_OF_RANGE,
+        400,
+        'Chunk index out of range',
+      );
+    }
+    return apiError(
+      ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
+      404,
+      'Upload session not found or expired',
     );
   }
 }

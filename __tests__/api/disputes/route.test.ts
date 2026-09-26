@@ -349,7 +349,10 @@ describe('POST /api/disputes', () => {
     );
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.error).toMatch(/milestone non_existent_milestone not found/i);
+    expect(body.error.code).toBe('MILESTONE_NOT_FOUND');
+    expect(body.error.message).toMatch(
+      /milestone non_existent_milestone not found/i,
+    );
   });
 
   it('creates a dispute with the authentic on-chain description even if client supplies forged description', async () => {
