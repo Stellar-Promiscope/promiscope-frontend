@@ -63,7 +63,25 @@
     "milestones": "Jalons",
     "search_player": "Rechercher un joueur par adresse de portefeuille",
     "player_not_found": "Joueur non trouvé",
-    "no_players": "Aucun joueur trouvé"
+    "no_players": "Aucun joueur trouvé",
+    "all_regions": "Toutes les régions",
+    "any_position": "Tous les postes",
+    "save_search_placeholder": "ex. attaquants de Lagos"
+  },
+  "trial_offer": {
+    "form_label": "Enregistrer une offre d'essai",
+    "club_name": "Nom du club",
+    "club_name_placeholder": "ex. FC Barcelone",
+    "club_name_required": "Le nom du club est requis",
+    "offer_type": "Type d'offre",
+    "offer_type_trial": "Essai",
+    "offer_type_loan": "Prêt",
+    "offer_type_transfer": "Transfert",
+    "message": "Message",
+    "optional": "facultatif",
+    "message_hint": "Détails supplémentaires sur l'offre…",
+    "submit": "Envoyer l'offre d'essai",
+    "submitting": "Envoi…"
   },
   "player_profile": {
     "back_to_scout_dashboard": "← Retour au tableau de bord des scouts"

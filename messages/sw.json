@@ -121,7 +121,25 @@
     "milestones": "Miikukuu",
     "search_player": "TODO: Machine-translated - Tafuta mchezaji kwa anwani ya pochi",
     "player_not_found": "TODO: Machine-translated - Mchezaji hajafikiwa",
-    "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana"
+    "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana",
+    "all_regions": "Maeneo yote",
+    "any_position": "Nafasi yoyote",
+    "save_search_placeholder": "mf. washambuliaji wa Lagos"
+  },
+  "trial_offer": {
+    "form_label": "Rekodi ofa ya majaribio",
+    "club_name": "Jina la Klabu",
+    "club_name_placeholder": "mf. FC Barcelona",
+    "club_name_required": "Jina la klabu linahitajika",
+    "offer_type": "Aina ya Ofa",
+    "offer_type_trial": "Majaribio",
+    "offer_type_loan": "Mkopo",
+    "offer_type_transfer": "Uhamisho",
+    "message": "Ujumbe",
+    "optional": "si lazima",
+    "message_hint": "Maelezo ya ziada kuhusu ofa…",
+    "submit": "Wasilisha Ofa ya Majaribio",
+    "submitting": "Inawasilisha…"
   },
   "player_profile": {
     "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout"

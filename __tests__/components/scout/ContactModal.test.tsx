@@ -18,10 +18,12 @@ function setHook(
   overrides: {
     contactDetails?: Record<string, string | undefined>;
     clear?: jest.Mock;
+    loading?: boolean;
   } = {},
 ) {
   mockUsePayToContact.mockReturnValue({
     contactDetails: undefined,
+    loading: false,
     clear: jest.fn(),
     ...overrides,
   });
@@ -98,5 +100,24 @@ describe('ContactModal', () => {
 
     expect(clear).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a spinner and disables the action buttons while pay-to-contact is pending', () => {
+    setHook({ loading: true, contactDetails: { email: 'p@example.com' } });
+    render(<ContactModal isOpen onClose={jest.fn()} playerId={PLAYER_ID} />);
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Confirming pay-to-contact transaction/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
+  });
+
+  it('re-enables the action buttons once the transaction resolves', () => {
+    setHook({ loading: false, contactDetails: { email: 'p@example.com' } });
+    render(<ContactModal isOpen onClose={jest.fn()} playerId={PLAYER_ID} />);
+    expect(
+      screen.queryByText(/Confirming pay-to-contact transaction/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
   });
 });

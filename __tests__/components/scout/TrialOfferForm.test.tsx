@@ -7,6 +7,13 @@ import userEvent from '@testing-library/user-event';
 const mockLogTrialOffer = jest.fn();
 const mockUseTrialOffer = jest.fn();
 
+jest.mock('next-intl', () => {
+  const en = jest.requireActual('@/messages/en.json');
+  return {
+    useTranslations: (ns: string) => (key: string) => en[ns]?.[key] ?? key,
+  };
+});
+
 jest.mock('@/hooks/useTrialOffer', () => ({
   useTrialOffer: () => mockUseTrialOffer(),
 }));
