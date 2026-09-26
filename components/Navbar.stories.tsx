@@ -115,6 +115,7 @@ export const SwahiliLabels: Story = {
 };
 
 export const OpenMobileMenu: Story = {
+  parameters: { testRunner: { viewport: { width: 375, height: 812 } } },
   render: () => (
     <StoryProviders locale="en" authenticated={true}>
       <Navbar />

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { expect, userEvent, waitFor, within } from '@storybook/test';
 import Tooltip from './Tooltip';
 import Badge from './Badge';
 
@@ -55,4 +56,38 @@ export const BottomFlip: Story = {
       </Tooltip>
     </div>
   ),
+};
+
+/**
+ * Interaction test (issue #1322): keyboard users get the tooltip on focus,
+ * it's linked to the trigger via aria-describedby, and it hides on blur.
+ */
+export const FocusPlay: Story = {
+  name: 'Keyboard focus (play)',
+  render: () => (
+    <Tooltip content="Fee goes to the platform treasury">
+      <button type="button" className="text-brand-green underline">
+        Fee info
+      </button>
+    </Tooltip>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+
+    await userEvent.tab();
+    await expect(
+      canvas.getByRole('button', { name: 'Fee info' }),
+    ).toHaveFocus();
+    const tooltip = await page.findByRole('tooltip');
+    await expect(tooltip).toHaveTextContent(
+      'Fee goes to the platform treasury',
+    );
+    await expect(
+      canvasElement.querySelector(`[aria-describedby="${tooltip.id}"]`),
+    ).not.toBeNull();
+
+    await userEvent.tab();
+    await waitFor(() => expect(page.queryByRole('tooltip')).toBeNull());
+  },
 };

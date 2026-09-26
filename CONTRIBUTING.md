@@ -178,6 +178,44 @@ The repository exposes the following test-related commands:
 - `npm run prepare` — install Husky hooks
 - `npm run test:visual` — run Storybook visual regression checks against committed baselines
 - `npm run test:visual:update` — regenerate visual regression baselines after an intentional UI change (see [docs/visual-regression.md](docs/visual-regression.md))
+- `npm run test-storybook` — run Storybook interaction tests (play functions and axe a11y checks) against a running Storybook (`npm run storybook`)
+- `npm run test-storybook:ci` — the same against the static build (`npm run build-storybook` first); this is what CI runs
+
+### Storybook Interaction Tests
+
+jsdom doesn't do real layout or focus, so behaviour like focus traps, keyboard navigation, stacking and gestures is tested in a real browser. You write it as a Storybook `play` function, and `@storybook/test-runner` runs it in Chromium in the `build-storybook` CI job. A failing assertion fails the job.
+
+When you add or change an interactive component, add a story with a `play` function next to its visual stories. Name it with a `(play)` suffix:
+
+```tsx
+import { expect, fn, userEvent, waitFor, within } from '@storybook/test';
+
+export const ConfirmCancelPlay: Story = {
+  name: 'Confirm / cancel (play)',
+  args: { isOpen: true, title: 'Remove?', message: '…', onCancel: fn() },
+  play: async ({ args, canvasElement }) => {
+    const dialog = within(await within(canvasElement).findByRole('dialog'));
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }));
+    await expect(args.onCancel).toHaveBeenCalled();
+  },
+};
+```
+
+Guidelines:
+
+- Assert **behaviour**, not markup: focus movement, handlers called, elements appearing or disappearing, layout (`getBoundingClientRect`).
+- Query by role and accessible name. Use `within(canvasElement.ownerDocument.body)` for anything portalled outside the story root (tooltips, toasts).
+- Use `fn()` args to assert callbacks. Use `waitFor` for timers and animations rather than fixed sleeps.
+- For mobile-only UI, request a viewport: `parameters: { testRunner: { viewport: { width: 375, height: 812 } } }`.
+- Stories with a `play` function are **excluded from visual regression**, because their end state isn't a stable screenshot. Keep a plain sibling story for the visual baseline.
+- Every story is also checked with axe (`.storybook/test-runner.ts`). Violations **fail** stories that have a `play` function and are logged as warnings for other stories. Tune or disable rules per story with the `a11y` parameter (`parameters: { a11y: { config: { rules: [...] } } }`), the same one the Storybook a11y panel reads.
+
+To run them locally:
+
+```bash
+npx playwright install chromium
+npm run build-storybook && npm run test-storybook:ci
+```
 
 ### Indexer Package Tests
 

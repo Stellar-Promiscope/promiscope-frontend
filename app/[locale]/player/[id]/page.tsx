@@ -249,7 +249,10 @@ export default function PlayerProfile() {
           </button>
         )}
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
-          <IPFSMediaGallery cids={player.ipfsHash ? [player.ipfsHash] : []} />
+          <IPFSMediaGallery
+            cids={player.ipfsHash ? [player.ipfsHash] : []}
+            playerId={player.id}
+          />
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">
@@ -377,10 +380,19 @@ export default function PlayerProfile() {
             confirmLabel="Confirm"
             loading={feeCheckStatus === 'checking' || contacting}
           />
+          <button
+            type="button"
+            onClick={() => setContactModalOpen(true)}
+            disabled={contacting}
+            className="text-sm text-gray-400 underline hover:text-white disabled:opacity-50"
+          >
+            Pay with USDC instead
+          </button>
           <ContactModal
             isOpen={contactModalOpen}
             onClose={() => setContactModalOpen(false)}
             playerId={id ?? ''}
+            feeXlm={displayFee}
           />
         </div>
       )}

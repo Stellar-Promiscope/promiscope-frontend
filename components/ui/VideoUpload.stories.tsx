@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { expect, fn, userEvent, within } from '@storybook/test';
 import VideoUpload from './VideoUpload';
 import Spinner from './Spinner';
 
@@ -48,4 +48,36 @@ export const UploadingState: Story = {
       </div>
     </div>
   ),
+};
+
+/**
+ * Interaction test (issue #1322): client-side validation rejects an
+ * unsupported type and an oversized file before any upload starts.
+ */
+export const ValidationPlay: Story = {
+  name: 'Rejects invalid files (play)',
+  args: {},
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByLabelText('Highlight Reel') as HTMLInputElement;
+    const user = userEvent.setup({ applyAccept: false });
+
+    await user.upload(
+      input,
+      new File(['hello'], 'notes.txt', { type: 'text/plain' }),
+    );
+    await expect(
+      await canvas.findByText(/File type "text\/plain" is not supported/),
+    ).toBeInTheDocument();
+    await expect(input).toHaveAttribute('aria-invalid', 'true');
+
+    const big = new File(['x'], 'big.mp4', { type: 'video/mp4' });
+    Object.defineProperty(big, 'size', { value: 60 * 1024 * 1024 });
+    await user.upload(input, big);
+    await expect(
+      await canvas.findByText(/File is too large/),
+    ).toBeInTheDocument();
+
+    await expect(args.onUpload).not.toHaveBeenCalled();
+  },
 };

@@ -319,7 +319,9 @@
     "section6_title": "6. Conservation et suppression",
     "section6_content": "Les données on-chain sont permanentes et ne peuvent pas être supprimées. Les données off-chain sont conservées aussi longtemps que nécessaire. Vous pouvez demander la suppression de vos données off-chain via les paramètres du compte. Utilisez l'action « Demander la suppression des données » dans les paramètres du compte.",
     "section7_title": "7. Vos droits et contact",
-    "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de ScoutOff."
+    "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de ScoutOff.",
+    "section8_title": "Signalements de médias",
+    "section8_content": "Lorsque vous signalez un média, nous conservons son identifiant (CID), le joueur concerné, le motif et les détails fournis, ainsi qu'une empreinte irréversible de votre adresse de portefeuille ou de votre adresse IP, utilisée uniquement pour regrouper les signalements en double et prévenir les abus. Les décisions des modérateurs sont consignées dans notre journal d'audit d'administration. Nous ne communiquons pas l'identité des auteurs de signalements au joueur signalé."
   },
   "terms": {
     "back_to_home": "Retour à l'accueil",
@@ -338,7 +340,9 @@
     "section5_title": "5. Propriété intellectuelle",
     "section5_content": "Les joueurs conservent la propriété du contenu de leur profil et de leurs données personnelles. En soumettant du contenu à ScoutOff, vous nous accordez une licence pour afficher ce contenu uniquement aux fins de l'exploitation de la plateforme. Le code de la plateforme est open source.",
     "section6_title": "6. Avertissements et limitations",
-    "section6_content": "ScoutOff est fourni « en l'état » sans garantie. Nous ne sommes pas responsables de l'exactitude des informations sur les joueurs, du contenu IPFS, des pertes dues à des problèmes de réseau blockchain ou à des bugs de contrats intelligents. Notre responsabilité n'excédera pas les frais que vous nous avez versés au cours des 12 mois précédant la réclamation."
+    "section6_content": "ScoutOff est fourni « en l'état » sans garantie. Nous ne sommes pas responsables de l'exactitude des informations sur les joueurs, du contenu IPFS, des pertes dues à des problèmes de réseau blockchain ou à des bugs de contrats intelligents. Notre responsabilité n'excédera pas les frais que vous nous avez versés au cours des 12 mois précédant la réclamation.",
+    "section7_title": "Signalement et retrait des médias",
+    "section7_content": "Toute personne peut signaler une photo ou une vidéo d'un joueur depuis la galerie du profil (motifs : nudité, violence, usurpation d'identité, droits d'auteur, autre). Nos modérateurs examinent les signalements et peuvent retirer les médias qui enfreignent ces conditions ou la loi. Les médias retirés ne sont plus affichés ni servis par ScoutOff et peuvent également être désépinglés de notre service d'épinglage IPFS après un court délai de grâce. IPFS étant un réseau public, le retrait ne s'applique qu'à ScoutOff : le même contenu peut rester accessible via des passerelles IPFS publiques ou des nœuds qui l'épinglent indépendamment. Les titulaires de droits et toute personne concernée peuvent aussi nous contacter pour demander un retrait ; nous traiterons rapidement les demandes valables."
   },
   "settings": {
     "back_to_home": "Retour à l'accueil",

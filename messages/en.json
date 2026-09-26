@@ -319,7 +319,9 @@
     "section6_title": "6. Retention and Deletion",
     "section6_content": "On-chain data is permanent and cannot be deleted. Off-chain data is retained for as long as necessary. You can request deletion of your off-chain data through account settings. Use the ‘Request Data Deletion’ action in Account Settings.",
     "section7_title": "7. Your Rights and Contact",
-    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels."
+    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels.",
+    "section8_title": "Media reports",
+    "section8_content": "When you report media we store the media identifier (CID), the player it appeared on, the reason and any details you provide, together with a one-way hash of your wallet address or IP address used only to merge duplicate reports and prevent abuse. Moderator decisions are recorded in our admin audit log. We do not share reporter identities with the reported player."
   },
   "terms": {
     "back_to_home": "Back to Home",
@@ -338,7 +340,9 @@
     "section5_title": "5. Intellectual Property",
     "section5_content": "Players retain ownership of their profile content and personal data. By submitting content to ScoutOff, you grant us a license to display that content solely for the purpose of operating the platform. The platform’s code is open source.",
     "section6_title": "6. Disclaimers and Limitations",
-    "section6_content": "ScoutOff is provided “as is” without warranties. We are not responsible for the accuracy of player information, IPFS content, losses from blockchain network issues, or smart contract bugs. Our liability will not exceed the fees you paid us in the 12 months prior to the claim."
+    "section6_content": "ScoutOff is provided “as is” without warranties. We are not responsible for the accuracy of player information, IPFS content, losses from blockchain network issues, or smart contract bugs. Our liability will not exceed the fees you paid us in the 12 months prior to the claim.",
+    "section7_title": "Reporting and removal of media",
+    "section7_content": "Anyone can report a player's photo or video from the profile gallery (reasons: nudity, violence, impersonation, copyright, other). Our moderators review reports and may remove media that breaks these terms or the law. Removed media is no longer shown or served by ScoutOff, and may also be unpinned from our IPFS pinning service after a short grace period. Because IPFS is a public network, removal applies to ScoutOff only: the same content may remain reachable through public IPFS gateways or nodes that pin it independently. Copyright holders and anyone affected may also contact us to request a takedown, and we will act on valid requests promptly."
   },
   "settings": {
     "back_to_home": "Back to Home",

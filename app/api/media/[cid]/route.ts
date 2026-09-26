@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
+import { MediaModerationStore } from '@/lib/mediaModerationStore';
 
 /**
  * GET /api/media/[cid]
@@ -105,6 +106,16 @@ export async function GET(
   const cid = params.cid;
   if (!cid) {
     return NextResponse.json({ error: 'Missing cid' }, { status: 400 });
+  }
+
+  // Moderated media (issue #1320): never proxied, and never cached, so a
+  // later reinstatement takes effect. This only covers ScoutOff's own
+  // surfaces — the CID stays reachable through public IPFS gateways.
+  if (MediaModerationStore.getInstance().isDenylisted(cid)) {
+    return NextResponse.json(
+      { error: 'This media has been removed for legal or policy reasons' },
+      { status: 451, headers: { 'Cache-Control': 'no-store' } },
+    );
   }
 
   const ip = getClientIp(req);

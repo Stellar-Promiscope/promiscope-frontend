@@ -10,7 +10,11 @@
     "test": "cd ../.. && npx jest packages/indexer"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "@types/node": "^20.14.2"
+    "@types/node": "^20.14.2",
+    "@types/pg": "^8.23.1",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "pg": "^8.23.0"
   }
 }

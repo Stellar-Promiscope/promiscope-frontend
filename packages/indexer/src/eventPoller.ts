@@ -1,8 +1,13 @@
 import { createHash } from 'crypto';
 import { SorobanRpc, Networks, xdr, scValToNative } from '@stellar/stellar-sdk';
 import { IndexerMetrics, type EventType } from './metrics/IndexerMetrics';
-import { updateLastLedger, updateNetworkLedger } from './ledgerTracker';
-import { EventStore } from './db/eventStore';
+import {
+  setRole,
+  updateLastLedger,
+  updateNetworkLedger,
+} from './ledgerTracker';
+import { EventStore, type IndexerStore } from './db/eventStore';
+import type { LeaderElector } from './leaderElection';
 
 /**
  * Polls Soroban RPC's getEvents for new ScoutOff contract events and feeds
@@ -246,7 +251,7 @@ export async function pollOnce(
   rpc: RpcClient,
   metrics: IndexerMetrics,
   cursorLedger: number,
-  store: EventStore,
+  store: IndexerStore,
 ): Promise<number> {
   const cycleStart = Date.now();
 
@@ -287,17 +292,17 @@ export async function pollOnce(
     }
 
     let nextCursor = cursorLedger > 0 ? cursorLedger : effectiveStart;
+    const decodedBatch: Array<{ event: DecodedEvent; decodeMs: number }> = [];
 
     for (const raw of res.events) {
       const eventStart = Date.now();
       try {
-        const decoded = decodeEvent(raw);
-        store.insertEvent(decoded);
-        metrics.recordSuccess(
-          decoded.type,
-          Date.now() - eventStart,
-          JSON.stringify(decoded.data).length,
-        );
+        const event = decodeEvent(raw);
+        // Serialise up front: an event the store can't persist must be
+        // skipped on its own (as before batching), not fail the whole
+        // batch and pin the cursor on this range forever.
+        JSON.stringify(event.data);
+        decodedBatch.push({ event, decodeMs: Date.now() - eventStart });
       } catch {
         // Malformed or unrecognized event from our own contract — a real
         // processing failure, not a transient RPC error, but still must
@@ -312,6 +317,31 @@ export async function pollOnce(
 
     if (res.events.length === 0) {
       nextCursor = Math.max(nextCursor, res.latestLedger + 1);
+    }
+
+    // Events and checkpoint commit together (issue #1319): if the write
+    // fails, neither lands and the same range is retried next cycle.
+    const writeStart = Date.now();
+    try {
+      await store.insertBatch(
+        decodedBatch.map((d) => d.event),
+        {
+          lastLedger: Math.max(nextCursor - 1, 0),
+          networkLedger: latest.sequence,
+        },
+      );
+    } catch {
+      metrics.recordFailure(Date.now() - cycleStart);
+      metrics.reportCursor(cursorLedger);
+      return cursorLedger;
+    }
+    const writeMs = Date.now() - writeStart;
+    for (const { event, decodeMs } of decodedBatch) {
+      metrics.recordSuccess(
+        event.type,
+        decodeMs + writeMs,
+        JSON.stringify(event.data).length,
+      );
     }
 
     updateLastLedger(Math.max(nextCursor - 1, 0));
@@ -339,14 +369,40 @@ export function startEventPolling(
   config: PollerConfig = loadConfigFromEnv(),
   rpc: RpcClient = createRpcClient(config),
   metrics: IndexerMetrics = IndexerMetrics.getInstance(),
-  store: EventStore = EventStore.getInstance(),
+  store: IndexerStore = EventStore.getInstance(),
+  elector: LeaderElector | null = null,
 ): EventPollerHandle {
   let cursor = config.startLedger;
+  let wasLeader = false;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   async function tick(): Promise<void> {
-    cursor = await pollOnce(config, rpc, metrics, cursor, store);
+    try {
+      // Without an elector (single replica) this process is always leader.
+      const isLeader = elector ? await elector.tick() : true;
+      setRole(isLeader ? 'leader' : 'follower');
+
+      if (isLeader) {
+        if (!wasLeader) {
+          // Fresh start or takeover: resume from the shared checkpoint.
+          const checkpoint = await store.getCheckpoint();
+          if (checkpoint && checkpoint.lastLedger + 1 > cursor) {
+            cursor = checkpoint.lastLedger + 1;
+          }
+        }
+        wasLeader = true;
+        if (!stopped) {
+          cursor = await pollOnce(config, rpc, metrics, cursor, store);
+        }
+      } else {
+        // Lost (or never held) the lock: stop polling immediately.
+        wasLeader = false;
+      }
+    } catch (err) {
+      console.error('[eventPoller] poll cycle failed:', err);
+      metrics.recordFailure(0);
+    }
     if (!stopped) {
       timer = setTimeout(tick, config.pollIntervalMs);
     }
@@ -358,6 +414,7 @@ export function startEventPolling(
     stop(): void {
       stopped = true;
       if (timer) clearTimeout(timer);
+      void elector?.release();
     },
   };
 }

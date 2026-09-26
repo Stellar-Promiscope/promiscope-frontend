@@ -17,7 +17,28 @@ import {
   contactDetailsKey,
   purgeContactDetails,
 } from '@/lib/contactDetailsCache';
+import {
+  clearPendingSwap,
+  computeSendMax,
+  getAssetBalance,
+  getPendingSwap,
+  isQuoteExpired,
+  QuoteExpiredError,
+  savePendingSwap,
+  swapToXlm,
+  type PathQuote,
+  type PendingSwap,
+} from '@/lib/pathPayment';
 import type { ContactDetails } from '@/types';
+
+/**
+ * Pay the XLM fee with another asset (issue #1321): convert via a path
+ * payment first, then run the normal XLM contract call.
+ */
+export interface AssetPayment {
+  quote: PathQuote;
+  slippageBps: number;
+}
 
 /**
  * Pays to unlock a player's contact details and exposes the result through
@@ -59,75 +80,143 @@ export function usePayToContact(playerId: string) {
   // promise instead of building/signing/submitting a second payToContact
   // transaction. See docs/payment-idempotency.md for what this does and
   // doesn't guarantee.
-  const unlock = useCallback((): Promise<ContactDetails | undefined> => {
-    return submitGuarded(async () => {
-      function fail(msg: string): void {
-        setError(msg);
-        show({ message: msg, variant: 'error' });
-      }
+  const [pendingSwap, setPendingSwap] = useState<PendingSwap | null>(() =>
+    publicKey && typeof window !== 'undefined'
+      ? getPendingSwap(publicKey, playerId)
+      : null,
+  );
 
-      if (!publicKey) {
-        fail('Wallet not connected.');
-        return undefined;
-      }
+  const run = useCallback(
+    (payment?: AssetPayment): Promise<ContactDetails | undefined> => {
+      return submitGuarded(async () => {
+        function fail(msg: string): void {
+          setError(msg);
+          show({ message: msg, variant: 'error' });
+        }
 
-      setLoading(true);
-      setError(null);
-
-      try {
-        // ── 1. Block gate ────────────────────────────────────────────────────
-        // pay_to_contact is submitted directly to the chain (lib/contract.ts)
-        // and never touches the chat API, so it bypasses the block check that
-        // stops blocked users from messaging — this is the only place that
-        // check can happen before an unlock (and its fee) goes through.
-        if (await isBlockedByCounterpart(playerId)) {
-          fail('This player is not accepting new contact requests.');
+        if (!publicKey) {
+          fail('Wallet not connected.');
           return undefined;
         }
 
-        // ── 2. Subscription gate ────────────────────────────────────────────
-        const subscription = await getSubscription(publicKey);
-        const now = Date.now() / 1000;
-        if (!subscription || subscription.expiresAt < now) {
-          fail(
-            'An active subscription is required to contact players. Please subscribe or renew.',
+        setLoading(true);
+        setError(null);
+
+        try {
+          // ── 1. Block gate ────────────────────────────────────────────────────
+          // pay_to_contact is submitted directly to the chain (lib/contract.ts)
+          // and never touches the chat API, so it bypasses the block check that
+          // stops blocked users from messaging — this is the only place that
+          // check can happen before an unlock (and its fee) goes through.
+          if (await isBlockedByCounterpart(playerId)) {
+            fail('This player is not accepting new contact requests.');
+            return undefined;
+          }
+
+          // ── 2. Subscription gate ────────────────────────────────────────────
+          const subscription = await getSubscription(publicKey);
+          const now = Date.now() / 1000;
+          if (!subscription || subscription.expiresAt < now) {
+            fail(
+              'An active subscription is required to contact players. Please subscribe or renew.',
+            );
+            return undefined;
+          }
+
+          // ── 3. Balance gate (converting from another asset if requested) ────
+          const balance = parseFloat(xlmBalance ?? '0');
+          const recovered = getPendingSwap(publicKey, playerId);
+          if (payment && !(recovered && balance >= PLATFORM_CONTACT_FEE_XLM)) {
+            const { quote, slippageBps } = payment;
+            if (isQuoteExpired(quote)) throw new QuoteExpiredError();
+            const sendMax = computeSendMax(quote.sourceAmount, slippageBps);
+            const assetBalance = await getAssetBalance(
+              publicKey,
+              quote.sourceAsset,
+            );
+            if (assetBalance < parseFloat(sendMax)) {
+              fail(
+                `Insufficient ${quote.sourceAsset.code}. You need up to ${sendMax} ${quote.sourceAsset.code} (including slippage) to contact this player.`,
+              );
+              return undefined;
+            }
+            const txHash = await swapToXlm(
+              publicKey,
+              quote,
+              slippageBps,
+              signOnly,
+            );
+            const swap = {
+              txHash,
+              xlmAmount: parseFloat(quote.destAmount),
+              createdAt: Date.now(),
+            };
+            savePendingSwap(publicKey, playerId, swap);
+            setPendingSwap(swap);
+            await refreshBalance();
+          } else if (!payment && balance < PLATFORM_CONTACT_FEE_XLM) {
+            fail(
+              `Insufficient XLM. You need at least ${PLATFORM_CONTACT_FEE_XLM} XLM to contact this player.`,
+            );
+            return undefined;
+          }
+
+          // ── 4. Sign, submit, and cache the result ───────────────────────────
+          let details: ContactDetails;
+          try {
+            details = await payToContact(publicKey, playerId, signOnly);
+          } catch (e) {
+            if (getPendingSwap(publicKey, playerId)) {
+              // The swap landed but the contract call didn't: the scout now
+              // holds the XLM, and a retry skips the conversion.
+              fail(
+                `Your payment was converted to XLM, but the contact payment failed (${parseContractError(e)}). You can retry without converting again.`,
+              );
+              (e as { handled?: boolean }).handled = true;
+            }
+            throw e;
+          }
+          clearPendingSwap(publicKey, playerId);
+          setPendingSwap(null);
+          await refreshBalance();
+          await cacheContactDetails(
+            contactDetailsKey(playerId, publicKey),
+            details,
           );
-          return undefined;
+          return details;
+        } catch (e: any) {
+          if (!e?.handled) {
+            fail(
+              e instanceof QuoteExpiredError
+                ? e.message
+                : parseContractError(e),
+            );
+          }
+          throw e;
+        } finally {
+          setLoading(false);
         }
+      });
+    },
+    [
+      submitGuarded,
+      publicKey,
+      playerId,
+      xlmBalance,
+      signOnly,
+      refreshBalance,
+      show,
+    ],
+  );
 
-        // ── 3. Balance gate ─────────────────────────────────────────────────
-        const balance = parseFloat(xlmBalance ?? '0');
-        if (balance < PLATFORM_CONTACT_FEE_XLM) {
-          fail(
-            `Insufficient XLM. You need at least ${PLATFORM_CONTACT_FEE_XLM} XLM to contact this player.`,
-          );
-          return undefined;
-        }
+  /** Pays the fee in XLM. */
+  const unlock = useCallback(() => run(), [run]);
 
-        // ── 4. Sign, submit, and cache the result ───────────────────────────
-        const details = await payToContact(publicKey, playerId, signOnly);
-        await refreshBalance();
-        await cacheContactDetails(
-          contactDetailsKey(playerId, publicKey),
-          details,
-        );
-        return details;
-      } catch (e: any) {
-        fail(parseContractError(e));
-        throw e;
-      } finally {
-        setLoading(false);
-      }
-    });
-  }, [
-    submitGuarded,
-    publicKey,
-    playerId,
-    xlmBalance,
-    signOnly,
-    refreshBalance,
-    show,
-  ]);
+  /** Converts from another asset (e.g. USDC) via a path payment, then pays. */
+  const unlockWithAsset = useCallback(
+    (payment: AssetPayment) => run(payment),
+    [run],
+  );
 
   /** Purges this player's cached contact details immediately. */
   const clear = useCallback(() => {
@@ -135,5 +224,13 @@ export function usePayToContact(playerId: string) {
     purgeContactDetails(key);
   }, [key]);
 
-  return { unlock, contactDetails, loading, error, clear };
+  return {
+    unlock,
+    unlockWithAsset,
+    pendingSwap,
+    contactDetails,
+    loading,
+    error,
+    clear,
+  };
 }

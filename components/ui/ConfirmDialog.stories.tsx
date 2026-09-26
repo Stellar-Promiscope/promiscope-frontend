@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { expect, fn, userEvent, within } from '@storybook/test';
 import { useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
 import Button from './Button';
@@ -103,5 +103,53 @@ export const Interactive: Story = {
       );
     }
     return <Demo />;
+  },
+};
+
+/** Interaction test (issue #1322): Cancel, Escape and Confirm call the right handlers. */
+export const ConfirmCancelPlay: Story = {
+  name: 'Confirm / cancel (play)',
+  args: {
+    isOpen: true,
+    title: 'Remove Validator',
+    message: 'Remove this validator?',
+    confirmLabel: 'Remove',
+    cancelLabel: 'Keep',
+  },
+  play: async ({ args, canvasElement }) => {
+    const dialog = within(await within(canvasElement).findByRole('dialog'));
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Keep' }));
+    await expect(args.onCancel).toHaveBeenCalledTimes(1);
+    await expect(args.onConfirm).not.toHaveBeenCalled();
+
+    await userEvent.keyboard('{Escape}');
+    await expect(args.onCancel).toHaveBeenCalledTimes(2);
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove' }));
+    await expect(args.onConfirm).toHaveBeenCalledTimes(1);
+  },
+};
+
+/** Interaction test: while loading, neither button can fire. */
+export const LoadingBlocksPlay: Story = {
+  name: 'Loading blocks actions (play)',
+  args: {
+    isOpen: true,
+    title: 'Confirm Withdrawal',
+    message: 'Withdraw all fees?',
+    loading: true,
+  },
+  play: async ({ args, canvasElement }) => {
+    const dialog = within(await within(canvasElement).findByRole('dialog'));
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await expect(
+      dialog.getByRole('button', { name: /Confirm/ }),
+    ).toBeDisabled();
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }), {
+      pointerEventsCheck: 0,
+    });
+    await expect(args.onCancel).not.toHaveBeenCalled();
+    await expect(args.onConfirm).not.toHaveBeenCalled();
   },
 };

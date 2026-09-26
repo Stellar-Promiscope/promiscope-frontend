@@ -12,6 +12,9 @@ export const ADMIN_AUDIT_ACTION_TYPES = [
   'pause',
   'unpause',
   'fraud_flag_dismiss',
+  'media_approve',
+  'media_deny',
+  'media_reinstate',
 ] as const;
 
 export type AdminAuditActionType = (typeof ADMIN_AUDIT_ACTION_TYPES)[number];
@@ -68,6 +71,9 @@ export const ADMIN_AUDIT_ACTION_LABELS: Record<AdminAuditActionType, string> = {
   pause: 'Contract Paused',
   unpause: 'Contract Unpaused',
   fraud_flag_dismiss: 'Fraud Flag Dismissed',
+  media_approve: 'Reported Media Approved',
+  media_deny: 'Media Denylisted',
+  media_reinstate: 'Media Reinstated',
 };
 
 export interface ReconciliationMismatch {

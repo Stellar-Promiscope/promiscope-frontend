@@ -12,6 +12,7 @@ Off-chain event indexer for the ScoutOff platform. Subscribes to Soroban contrac
 - [Querying Indexed Data](#querying-indexed-data)
 - [HTTP API Reference](#http-api-reference)
 - [Prometheus Scrape Config](#prometheus-scrape-config)
+- [Deployment Topologies](#deployment-topologies)
 - [Tests](#tests)
 
 ---
@@ -114,16 +115,18 @@ Or, as part of the full local stack (frontend + indexer + mocked RPC/API), see t
 
 ## Environment Variables
 
-| Variable             | Required | Default                                               | Description                                                      |
-| -------------------- | -------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| `PORT`               | No       | `3001`                                                | HTTP server port for `/health` and `/metrics`                    |
-| `SOROBAN_RPC_URL`    | Yes      | —                                                     | Soroban RPC endpoint, e.g. `https://soroban-testnet.stellar.org` |
-| `CONTRACT_ID`        | Yes      | —                                                     | Deployed ScoutOff contract address (Strkey format)               |
-| `NETWORK_PASSPHRASE` | No       | Testnet passphrase                                    | Stellar network passphrase used to decode event XDR              |
-| `POLL_INTERVAL_MS`   | No       | `5000`                                                | How often (ms) to poll for new ledgers                           |
-| `START_LEDGER`       | No       | `0`                                                   | Ledger sequence to start indexing from (0 = latest)              |
-| `LOG_LEVEL`          | No       | `info`                                                | Log verbosity: `debug`, `info`, `warn`, `error`                  |
-| `INDEXER_DB_PATH`    | No       | `./data/indexer.db` (`:memory:` when `NODE_ENV=test`) | Path to the SQLite event store file                              |
+| Variable                  | Required | Default                                               | Description                                                                                                                                                          |
+| ------------------------- | -------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                    | No       | `3001`                                                | HTTP server port for `/health` and `/metrics`                                                                                                                        |
+| `SOROBAN_RPC_URL`         | Yes      | —                                                     | Soroban RPC endpoint, e.g. `https://soroban-testnet.stellar.org`                                                                                                     |
+| `CONTRACT_ID`             | Yes      | —                                                     | Deployed ScoutOff contract address (Strkey format)                                                                                                                   |
+| `NETWORK_PASSPHRASE`      | No       | Testnet passphrase                                    | Stellar network passphrase used to decode event XDR                                                                                                                  |
+| `POLL_INTERVAL_MS`        | No       | `5000`                                                | How often (ms) to poll for new ledgers                                                                                                                               |
+| `START_LEDGER`            | No       | `0`                                                   | Ledger sequence to start indexing from (0 = latest)                                                                                                                  |
+| `LOG_LEVEL`               | No       | `info`                                                | Log verbosity: `debug`, `info`, `warn`, `error`                                                                                                                      |
+| `INDEXER_DB_PATH`         | No       | `./data/indexer.db` (`:memory:` when `NODE_ENV=test`) | Path to the SQLite event store file                                                                                                                                  |
+| `INDEXER_DATABASE_URL`    | No       | —                                                     | Postgres connection string. When set, the shared Postgres store and leader election are used instead of SQLite (see [Deployment Topologies](#deployment-topologies)) |
+| `INDEXER_LEADER_LOCK_KEY` | No       | `7319001`                                             | Advisory-lock key for leader election; change it only to run several independent indexers on one database                                                            |
 
 Copy `.env.example` in the repo root and fill in the required values:
 
@@ -381,16 +384,20 @@ curl http://localhost:3001/health
 ```json
 {
   "status": "ok",
+  "role": "leader",
   "lastLedger": 54321,
   "uptime": 3600
 }
 ```
 
-| Field        | Type                   | Description                                         |
-| ------------ | ---------------------- | --------------------------------------------------- |
-| `status`     | `"ok"` \| `"degraded"` | `"degraded"` when no ledger update in the last 60 s |
-| `lastLedger` | `number`               | Last indexed ledger sequence (0 = none yet)         |
-| `uptime`     | `number`               | Server uptime in seconds                            |
+| Field        | Type                       | Description                                                                 |
+| ------------ | -------------------------- | --------------------------------------------------------------------------- |
+| `status`     | `"ok"` \| `"degraded"`     | `"degraded"` when no ledger update in the last 60 s                         |
+| `lastLedger` | `number`                   | Last indexed ledger sequence (0 = none yet)                                 |
+| `uptime`     | `number`                   | Server uptime in seconds                                                    |
+| `role`       | `"leader"` \| `"follower"` | Whether this replica holds the polling lock (always `"leader"` with SQLite) |
+
+Followers don't poll, so they report the leader's progress from the shared checkpoint instead: `lastLedger` is the leader's checkpoint, plus `leaderLag` (network tip minus checkpoint, in ledgers) and `leaderCheckpointAgeMs`. A follower reports `"degraded"` when the checkpoint is older than 60 s.
 
 #### `GET /metrics`
 
@@ -461,6 +468,33 @@ scrape_configs:
 
 ---
 
+## Deployment Topologies
+
+### Single replica (SQLite)
+
+The default. One process polls RPC and serves reads from an embedded SQLite file (`INDEXER_DB_PATH`). It is always the leader. Suitable for dev and small deployments; there is no failover.
+
+### N replicas (Postgres)
+
+Set `INDEXER_DATABASE_URL` on every replica. All replicas share one Postgres database and serve the read API; exactly one — the leader — polls Soroban RPC.
+
+- **Leader election:** each replica tries `pg_try_advisory_lock` on a dedicated connection. The lock is renewed (verified) on every poll cycle, and renewal must finish within one `POLL_INTERVAL_MS` lease. If the lock is lost or renewal fails, the replica stops polling immediately and becomes a follower.
+- **Failover:** Postgres releases a session advisory lock as soon as the holder's connection closes, so when the leader dies a follower takes over on its next attempt — within one `POLL_INTERVAL_MS`. A graceful stop unlocks explicitly for an immediate hand-off.
+- **Exactly-once storage:** events are inserted with `ON CONFLICT (event_id) DO NOTHING`, so a brief overlap between an old and a new leader cannot create duplicates.
+- **Atomic checkpoint:** the event batch and the `checkpoint` row (`last_ledger`, `network_ledger`, `updated_at`) are written in one transaction, and the checkpoint never moves backwards. A new leader resumes from `last_ledger + 1`.
+- **Observability:** `/health` includes `role`; `/metrics` exposes the `indexer_is_leader` gauge (sum across replicas should always be `1`).
+
+The schema is created automatically on startup. See [`docker-compose.replicas.yml`](./docker-compose.replicas.yml) for a two-replica example:
+
+```bash
+SOROBAN_RPC_URL=https://soroban-testnet.stellar.org CONTRACT_ID=C... \
+  docker compose -f docker-compose.replicas.yml up --build
+```
+
+Put the replicas behind any HTTP load balancer for the read API.
+
+---
+
 ## Tests
 
 ```bash
@@ -477,6 +511,9 @@ Test files live in:
 - `src/__tests__/eventPoller.test.ts` — event decoding, poll-cycle ledger advancement, RPC/decode error handling, and event persistence, against a mocked RPC client and an in-memory `EventStore`
 - `src/db/__tests__/eventStore.test.ts` — `EventStore` unit tests (schema, insert, type/player filters, ordering, keyset pagination)
 - `src/metrics/__tests__/` — `IndexerMetrics` unit tests (singleton, counters, sliding window, p95, health flag)
+- `src/__tests__/leaderElection.test.ts` — leader election and two replicas sharing a store: no duplicate events, takeover within the lease
+- `src/db/__tests__/checkpointAtomicity.test.ts` — event batch + checkpoint atomicity for the SQLite and Postgres stores
+- `src/__tests__/replicas.pg.integration.test.ts` — two replicas against a real Postgres; skipped unless `INDEXER_TEST_DATABASE_URL` is set
 
 ---
 

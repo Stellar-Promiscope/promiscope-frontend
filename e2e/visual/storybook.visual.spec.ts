@@ -25,7 +25,13 @@ test('storybook stories render consistently', async ({ page, baseURL }) => {
   const { entries }: StoryIndex = await res.json();
 
   const storyIds = Object.values(entries)
-    .filter((entry) => entry.type === 'story')
+    // Stories with a play function (auto-tagged `play-fn` by Storybook) are
+    // interaction tests run by `test-storybook`; their end state (open
+    // toasts, dismissed dialogs) isn't a stable screenshot, and each one's
+    // static appearance is already covered by its sibling stories.
+    .filter(
+      (entry) => entry.type === 'story' && !entry.tags?.includes('play-fn'),
+    )
     .map((entry) => entry.id)
     .sort();
 

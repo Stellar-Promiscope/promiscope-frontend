@@ -1,30 +1,54 @@
 import * as http from 'http';
 import { IndexerMetrics } from './metrics/IndexerMetrics';
-import { getLastLedgerInfo, getLedgerLag } from './ledgerTracker';
-import { startEventPolling, isEventType } from './eventPoller';
+import { getLastLedgerInfo, getLedgerLag, getRole } from './ledgerTracker';
 import {
-  EventStore,
-  type QueryFilter,
-  type WalletApprovalWindow,
-} from './db/eventStore';
+  startEventPolling,
+  isEventType,
+  loadConfigFromEnv,
+  createRpcClient,
+} from './eventPoller';
+import type { QueryFilter, WalletApprovalWindow } from './db/eventStore';
+import { createPgPoolFromEnv, getStore, initStore } from './db';
+import { LeaderElector } from './leaderElection';
 import type { EventType } from './metrics/IndexerMetrics';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 const startTime = Date.now();
 
-function handleHealth(res: http.ServerResponse): void {
-  const { lastLedger, timestamp } = getLastLedgerInfo();
+async function handleHealth(res: http.ServerResponse): Promise<void> {
+  const role = getRole();
   const now = Date.now();
-  const stale = timestamp > 0 && now - timestamp > 60_000;
   const uptimeSec = Math.floor((now - startTime) / 1000);
-  const body = JSON.stringify({
+
+  if (role === 'follower') {
+    // Followers don't poll; report the leader's progress from the shared
+    // checkpoint instead of this process's (idle) ledgerTracker.
+    const checkpoint = await getStore().getCheckpoint();
+    const checkpointAgeMs = checkpoint ? now - checkpoint.updatedAt : null;
+    return sendJson(res, 200, {
+      status:
+        checkpointAgeMs !== null && checkpointAgeMs <= 60_000
+          ? 'ok'
+          : 'degraded',
+      role,
+      lastLedger: checkpoint?.lastLedger ?? 0,
+      leaderLag: checkpoint
+        ? Math.max(0, checkpoint.networkLedger - checkpoint.lastLedger)
+        : null,
+      leaderCheckpointAgeMs: checkpointAgeMs,
+      uptime: uptimeSec,
+    });
+  }
+
+  const { lastLedger, timestamp } = getLastLedgerInfo();
+  const stale = timestamp > 0 && now - timestamp > 60_000;
+  sendJson(res, 200, {
     status: stale ? 'degraded' : 'ok',
+    role,
     lastLedger,
     uptime: uptimeSec,
   });
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(body);
 }
 
 function handleMetrics(res: http.ServerResponse): void {
@@ -58,6 +82,9 @@ function handleMetrics(res: http.ServerResponse): void {
     '# HELP indexer_healthy 1 if indexer is healthy, 0 otherwise',
     '# TYPE indexer_healthy gauge',
     `indexer_healthy ${snap.isHealthy ? 1 : 0}`,
+    '# HELP indexer_is_leader 1 if this replica holds the polling leader lock, 0 otherwise',
+    '# TYPE indexer_is_leader gauge',
+    `indexer_is_leader ${getRole() === 'leader' ? 1 : 0}`,
   ];
 
   res.writeHead(200, {
@@ -116,36 +143,35 @@ function parseQueryFilter(
   return { ok: true, filter };
 }
 
-function handleEventsQuery(
+async function handleEventsQuery(
   url: URL,
   res: http.ServerResponse,
   playerId?: string,
-): void {
+): Promise<void> {
   const parsed = parseQueryFilter(url.searchParams);
   if (!parsed.ok) {
     return sendJson(res, 400, { error: parsed.error });
   }
 
-  const store = EventStore.getInstance();
+  const store = getStore();
   const result = playerId
-    ? store.getEventsByPlayer(playerId, parsed.filter)
-    : store.getEvents(parsed.filter);
+    ? await store.getEventsByPlayer(playerId, parsed.filter)
+    : await store.getEvents(parsed.filter);
 
   sendJson(res, 200, result);
 }
 
-function handleValidatorEventsQuery(
+async function handleValidatorEventsQuery(
   url: URL,
   res: http.ServerResponse,
   validatorAddress: string,
-): void {
+): Promise<void> {
   const parsed = parseQueryFilter(url.searchParams);
   if (!parsed.ok) {
     return sendJson(res, 400, { error: parsed.error });
   }
 
-  const store = EventStore.getInstance();
-  const result = store.getEvents({
+  const result = await getStore().getEvents({
     ...parsed.filter,
     validator: validatorAddress,
   });
@@ -244,9 +270,8 @@ async function handleApprovalCountsQuery(
     });
   }
 
-  const store = EventStore.getInstance();
   try {
-    const counts = store.getApprovalCountsForWallets(
+    const counts = await getStore().getApprovalCountsForWallets(
       { start: start as number, end: end as number },
       parsedWallets,
     );
@@ -261,44 +286,55 @@ async function handleApprovalCountsQuery(
   }
 }
 
+function route(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void | Promise<void> {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+
+  if (req.method === 'GET' && url.pathname === '/health') {
+    return handleHealth(res);
+  }
+  if (req.method === 'GET' && url.pathname === '/metrics') {
+    return handleMetrics(res);
+  }
+  if (req.method === 'GET' && url.pathname === '/events') {
+    return handleEventsQuery(url, res);
+  }
+  if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
+    return handleApprovalCountsQuery(req, res);
+  }
+  const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
+  if (req.method === 'GET' && playerMatch) {
+    return handleEventsQuery(url, res, decodeURIComponent(playerMatch[1]));
+  }
+  const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
+  if (req.method === 'GET' && validatorMatch) {
+    return handleValidatorEventsQuery(
+      url,
+      res,
+      decodeURIComponent(validatorMatch[1]),
+    );
+  }
+
+  res.writeHead(404);
+  res.end('Not Found');
+}
+
 export const server = http.createServer(
   (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const url = new URL(req.url ?? '/', 'http://localhost');
-
-    if (req.method === 'GET' && url.pathname === '/health') {
-      return handleHealth(res);
-    }
-    if (req.method === 'GET' && url.pathname === '/metrics') {
-      return handleMetrics(res);
-    }
-    if (req.method === 'GET' && url.pathname === '/events') {
-      return handleEventsQuery(url, res);
-    }
-    if (
-      req.method === 'POST' &&
-      url.pathname === '/validators/approval-counts'
-    ) {
-      return handleApprovalCountsQuery(req, res);
-    }
-    const playerMatch = url.pathname.match(PLAYER_EVENTS_PATH);
-    if (req.method === 'GET' && playerMatch) {
-      return handleEventsQuery(url, res, decodeURIComponent(playerMatch[1]));
-    }
-    const validatorMatch = url.pathname.match(VALIDATOR_EVENTS_PATH);
-    if (req.method === 'GET' && validatorMatch) {
-      return handleValidatorEventsQuery(
-        url,
-        res,
-        decodeURIComponent(validatorMatch[1]),
-      );
-    }
-
-    res.writeHead(404);
-    res.end('Not Found');
+    Promise.resolve(route(req, res)).catch((err) => {
+      console.error('[server] request failed:', err);
+      if (!res.headersSent) sendJson(res, 500, { error: 'Internal error' });
+    });
   },
 );
 
-export function startServer(): void {
+export async function startServer(): Promise<void> {
+  // With INDEXER_DATABASE_URL every replica shares one Postgres store and
+  // serves reads; only the advisory-lock holder polls (issue #1319).
+  const store = await initStore();
+
   server.listen(PORT, () => {
     console.log(`Indexer server listening on port ${PORT}`);
   });
@@ -307,7 +343,23 @@ export function startServer(): void {
   // deploy-time misconfiguration, not a reason to bring the whole process
   // (and /health, which is useful for diagnosing exactly this) down.
   try {
-    startEventPolling();
+    const config = loadConfigFromEnv();
+    const pool = createPgPoolFromEnv();
+    const elector = pool
+      ? new LeaderElector(pool, {
+          lockKey: process.env.INDEXER_LEADER_LOCK_KEY
+            ? parseInt(process.env.INDEXER_LEADER_LOCK_KEY, 10)
+            : undefined,
+          leaseMs: config.pollIntervalMs,
+        })
+      : null;
+    startEventPolling(
+      config,
+      createRpcClient(config),
+      IndexerMetrics.getInstance(),
+      store,
+      elector,
+    );
   } catch (err) {
     console.error('Failed to start event poller:', err);
   }
