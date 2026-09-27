@@ -7,6 +7,8 @@
  * production hosting platform.
  */
 
+import { ENV_MANIFEST, isRequiredInProduction } from './envManifest';
+
 export interface ConfigWarning {
   key: string;
   message: string;
@@ -22,17 +24,17 @@ export interface ConfigWarning {
 export function validateConfig(): ConfigWarning[] {
   const warnings: ConfigWarning[] = [];
 
-  // ── NEXT_PUBLIC_CONTRACT_ID ──────────────────────────────────────────────
-  const contractId = process.env.NEXT_PUBLIC_CONTRACT_ID;
-  if (!contractId || contractId.trim() === '') {
-    warnings.push({
-      key: 'NEXT_PUBLIC_CONTRACT_ID',
-      message:
-        'NEXT_PUBLIC_CONTRACT_ID is not set. The Soroban contract ID must be ' +
-        'configured before any on-chain operations will work. Set it in your ' +
-        'hosting environment or .env.local file.',
-      severity: 'error',
-    });
+  // Entries flagged showInAppBanner in lib/envManifest.ts (issue #1327).
+  for (const spec of ENV_MANIFEST) {
+    if (!spec.showInAppBanner) continue;
+    const value = process.env[spec.name];
+    if (!value || value.trim() === '') {
+      warnings.push({
+        key: spec.name,
+        message: spec.description,
+        severity: isRequiredInProduction(spec) ? 'error' : 'warning',
+      });
+    }
   }
 
   return warnings;

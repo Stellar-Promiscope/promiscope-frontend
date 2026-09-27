@@ -1,8 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { privateJson } from '@/lib/httpResponses';
+import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { assembleFile, cleanupSession } from '@/lib/chunkedUploadStore';
-import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
-import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import {
+  assembleFile,
+  cleanupSession,
+  isSessionOwner,
+} from '@/lib/chunkedUploadStore';
+import { getSessionWallet } from '@/lib/session';
+import {
+  detectFileType,
+  isDeclaredTypeCompatible,
+  bufToHex,
+} from '@/lib/fileSignature';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { createRequestLogger } from '@/lib/logger';
 import {
   verifyUploadedContent,
@@ -27,17 +37,17 @@ export const runtime = 'nodejs';
  * deleted the poisoned session so it can't be retried into another giant
  * buffering attempt.
  */
-const checkRateLimit = createRateLimiter(20, 60 * 1000);
+const RATE_LIMIT = { limit: 20, windowMs: 60 * 1000 };
 
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
 export async function POST(req: NextRequest) {
   const log = createRequestLogger(req);
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const rl = await checkRateLimit(`ipfs-upload-complete:${ip}`, RATE_LIMIT);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json(
+    return privateJson(
       { error: 'Too many requests' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
@@ -47,14 +57,19 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { sessionId } = (body ?? {}) as Record<string, unknown>;
   if (typeof sessionId !== 'string' || !sessionId) {
-    return NextResponse.json(
-      { error: 'sessionId is required' },
-      { status: 400 },
+    return privateJson({ error: 'sessionId is required' }, { status: 400 });
+  }
+
+  if (!(await isSessionOwner(sessionId, getSessionWallet(req)))) {
+    // 404 rather than 403 so a foreign caller can't probe session existence.
+    return privateJson(
+      { error: 'Upload session not found or expired' },
+      { status: 404 },
     );
   }
 
@@ -62,7 +77,7 @@ export async function POST(req: NextRequest) {
   try {
     assembled = await assembleFile(sessionId);
   } catch (err) {
-    return NextResponse.json(
+    return privateJson(
       {
         error: err instanceof Error ? err.message : 'Failed to assemble upload',
       },
@@ -77,7 +92,7 @@ export async function POST(req: NextRequest) {
   );
   if (!mimeAllowed) {
     await cleanupSession(sessionId);
-    return NextResponse.json(
+    return privateJson(
       {
         error: `File type "${fileType}" is not allowed. Only image/* and video/* files are accepted.`,
       },
@@ -86,14 +101,17 @@ export async function POST(req: NextRequest) {
   }
 
   const header = new Uint8Array(buffer.subarray(0, 12));
-  if (!hasValidMagicBytes(header)) {
+  // Detected family must match the declared prefix (issue #1329).
+  const detected = detectFileType(header);
+  if (!detected || !isDeclaredTypeCompatible(fileType, detected)) {
     await cleanupSession(sessionId);
     log.warn('Rejected spoofed MIME type', {
       type: fileType,
+      detected: detected?.mime ?? null,
       ip,
       header: bufToHex(header),
     });
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           'File content does not match its declared type. Upload rejected.',
@@ -108,7 +126,7 @@ export async function POST(req: NextRequest) {
     // Uint8Array copy sidesteps a @types/node-vs-DOM-lib generic mismatch
     // (Buffer's ArrayBufferLike vs BlobPart's concrete ArrayBuffer).
     const file = new File([new Uint8Array(buffer)], filename, {
-      type: fileType,
+      type: detected.mime,
     });
     pinataForm.append('file', file);
 
@@ -131,7 +149,7 @@ export async function POST(req: NextRequest) {
       ip,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to upload file to IPFS' },
       { status: 502 },
     );
@@ -153,7 +171,7 @@ export async function POST(req: NextRequest) {
       cid,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           err instanceof UploadVerificationError
@@ -165,5 +183,5 @@ export async function POST(req: NextRequest) {
   }
 
   await cleanupSession(sessionId);
-  return NextResponse.json({ cid });
+  return privateJson({ cid });
 }

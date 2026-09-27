@@ -1,11 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { privateJson } from '@/lib/httpResponses';
+import { NextRequest } from 'next/server';
 import {
   writeChunk,
   CHUNK_SIZE_BYTES,
   ChunkTooLargeError,
   TotalSizeExceededError,
+  isSessionOwner,
 } from '@/lib/chunkedUploadStore';
-import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { getSessionWallet } from '@/lib/session';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +33,7 @@ export const runtime = 'nodejs';
  *    small multipart tolerance; smaller allowed for the final chunk) via
  *    writeChunk's own per-chunk + running-total checks.
  */
-const checkRateLimit = createRateLimiter(600, 60 * 1000);
+const RATE_LIMIT = { limit: 600, windowMs: 60 * 1000 };
 
 /**
  * Multipart framing overhead allowance when pre-checking Content-Length
@@ -42,10 +45,10 @@ const MULTIPART_OVERHEAD_TOLERANCE_BYTES = 64 * 1024;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const rl = await checkRateLimit(`ipfs-upload-chunk:${ip}`, RATE_LIMIT);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json(
+    return privateJson(
       { error: 'Too many requests' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
       Number.isFinite(contentLength) &&
       contentLength > CHUNK_SIZE_BYTES + MULTIPART_OVERHEAD_TOLERANCE_BYTES
     ) {
-      return NextResponse.json(
+      return privateJson(
         { error: `Chunk exceeds the ${CHUNK_SIZE_BYTES}-byte limit` },
         { status: 413 },
       );
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    return privateJson({ error: 'Invalid form data' }, { status: 400 });
   }
 
   const sessionId = form.get('sessionId');
@@ -83,25 +86,30 @@ export async function POST(req: NextRequest) {
   const chunk = form.get('chunk');
 
   if (typeof sessionId !== 'string' || !sessionId) {
-    return NextResponse.json(
-      { error: 'sessionId is required' },
-      { status: 400 },
-    );
+    return privateJson({ error: 'sessionId is required' }, { status: 400 });
   }
   if (typeof chunkIndexRaw !== 'string' || !/^\d+$/.test(chunkIndexRaw)) {
-    return NextResponse.json(
+    return privateJson(
       { error: 'chunkIndex must be a non-negative integer' },
       { status: 400 },
     );
   }
   if (!(chunk instanceof Blob)) {
-    return NextResponse.json({ error: 'chunk is required' }, { status: 400 });
+    return privateJson({ error: 'chunk is required' }, { status: 400 });
+  }
+
+  if (!(await isSessionOwner(sessionId, getSessionWallet(req)))) {
+    // 404 rather than 403 so a foreign caller can't probe session existence.
+    return privateJson(
+      { error: 'Upload session not found or expired' },
+      { status: 404 },
+    );
   }
 
   const chunkIndex = Number(chunkIndexRaw);
   // Cheap pre-check from the Blob's declared size before copying bytes.
   if (chunk.size > CHUNK_SIZE_BYTES + MULTIPART_OVERHEAD_TOLERANCE_BYTES) {
-    return NextResponse.json(
+    return privateJson(
       { error: `Chunk exceeds the ${CHUNK_SIZE_BYTES}-byte limit` },
       { status: 413 },
     );
@@ -110,19 +118,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const status = await writeChunk(sessionId, chunkIndex, buffer);
-    return NextResponse.json(status);
+    return privateJson(status);
   } catch (err) {
     if (err instanceof ChunkTooLargeError) {
-      return NextResponse.json({ error: err.message }, { status: 413 });
+      return privateJson({ error: err.message }, { status: 413 });
     }
     if (err instanceof TotalSizeExceededError) {
-      return NextResponse.json({ error: err.message }, { status: 413 });
+      return privateJson({ error: err.message }, { status: 413 });
     }
-    const message = err instanceof Error ? err.message : 'Failed to write chunk';
+    const message =
+      err instanceof Error ? err.message : 'Failed to write chunk';
     const notFound = /not found or expired/i.test(message);
-    return NextResponse.json(
-      { error: message },
-      { status: notFound ? 404 : 400 },
-    );
+    return privateJson({ error: message }, { status: notFound ? 404 : 400 });
   }
 }

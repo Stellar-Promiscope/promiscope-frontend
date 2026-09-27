@@ -8,7 +8,12 @@
  * - bufToHex helper
  */
 
-import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
+import {
+  hasValidMagicBytes,
+  detectFileType,
+  isDeclaredTypeCompatible,
+  bufToHex,
+} from '@/lib/fileSignature';
 
 // ---------------------------------------------------------------------------
 // Helpers to build minimal magic-byte headers
@@ -58,6 +63,7 @@ function mp4(): Uint8Array {
   buf[5] = 0x74;
   buf[6] = 0x79;
   buf[7] = 0x70; // ftyp
+  buf.set([0x69, 0x73, 0x6f, 0x6d], 8); // 'isom' major brand
   return buf;
 }
 
@@ -195,5 +201,82 @@ describe('bufToHex', () => {
 
   it('zero-pads single-digit hex values', () => {
     expect(bufToHex(new Uint8Array([0x00, 0x01, 0x0a]))).toBe('00010a');
+  });
+});
+
+function ftyp(brand: string): Uint8Array {
+  const buf = new Uint8Array(12);
+  buf.set([0x66, 0x74, 0x79, 0x70], 4);
+  buf.set(
+    Array.from(brand, (c) => c.charCodeAt(0)),
+    8,
+  );
+  return buf;
+}
+
+function riff(tag: string): Uint8Array {
+  const buf = new Uint8Array(12);
+  buf.set([0x52, 0x49, 0x46, 0x46], 0);
+  buf.set(
+    Array.from(tag, (c) => c.charCodeAt(0)),
+    8,
+  );
+  return buf;
+}
+
+describe('detectFileType (issue #1329)', () => {
+  it.each([
+    ['JPEG', jpeg(), 'image/jpeg', 'image'],
+    ['PNG', png(), 'image/png', 'image'],
+    ['GIF', gif(), 'image/gif', 'image'],
+    ['WebP', riff('WEBP'), 'image/webp', 'image'],
+    ['AVI', riff('AVI '), 'video/x-msvideo', 'video'],
+    [
+      'WebM/MKV',
+      new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0, 0, 0, 0, 0, 0, 0, 0]),
+      'video/webm',
+      'video',
+    ],
+    ['MP4 isom', ftyp('isom'), 'video/mp4', 'video'],
+    ['MP4 mp42', ftyp('mp42'), 'video/mp4', 'video'],
+    ['MOV', ftyp('qt  '), 'video/quicktime', 'video'],
+    ['M4V', ftyp('M4V '), 'video/x-m4v', 'video'],
+    ['AVIF', ftyp('avif'), 'image/avif', 'image'],
+    ['HEIC', ftyp('heic'), 'image/heic', 'image'],
+  ])('detects %s', (_name, header, mime, family) => {
+    expect(detectFileType(header)).toEqual({ mime, family });
+  });
+
+  it('rejects ISO-BMFF brands outside the allow-list', () => {
+    expect(detectFileType(ftyp('crx '))).toBeNull();
+    expect(detectFileType(ftyp('3gp4'))).toBeNull();
+  });
+
+  it('rejects AVI-like RIFF headers whose byte 11 is not 0x20', () => {
+    expect(detectFileType(riff('AVIX'))).toBeNull();
+  });
+
+  it('rejects unknown signatures', () => {
+    expect(detectFileType(new Uint8Array(12))).toBeNull();
+  });
+});
+
+describe('isDeclaredTypeCompatible (issue #1329)', () => {
+  it('accepts a matching family', () => {
+    expect(isDeclaredTypeCompatible('image/png', detectFileType(png())!)).toBe(
+      true,
+    );
+    expect(
+      isDeclaredTypeCompatible('video/mp4', detectFileType(ftyp('isom'))!),
+    ).toBe(true);
+  });
+
+  it('rejects a PNG declared as video/mp4 and an MP4 declared as image/jpeg', () => {
+    expect(isDeclaredTypeCompatible('video/mp4', detectFileType(png())!)).toBe(
+      false,
+    );
+    expect(
+      isDeclaredTypeCompatible('image/jpeg', detectFileType(ftyp('isom'))!),
+    ).toBe(false);
   });
 });

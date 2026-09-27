@@ -23,7 +23,7 @@ describe('validate-env.js', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('All');
-    expect(result.stdout).toContain('declared in .env.example');
+    expect(result.stdout).toContain('match source and .env.example');
   });
 
   it('exits with code 1 and prints missing variables when some used vars are not declared', () => {
@@ -37,7 +37,7 @@ describe('validate-env.js', () => {
       });
 
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain('Missing from .env.example');
+      expect(result.stderr).toContain('Missing from lib/envManifest.json');
       expect(result.stderr).toContain('TEST_MISSING_VAR');
     } finally {
       fs.unlinkSync(testFilePath);

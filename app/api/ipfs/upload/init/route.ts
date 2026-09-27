@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { initSession } from '@/lib/chunkedUploadStore';
 import { getSessionWallet } from '@/lib/session';
-import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { privateJson } from '@/lib/httpResponses';
 
 export const runtime = 'nodejs';
@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
  * bandwidth on chunks. The magic-byte check is deferred to /complete, since
  * only the first chunk carries the file's leading bytes.
  */
-const checkRateLimit = createRateLimiter(20, 60 * 1000);
+const RATE_LIMIT = { limit: 20, windowMs: 60 * 1000 };
 
 const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
@@ -27,7 +27,7 @@ const MAX_CHUNKS = 5000;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const rl = await checkRateLimit(`ipfs-upload-init:${ip}`, RATE_LIMIT);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
     return privateJson(

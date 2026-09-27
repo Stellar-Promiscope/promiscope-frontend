@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { sanitize } from '@/lib/sanitize';
-import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
+import {
+  detectFileType,
+  isDeclaredTypeCompatible,
+  bufToHex,
+} from '@/lib/fileSignature';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { createRequestLogger } from '@/lib/logger';
 import {
@@ -116,9 +120,12 @@ export async function POST(req: NextRequest) {
   const headerSlice = file.slice(0, 12);
   const headerBuffer = new Uint8Array(await headerSlice.arrayBuffer());
 
-  if (!hasValidMagicBytes(headerBuffer)) {
+  // Detected family must match the declared prefix (issue #1329).
+  const detected = detectFileType(headerBuffer);
+  if (!detected || !isDeclaredTypeCompatible(mimeType, detected)) {
     log.warn('Rejected spoofed MIME type', {
       type: file.type,
+      detected: detected?.mime ?? null,
       size: file.size,
       ip,
       header: bufToHex(headerBuffer),
@@ -136,7 +143,11 @@ export async function POST(req: NextRequest) {
   let cid: string;
   try {
     const pinataForm = new FormData();
-    pinataForm.append('file', file);
+    // Pin with the detected MIME type, not the client-declared one.
+    pinataForm.append(
+      'file',
+      new File([file], file.name, { type: detected.mime }),
+    );
 
     const { data } = await axios.post(
       'https://api.pinata.cloud/pinning/pinFileToIPFS',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 /**
  * GET /api/media/[cid]
@@ -43,32 +44,10 @@ const FALLBACK_GATEWAYS = [
 
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
-// Best-effort in-process rate limit. This only protects a single server
-// instance/region — it bounds obvious bulk-scraping in the default
-// single-instance deployment, but a production deployment fronted by a real
-// CDN should prefer that CDN's (or Cloudflare's/Upstash's) distributed rate
-// limiting instead of relying on this alone.
+// Shared, Redis-backed (when configured) limiter from lib/rateLimit.ts so
+// the limit holds across serverless instances (#1330).
 const RATE_LIMIT_PER_WINDOW = 120;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-type RateEntry = { count: number; firstSeen: number };
-const rateMap = new Map<string, RateEntry>();
-
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.headers.get('x-real-ip') ?? 'unknown';
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateMap.get(ip);
-  if (!entry || now - entry.firstSeen > RATE_LIMIT_WINDOW_MS) {
-    rateMap.set(ip, { count: 1, firstSeen: now });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > RATE_LIMIT_PER_WINDOW;
-}
 
 function isAllowedReferrer(req: NextRequest): boolean {
   const referer = req.headers.get('referer');
@@ -108,11 +87,16 @@ export async function GET(
   }
 
   const ip = getClientIp(req);
-  if (isRateLimited(ip)) {
+  const rl = await checkRateLimit(`media:${ip}`, {
+    limit: RATE_LIMIT_PER_WINDOW,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rl.limited) {
     log.warn('Rate limit exceeded', { ip, cid });
+    const retryAfter = rl.retryAfterSec ?? RATE_LIMIT_WINDOW_MS / 1000;
     return NextResponse.json(
       { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': '60' } },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
   }
 
