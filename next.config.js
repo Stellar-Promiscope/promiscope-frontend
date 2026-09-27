@@ -114,61 +114,14 @@ const nextConfig = {
     ],
   },
   async headers() {
-    const isDev = process.env.NODE_ENV === 'development';
-
-    // Get environment variables with defaults for development
-    const ipfsGateway =
-      process.env.NEXT_PUBLIC_IPFS_GATEWAY ||
-      'https://gateway.pinata.cloud/ipfs';
-    const sorobanRpc =
-      process.env.NEXT_PUBLIC_SOROBAN_RPC ||
-      'https://soroban-testnet.stellar.org';
-    const horizonUrl =
-      process.env.NEXT_PUBLIC_HORIZON_URL ||
-      'https://horizon-testnet.stellar.org';
-
-    // Extract domain from URLs for CSP (remove protocol and path)
-    const extractDomain = (url) => {
-      try {
-        return new URL(url).origin;
-      } catch {
-        return url;
-      }
-    };
-
-    const ipfsGatewayDomain = extractDomain(ipfsGateway);
-    const sorobanDomain = extractDomain(sorobanRpc);
-    const horizonDomain = extractDomain(horizonUrl);
-
-    // Next.js dev tooling (react-refresh/runtime overlays) relies on inline
-    // scripts and eval. Keep production CSP strict.
-    const scriptSrc = isDev
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-      : "script-src 'self'";
-
-    // Build Content Security Policy header
-    const cspHeader = [
-      "default-src 'self'",
-      scriptSrc,
-      `img-src 'self' data: ${ipfsGatewayDomain}`,
-      `connect-src 'self' ${sorobanDomain} ${horizonDomain}`,
-      "style-src 'self' 'unsafe-inline'",
-      "font-src 'self' data:",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-      'report-uri /api/csp-report',
-    ].join('; ');
-
     return [
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: cspHeader,
-          },
+          // Content-Security-Policy is now generated per-request in
+          // middleware.ts (nonce-based, 'strict-dynamic') so it is NOT set
+          // here. Setting it here would override the per-request nonce with a
+          // static value and break every inline script that relies on the nonce.
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
