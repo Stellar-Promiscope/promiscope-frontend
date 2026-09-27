@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -574,24 +574,23 @@ export default function AccountRecoveryPage() {
             </div>
 
             {/* Show migration counts */}
-            {migrationResult.migration &&
-              typeof migrationResult.migration === 'object' && (
-                <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 text-sm space-y-1">
-                  {Object.entries(
-                    (migrationResult.migration as Record<string, unknown>)
-                      .counts as Record<string, unknown>,
-                  ).map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="text-gray-400 capitalize">
-                        {key.replace(/([A-Z])/g, ' $1')}
-                      </span>
-                      <span className="text-gray-300 font-mono">
-                        {String(value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {migrationResult.migration != null &&
+              typeof migrationResult.migration === 'object' ? (
+              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 text-sm space-y-1">
+                {Object.entries(
+                  ((migrationResult.migration as Record<string, unknown>).counts ?? {}) as Record<string, string | number | boolean>,
+                ).map(([key, value]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="text-gray-400 capitalize">
+                      {key.replace(/([A-Z])/g, ' $1')}
+                    </span>
+                    <span className="text-gray-300 font-mono">
+                      {String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-3">
               <p className="text-xs text-orange-200">

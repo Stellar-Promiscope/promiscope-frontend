@@ -4,6 +4,7 @@ import { getLastLedgerInfo, getLedgerLag } from './ledgerTracker';
 import { startEventPolling, isEventType } from './eventPoller';
 import {
   EventStore,
+  type EventRecord,
   type QueryFilter,
   type WalletApprovalWindow,
 } from './db/eventStore';
@@ -121,11 +122,7 @@ function handleStream(
   const store = EventStore.getInstance();
 
   // Helper: serialise one EventRecord as an SSE message.
-  function sendEvent(record: {
-    id: number;
-    type: string;
-    [k: string]: unknown;
-  }): void {
+  function sendEvent(record: EventRecord): void {
     const payload = JSON.stringify(record);
     res.write(`id: ${record.id}\nevent: ${record.type}\ndata: ${payload}\n\n`);
   }

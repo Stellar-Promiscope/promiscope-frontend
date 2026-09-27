@@ -115,7 +115,7 @@ export async function executeWalletMigration(
   recentlyViewedStore.clearForWallet(fromWallet);
   for (const item of recentlyViewed) {
     try {
-      recentlyViewedStore.record(toWallet, item.playerId);
+      recentlyViewedStore.record(toWallet, item.playerId, item.viewedAt);
     } catch {
       // Skip on error
     }
