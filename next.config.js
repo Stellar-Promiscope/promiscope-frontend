@@ -24,15 +24,6 @@ const withPWA = require('next-pwa')({
   runtimeCaching: [
     // Network-first for API / RPC calls
     {
-      urlPattern:
-        /^https:\/\/(soroban-testnet|horizon-testnet|soroban)\.stellar\.org\/.*/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'stellar-rpc-cache',
-        expiration: { maxEntries: 32, maxAgeSeconds: 60 },
-      },
-    },
-    {
       urlPattern: /\/api\/.*/i,
       handler: 'NetworkFirst',
       options: {
