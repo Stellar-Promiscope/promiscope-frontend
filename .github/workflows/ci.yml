@@ -225,6 +225,25 @@ jobs:
       - name: Test indexer
         run: npm test --workspace=packages/indexer
 
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+
+      - name: Test backend
+        run: node --test --experimental-test-coverage test/
+
   build:
     # Standalone build job — separated from the `lint` job so its
     # Next.js build cache can be reused and build failures don't block

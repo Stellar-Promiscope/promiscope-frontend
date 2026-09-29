@@ -26,10 +26,11 @@ export default function DisputeMilestoneModal({
   milestoneDescription,
   onSubmit,
 }: DisputeMilestoneModalProps) {
+  const t = useTranslations('player.modals.dispute');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const t = useTranslations('dispute_modal');
+  const tCounter = useTranslations('dispute_modal');
 
   function handleClose() {
     setReason('');
@@ -40,9 +41,7 @@ export default function DisputeMilestoneModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (reason.trim().length < MIN_REASON_LENGTH) {
-      setError(
-        `Please describe your dispute in at least ${MIN_REASON_LENGTH} characters.`,
-      );
+      setError(t('reasonTooShort', { min: MIN_REASON_LENGTH }));
       return;
     }
     if (reason.trim().length > MAX_REASON_LENGTH) {
@@ -57,7 +56,7 @@ export default function DisputeMilestoneModal({
       await onSubmit(reason.trim());
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit dispute');
+      setError(err instanceof Error ? err.message : t('submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -67,13 +66,15 @@ export default function DisputeMilestoneModal({
   const isNearLimit = currentLength >= MAX_REASON_LENGTH * 0.9;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Dispute milestone">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('title')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-gray-300">
-          Flag{' '}
-          <span className="font-medium text-white">{milestoneDescription}</span>{' '}
-          for admin review. Explain why you believe this decision was made in
-          error.
+          {t.rich('intro', {
+            milestone: milestoneDescription,
+            highlight: (chunks) => (
+              <span className="font-medium text-white">{chunks}</span>
+            ),
+          })}
         </p>
 
         <div>
@@ -81,7 +82,7 @@ export default function DisputeMilestoneModal({
             htmlFor="dispute-reason"
             className="block text-sm font-medium text-gray-300 mb-1"
           >
-            Reason
+            {t('reasonLabel')}
           </label>
           <textarea
             id="dispute-reason"
@@ -92,13 +93,13 @@ export default function DisputeMilestoneModal({
             maxLength={MAX_REASON_LENGTH}
             minLength={MIN_REASON_LENGTH}
             className="w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-brand-green focus:outline-none"
-            placeholder="e.g. This milestone was rejected without an explanation, but I submitted matching evidence…"
+            placeholder={t('reasonPlaceholder')}
           />
           <p
             className="text-xs text-gray-400 mt-1 text-right"
             aria-live={isNearLimit ? 'polite' : undefined}
           >
-            {t('character_count', { count: currentLength, max: MAX_REASON_LENGTH })}
+            {tCounter('character_count', { count: currentLength, max: MAX_REASON_LENGTH })}
           </p>
         </div>
 
@@ -115,10 +116,10 @@ export default function DisputeMilestoneModal({
             onClick={handleClose}
             disabled={submitting}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button type="submit" isLoading={submitting} disabled={submitting}>
-            Submit dispute
+            {t('submit')}
           </Button>
         </div>
       </form>

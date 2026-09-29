@@ -1,15 +1,13 @@
-import axios from 'axios';
+import api from '@/lib/api';
 
 /**
- * Client for the Node.js off-chain chat/comments API referenced in
+ * Canonical client for the Node.js off-chain chat/comments API referenced in
  * CONTRIBUTING.md and the architecture diagram — persists message history
- * for a scout/player thread once pay-to-contact has been unlocked.
+ * for a scout/player thread once pay-to-contact has been unlocked. Reuses the
+ * shared axios instance from lib/api.ts (base URL resolution + interceptors).
+ * The sender is always derived server-side from the session; never send it.
  */
-const chatApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 5000,
-});
+const chatApi = api;
 
 export interface ChatMessage {
   id: string;

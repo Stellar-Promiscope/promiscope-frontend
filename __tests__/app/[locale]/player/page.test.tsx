@@ -14,7 +14,8 @@ import type { Player } from '@/types';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 jest.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () =>
+    Object.assign((key: string) => key, { rich: (key: string) => key }),
 }));
 
 jest.mock('next/navigation', () => ({

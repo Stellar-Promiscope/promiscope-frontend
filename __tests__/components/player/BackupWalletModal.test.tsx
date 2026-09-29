@@ -1,5 +1,7 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/__tests__/setup-providers-intl';
 import userEvent from '@testing-library/user-event';
 import BackupWalletModal from '@/components/player/BackupWalletModal';
 import type { Player } from '@/types';
@@ -134,6 +136,37 @@ describe('BackupWalletModal', () => {
     expect(
       screen.getByText(
         /This action cannot be undone\. You'll have no backup recovery method\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('renders translated copy and validation errors in French', async () => {
+    const user = userEvent.setup();
+    render(
+      <BackupWalletModal
+        player={PLAYER}
+        isOpen
+        onClose={onClose}
+        onSuccess={onSuccess}
+      />,
+      { locale: 'fr' },
+    );
+
+    expect(screen.getByText('Récupération du compte')).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Associer un portefeuille de secours',
+      }),
+    );
+    await user.type(
+      screen.getByLabelText('Adresse du portefeuille de secours'),
+      'not-a-wallet',
+    );
+    await user.click(screen.getByRole('button', { name: 'Continuer' }));
+
+    expect(
+      screen.getByText(
+        'Adresse Stellar invalide. Elle doit comporter 56 caractères et commencer par G.',
       ),
     ).toBeInTheDocument();
   });

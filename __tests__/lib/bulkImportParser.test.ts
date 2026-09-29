@@ -74,7 +74,8 @@ describe('parseBulkImportFile — CSV', () => {
     expect(result.rows[0].isValid).toBe(false);
     expect(result.rows[0].errors).toContainEqual({
       field: 'name',
-      message: 'Name is required',
+      code: 'REQUIRED',
+      row: 1,
     });
   });
 
@@ -87,7 +88,9 @@ describe('parseBulkImportFile — CSV', () => {
     expect(result.rows[0].isValid).toBe(false);
     expect(result.rows[0].errors).toContainEqual({
       field: 'position',
-      message: '"QUARTERBACK" is not a recognised position',
+      code: 'INVALID_POSITION',
+      row: 1,
+      params: { value: 'QUARTERBACK' },
     });
   });
 
@@ -100,7 +103,9 @@ describe('parseBulkImportFile — CSV', () => {
     expect(result.rows[0].isValid).toBe(false);
     expect(result.rows[0].errors).toContainEqual({
       field: 'region',
-      message: '"narnia" is not a recognised region',
+      code: 'INVALID_REGION',
+      row: 1,
+      params: { value: 'narnia' },
     });
   });
 
@@ -113,11 +118,15 @@ describe('parseBulkImportFile — CSV', () => {
     const result = parseBulkImportFile(csv, 'csv');
     expect(result.rows[0].errors).toContainEqual({
       field: 'age',
-      message: 'Age must be a whole number between 14 and 45',
+      code: 'INVALID_AGE',
+      row: 1,
+      params: { value: '5', min: 14, max: 45 },
     });
     expect(result.rows[1].errors).toContainEqual({
       field: 'age',
-      message: 'Age must be a whole number between 14 and 45',
+      code: 'INVALID_AGE',
+      row: 2,
+      params: { value: '90', min: 14, max: 45 },
     });
   });
 
@@ -161,7 +170,7 @@ describe('parseBulkImportFile — CSV', () => {
       'name,age,nationality,region,position',
       'csv',
     );
-    expect(result.fileError).toMatch(/no data rows/i);
+    expect(result.fileError).toEqual({ code: 'EMPTY_CSV' });
     expect(result.rows).toHaveLength(0);
   });
 
@@ -172,7 +181,7 @@ describe('parseBulkImportFile — CSV', () => {
       '\n',
     );
     const result = parseBulkImportFile(csv, 'csv');
-    expect(result.fileError).toMatch(/exceeds/i);
+    expect(result.fileError?.code).toBe('TOO_MANY_ROWS');
     expect(result.rows).toHaveLength(0);
   });
 
@@ -229,18 +238,18 @@ describe('parseBulkImportFile — JSON', () => {
 
   it('returns a fileError for malformed JSON', () => {
     const result = parseBulkImportFile('{not valid json', 'json');
-    expect(result.fileError).toMatch(/not valid json/i);
+    expect(result.fileError).toEqual({ code: 'INVALID_JSON' });
     expect(result.rows).toHaveLength(0);
   });
 
   it('returns a fileError when the JSON root is not an array', () => {
     const result = parseBulkImportFile('{"name":"John"}', 'json');
-    expect(result.fileError).toMatch(/array of player objects/i);
+    expect(result.fileError).toEqual({ code: 'JSON_NOT_ARRAY' });
   });
 
   it('returns a fileError for an empty JSON array', () => {
     const result = parseBulkImportFile('[]', 'json');
-    expect(result.fileError).toMatch(/no player entries/i);
+    expect(result.fileError).toEqual({ code: 'EMPTY_JSON' });
   });
 
   it('flags invalid rows in JSON input just like CSV', () => {
@@ -265,7 +274,8 @@ describe('parseBulkImportFile — JSON', () => {
     expect(result.rows[1].isValid).toBe(false);
     expect(result.rows[1].errors).toContainEqual({
       field: 'name',
-      message: 'Name is required',
+      code: 'REQUIRED',
+      row: 2,
     });
   });
 });

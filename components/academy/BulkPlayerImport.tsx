@@ -9,6 +9,7 @@ import { parseContractError } from '@/lib/contractErrorMessage';
 import {
   parseBulkImportFile,
   detectFormat,
+  type BulkImportFileError,
   type ParsedRow,
 } from '@/lib/bulkImportParser';
 import {
@@ -41,6 +42,11 @@ type RowSubmissionStatus =
   | 'failed'
   | 'skipped';
 
+/** A parser file error, or a FileReader failure surfaced the same way. */
+type FileErrorState =
+  | BulkImportFileError
+  | { code: 'READ_FAILED'; params?: undefined };
+
 interface RowSubmission {
   status: RowSubmissionStatus;
   txHash?: string | null;
@@ -72,9 +78,10 @@ function StatusBadge({
   phase: Phase;
   submission?: RowSubmission;
 }) {
+  const t = useTranslations('academy.bulkImport.status');
   if (!row.isValid) {
     const label =
-      phase === 'upload' || phase === 'preview' ? 'Invalid' : 'Skipped';
+      phase === 'upload' || phase === 'preview' ? t('invalid') : t('skipped');
     return (
       <span className="inline-flex items-center rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-300">
         {label}
@@ -85,7 +92,7 @@ function StatusBadge({
   if (phase === 'upload' || phase === 'preview' || !submission) {
     return (
       <span className="inline-flex items-center rounded-full border border-brand-green/40 bg-brand-green/10 px-2.5 py-1 text-xs font-medium text-brand-green">
-        Valid
+        {t('valid')}
       </span>
     );
   }
@@ -94,20 +101,20 @@ function StatusBadge({
     case 'pending':
       return (
         <span className="inline-flex items-center rounded-full border border-gray-600 bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-400">
-          Waiting…
+          {t('waiting')}
         </span>
       );
     case 'signing':
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-300">
           <Spinner size="sm" className="text-yellow-300" />
-          Awaiting signature…
+          {t('signing')}
         </span>
       );
     case 'success':
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-green/40 bg-brand-green/10 px-2.5 py-1 text-xs font-medium text-brand-green">
-          <span aria-hidden="true">✓</span> Registered
+          <span aria-hidden="true">✓</span> {t('registered')}
           {submission.txHash && (
             <a
               href={explorerUrl(submission.txHash)}
@@ -115,7 +122,7 @@ function StatusBadge({
               rel="noopener noreferrer"
               className="underline hover:opacity-80"
             >
-              View tx
+              {t('viewTx')}
             </a>
           )}
         </span>
@@ -123,7 +130,7 @@ function StatusBadge({
     case 'failed':
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-300">
-          <span aria-hidden="true">✕</span> Failed
+          <span aria-hidden="true">✕</span> {t('failed')}
         </span>
       );
     default:
@@ -134,6 +141,7 @@ function StatusBadge({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function BulkPlayerImport() {
+  const t = useTranslations('academy.bulkImport');
   const { publicKey, signAndSubmit } = useWallet();
   const isPaused = useIsPaused();
   const tContractStatus = useTranslations('contract_status');
@@ -141,7 +149,7 @@ export default function BulkPlayerImport() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>('upload');
   const [fileName, setFileName] = useState('');
-  const [fileError, setFileError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<FileErrorState | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [submissions, setSubmissions] = useState<Record<number, RowSubmission>>(
     {},
@@ -258,7 +266,7 @@ export default function BulkPlayerImport() {
       }
     };
     reader.onerror = () => {
-      setFileError('Failed to read the file. Please try again.');
+      setFileError({ code: 'READ_FAILED' });
     };
     reader.readAsText(file);
   };
@@ -279,11 +287,11 @@ export default function BulkPlayerImport() {
   // and records which rows were skipped so they can be retried on resume.
   const handleImport = async () => {
     if (!publicKey) {
-      setFormError('Wallet not connected');
+      setFormError(t('walletNotConnected'));
       return;
     }
     if (isPaused) {
-      setFormError('Transactions are currently disabled');
+      setFormError(t('transactionsDisabled'));
       return;
     }
     if (validRows.length === 0) return;
@@ -410,9 +418,7 @@ export default function BulkPlayerImport() {
       }
       setIsPausedBatch(false);
       setPhase('preview');
-      setFormError(
-        'Batch cancelled. Re-upload the same file to resume from where you left off.',
-      );
+      setFormError(t('batchCancelled'));
     } else {
       setPhase('done');
     }
@@ -437,12 +443,8 @@ export default function BulkPlayerImport() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">Bulk Player Import</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          Upload a CSV or JSON file listing multiple players to register them in
-          one session. Each player is still registered as its own on-chain
-          transaction — you will be asked to sign once per player.
-        </p>
+        <h1 className="text-2xl font-bold text-white">{t('title')}</h1>
+        <p className="text-sm text-gray-400 mt-1">{t('intro')}</p>
       </div>
 
       {/* ── File upload ──────────────────────────────────────────────────── */}
@@ -452,12 +454,10 @@ export default function BulkPlayerImport() {
             htmlFor="bulk-import-file"
             className="block text-sm font-medium text-gray-300"
           >
-            Player file (CSV or JSON)
+            {t('fileLabel')}
           </label>
           <p id="bulk-import-hint" className="text-xs text-gray-400 mt-1">
-            Required columns/fields: name, age, nationality, region, position.
-            Optional: bio. One row/object per player. No highlight reel upload
-            here — add those later per-player.
+            {t('fileHint')}
           </p>
         </div>
         <input
@@ -481,11 +481,11 @@ export default function BulkPlayerImport() {
             role="alert"
             className="text-sm text-red-500"
           >
-            {fileError}
+            {t(`fileErrors.${fileError.code}`, fileError.params)}
           </p>
         )}
         {fileName && !fileError && (
-          <p className="text-sm text-gray-400">Loaded: {fileName}</p>
+          <p className="text-sm text-gray-400">{t('loaded', { fileName })}</p>
         )}
       </section>
 
@@ -494,11 +494,14 @@ export default function BulkPlayerImport() {
         <section className="bg-brand-card border border-gray-800 rounded-xl p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-white">
-              {phase === 'preview' ? 'Preview' : 'Import Progress'}
+              {phase === 'preview' ? t('previewHeading') : t('progressHeading')}
             </h2>
             <p className="text-sm text-gray-400">
-              {validRows.length} valid · {invalidRows.length} invalid ·{' '}
-              {rows.length} total
+              {t('counts', {
+                valid: validRows.length,
+                invalid: invalidRows.length,
+                total: rows.length,
+              })}
             </p>
           </div>
 
@@ -509,43 +512,41 @@ export default function BulkPlayerImport() {
               aria-live="polite"
               className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-200"
             >
-              Incomplete batch found:{' '}
-              <span className="font-medium">
-                {resumedSessionInfo.completedRows} of{' '}
-                {resumedSessionInfo.totalRows} rows
-              </span>{' '}
-              already processed. Rows that previously succeeded will be skipped.
-              Click <span className="font-medium">Import</span> to resume.
+              {t.rich('resumeBanner', {
+                completed: resumedSessionInfo.completedRows,
+                total: resumedSessionInfo.totalRows,
+                strong: (chunks) => (
+                  <span className="font-medium">{chunks}</span>
+                ),
+              })}
             </div>
           )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <caption className="sr-only">
-                Bulk player import preview and status
-              </caption>
+              <caption className="sr-only">{t('tableCaption')}</caption>
               <thead>
                 <tr className="border-b border-gray-800 text-gray-400">
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    Row
+                    {t('columns.row')}
                   </th>
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    Name
+                    {t('columns.name')}
                   </th>
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    Age
+                    {t('columns.age')}
                   </th>
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    Nationality
+                    {t('columns.nationality')}
                   </th>
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    Region
+                    {t('columns.region')}
                   </th>
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    Position
+                    {t('columns.position')}
                   </th>
                   <th scope="col" className="py-2 pr-4 font-medium">
-                    Status
+                    {t('columns.status')}
                   </th>
                 </tr>
               </thead>
@@ -586,7 +587,11 @@ export default function BulkPlayerImport() {
                           <ul className="text-xs text-red-400 list-disc list-inside">
                             {row.errors.map((err, i) => (
                               <li key={i}>
-                                {err.field}: {err.message}
+                                {t(`columns.${err.field}`)}:{' '}
+                                {t(`rowErrors.${err.code}`, {
+                                  field: t(`columns.${err.field}`),
+                                  ...err.params,
+                                })}
                               </li>
                             ))}
                           </ul>
@@ -617,8 +622,11 @@ export default function BulkPlayerImport() {
               aria-live="polite"
               className="rounded-md border border-gray-700 bg-gray-900/50 p-3 text-sm text-gray-200"
             >
-              Import complete: {succeededCount} registered, {failedCount}{' '}
-              failed, {invalidRows.length} skipped (invalid).
+              {t('done', {
+                succeeded: succeededCount,
+                failed: failedCount,
+                invalid: invalidRows.length,
+              })}
             </div>
           )}
 
@@ -631,12 +639,12 @@ export default function BulkPlayerImport() {
                     variant="secondary"
                     onClick={handlePause}
                   >
-                    Pause
+                    {t('pause')}
                   </Button>
                 )}
                 {phase === 'submitting' && isPausedBatch && (
                   <Button type="button" onClick={handleResume}>
-                    Resume
+                    {t('resume')}
                   </Button>
                 )}
                 {phase === 'submitting' && (
@@ -645,7 +653,7 @@ export default function BulkPlayerImport() {
                     variant="secondary"
                     onClick={handleCancel}
                   >
-                    Cancel
+                    {t('cancel')}
                   </Button>
                 )}
                 <Button
@@ -658,12 +666,16 @@ export default function BulkPlayerImport() {
                     !publicKey
                   }
                   disabledReason={isPaused ? tContractStatus('paused_hint') : undefined}
+                  title={!isPaused && !publicKey ? t('connectWalletTitle') : undefined}
                 >
                   {phase === 'submitting'
                     ? isPausedBatch
-                      ? 'Paused'
-                      : 'Importing…'
-                    : `Import ${validRows.length} valid player${validRows.length === 1 ? '' : 's'}`}
+                      ? t('paused')
+                      : t('importing', {
+                          done: succeededCount + failedCount,
+                          total: validRows.length,
+                        })
+                    : t('importButton', { count: validRows.length })}
                 </Button>
               </>
             )}
@@ -678,9 +690,7 @@ export default function BulkPlayerImport() {
               }}
               disabled={phase === 'submitting'}
             >
-              {phase === 'done'
-                ? 'Import another batch'
-                : 'Choose another file'}
+              {phase === 'done' ? t('importAnother') : t('chooseAnother')}
             </Button>
           </div>
         </section>

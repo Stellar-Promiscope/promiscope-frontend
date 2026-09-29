@@ -110,17 +110,6 @@ export const subscribeToPush = (
 
 export const unsubscribeFromPush = (wallet: string, endpoint: string) =>
   api.delete('/push/subscriptions', { data: { wallet, endpoint } });
-
-// Chat
-export const fetchChatHistory = (roomId: string) =>
-  api.get(`/chat/${roomId}`).then((r) => r.data);
-
-export const postChatMessage = (
-  roomId: string,
-  message: string,
-  sender: string,
-) => api.post(`/chat/${roomId}`, { message, sender }).then((r) => r.data);
-
 // Admin activity feed
 export type ActivityEventType =
   | 'player_registered'

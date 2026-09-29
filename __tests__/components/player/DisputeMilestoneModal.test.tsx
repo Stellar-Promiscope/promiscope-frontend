@@ -1,5 +1,7 @@
+jest.unmock('next-intl');
+
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/__tests__/setup-providers-intl';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import DisputeMilestoneModal from '@/components/player/DisputeMilestoneModal';
@@ -184,5 +186,28 @@ describe('DisputeMilestoneModal', () => {
       // Textarea should not exceed maxLength due to browser enforcement
       expect(textarea).toHaveValue('a'.repeat(2000));
     });
+  });
+
+  it('renders translated copy and a pluralized validation error in French', async () => {
+    const user = userEvent.setup({ delay: null });
+    render(
+      <DisputeMilestoneModal
+        isOpen
+        onClose={jest.fn()}
+        milestoneDescription="KYC verified"
+        onSubmit={jest.fn()}
+      />,
+      { locale: 'fr' },
+    );
+
+    expect(screen.getByText('KYC verified')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Motif'), 'court');
+    await user.click(
+      screen.getByRole('button', { name: 'Envoyer la contestation' }),
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Veuillez décrire votre contestation en au moins 10 caractères.',
+    );
   });
 });

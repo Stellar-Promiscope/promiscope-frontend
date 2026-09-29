@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+jest.unmock('next-intl');
+
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@/__tests__/setup-providers-intl';
 import '@testing-library/jest-dom';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import BulkPlayerImport from '@/components/academy/BulkPlayerImport';

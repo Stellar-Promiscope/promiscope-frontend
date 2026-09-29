@@ -7,8 +7,25 @@ history and player/scout comments next) and shouldn't be stored as ad-hoc
 files or stubs inside the Next.js app.
 
 Frontend calls hit this service through the shared `api` axios instance in
-`lib/api.ts` (`NEXT_PUBLIC_API_URL`), the same pattern already used for the
-chat helpers (`fetchChatHistory`/`postChatMessage`).
+`lib/api.ts` (`NEXT_PUBLIC_API_URL`). The chat client in
+`lib/messaging/chatApi.ts` reuses that same instance.
+
+## Planned: messaging API (canonical contract)
+
+`lib/messaging/chatApi.ts` is the single chat client; the backend chat
+implementation should target exactly these endpoints. The sender of a message
+is **always** derived from the authenticated session on the server — clients
+never send a `sender`/`senderId`, and the server must ignore one if present.
+
+| Method | Path                    | Body       | Response        |
+| ------ | ----------------------- | ---------- | --------------- |
+| GET    | `/threads/:id/messages` | —          | `ChatMessage[]` |
+| POST   | `/threads/:id/messages` | `{ body }` | `ChatMessage`   |
+| POST   | `/threads/:id/read`     | —          | `204`           |
+
+`ChatMessage` is `{ id, threadId, senderId, body, createdAt, status }`, where
+`status` is `'sent' | 'delivered' | 'read'` and `senderId` is server-set.
+The legacy `/chat/:roomId` routes are retired and must not be implemented.
 
 ## Stack
 

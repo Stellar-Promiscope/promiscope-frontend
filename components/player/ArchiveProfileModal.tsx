@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { Archive, RotateCcw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/Modal';
 import Spinner from '@/components/ui/Spinner';
 import { useArchiveProfile } from '@/hooks/useArchiveProfile';
@@ -19,6 +20,7 @@ export default function ArchiveProfileModal({
   onClose,
   onSuccess,
 }: ArchiveProfileModalProps) {
+  const t = useTranslations('player.modals.archive');
   const { archive, unarchive, loading, error } = useArchiveProfile();
   const [confirmStep, setConfirmStep] = useState(false);
   const isArchived = player.archived ?? false;
@@ -52,30 +54,20 @@ export default function ArchiveProfileModal({
                 <Archive className="w-5 h-5 text-yellow-500" />
               )}
               <h2 className="text-lg font-semibold text-white">
-                {isArchived ? 'Restore Your Profile?' : 'Archive Your Profile?'}
+                {isArchived ? t('titleRestore') : t('titleArchive')}
               </h2>
             </div>
 
             {isArchived ? (
               <>
-                <p className="text-sm text-gray-300">
-                  Restore your profile to make it visible to scouts again.
-                  Scouts will be able to search and view your profile.
-                </p>
-                <p className="text-xs text-gray-400">
-                  Your data and milestones are preserved — nothing is deleted.
-                </p>
+                <p className="text-sm text-gray-300">{t('restoreBody')}</p>
+                <p className="text-xs text-gray-400">{t('dataPreserved')}</p>
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-300">
-                  Archiving your profile will hide it from scout search results
-                  and browsing. You can restore it anytime.
-                </p>
+                <p className="text-sm text-gray-300">{t('archiveBody')}</p>
                 <p className="text-xs text-gray-400">
-                  Your data and milestones are preserved — nothing is deleted.
-                  Direct links to your profile will show a &apos;currently
-                  private&apos; message.
+                  {t('dataPreserved')} {t('directLinksNote')}
                 </p>
               </>
             )}
@@ -92,7 +84,7 @@ export default function ArchiveProfileModal({
                 onClick={handleClose}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
@@ -105,19 +97,17 @@ export default function ArchiveProfileModal({
                 }`}
               >
                 {loading && <Spinner size="sm" />}
-                {isArchived ? 'Restore Profile' : 'Archive Profile'}
+                {isArchived ? t('restoreButton') : t('archiveButton')}
               </button>
             </div>
           </>
         ) : (
           <>
             <h3 className="text-lg font-semibold text-white">
-              {isArchived ? 'Restore your profile?' : 'Archive your profile?'}
+              {isArchived ? t('confirmTitleRestore') : t('confirmTitleArchive')}
             </h3>
             <p className="text-sm text-gray-300">
-              {isArchived
-                ? 'Confirm that you want to restore your profile and make it visible to scouts.'
-                : 'Confirm that you want to archive your profile. You can restore it anytime.'}
+              {isArchived ? t('confirmRestore') : t('confirmArchive')}
             </p>
             <div className="flex gap-3 pt-2">
               <button
@@ -126,7 +116,7 @@ export default function ArchiveProfileModal({
                 disabled={loading}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition disabled:opacity-50"
               >
-                Go Back
+                {t('goBack')}
               </button>
               <button
                 type="button"
@@ -140,10 +130,10 @@ export default function ArchiveProfileModal({
               >
                 {loading && <Spinner size="sm" />}
                 {loading
-                  ? 'Processing...'
+                  ? t('processing')
                   : isArchived
-                    ? 'Yes, Restore'
-                    : 'Yes, Archive'}
+                    ? t('yesRestore')
+                    : t('yesArchive')}
               </button>
             </div>
           </>
