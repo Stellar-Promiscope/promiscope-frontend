@@ -131,6 +131,26 @@ node scripts/validate-env.js
 
 Expected output: `✓ All N env vars declared in .env.example`
 
+#### Required secrets for local auth
+
+SEP-10 wallet login needs three server-side secrets in `.env.local`. Without them `lib/session.ts` throws `SESSION_SECRET is not configured` and wallet sign-in fails with an opaque `401`/`500`.
+
+| Variable            | Purpose                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `SESSION_SECRET`    | Signs the session cookie issued after a successful SEP-10 login (32+ random bytes).                     |
+| `SEP10_SERVER_KEY`  | Stellar secret key used to sign SEP-10 challenge transactions. Use a throwaway testnet keypair locally. |
+| `SEP10_HOME_DOMAIN` | Home domain embedded in the SEP-10 challenge (`localhost:3000` for local dev).                          |
+
+```bash
+# 32+ random bytes
+echo "SESSION_SECRET=$(openssl rand -base64 48)" >> .env.local
+# A throwaway testnet keypair for signing SEP-10 challenges
+node -e "const {Keypair}=require('@stellar/stellar-sdk');const k=Keypair.random();console.log('SEP10_SERVER_KEY='+k.secret())" >> .env.local
+echo "SEP10_HOME_DOMAIN=localhost:3000" >> .env.local
+```
+
+> `scripts/validate-env.js` only checks that variables are declared in `.env.example`; it does not currently verify these secrets have values, so double-check them manually.
+
 **SEP-10 origin allow-list:** `SEP10_ALLOWED_ORIGINS` can be left blank for local dev — `app/api/auth/sep10/route.ts` falls back to `http://<NEXT_PUBLIC_DOMAIN>` (default `http://localhost:3000`) when `NODE_ENV !== 'production'`. It **must** be set before deploying to any non-local environment: a comma-separated list of full origins allowed to call the SEP-10 POST endpoint, e.g. `SEP10_ALLOWED_ORIGINS=https://scoutoff.app,https://www.scoutoff.app`. In production, if this (and `NEXT_PUBLIC_BASE_URL`, honored as a convenience single-origin entry) are both unset, the route fails closed with `403` rather than trusting the request's own `Host` header.
 
 ### 4. Create and fund a Stellar testnet account
@@ -405,6 +425,12 @@ required `## Summary` / `## Validation` sections intact — the CI guard
    in the PR description and bypass via `[skip-docs-validation]` in
    the PR title so the maintainer can drop the guard once.
 
+### Error 7: Wallet connects but I'm never logged in
+
+**Symptom:** Freighter connects and signs the SEP-10 challenge, but the app stays logged out, or `/api/auth/sep10` returns `401`/`500`. The server log shows `SESSION_SECRET is not configured`.
+
+**Fix:** Set `SESSION_SECRET` (and `SEP10_SERVER_KEY` / `SEP10_HOME_DOMAIN`) in `.env.local` as described in [Required secrets for local auth](#required-secrets-for-local-auth), then restart `npm run dev`.
+
 ## Verification Checklist
 
 After following all steps, verify the full stack is working:
@@ -545,6 +571,7 @@ npm run test:integration:local
 ```
 
 This single command:
+
 1. Starts `docker-compose.test.yml` (stellar/quickstart local network on port 8000)
 2. Runs `scripts/deploy-test-contract.sh` — fetches the pinned WASM, verifies its SHA-256, deploys it, initializes it with a generated admin keypair, writes `.env.integration`
 3. Runs `npm run test:integration` (Jest with `jest.integration.config.js`)
@@ -564,27 +591,27 @@ npm run test:integration
 
 ### What is tested
 
-| Suite | What it catches |
-|---|---|
-| `get_contract_version` | Pinned WASM version matches `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts` |
-| `register_player → getPlayer` | Full `PlayerVitals` struct encoding/decoding (field names, types, order) |
-| `add_validator → approve_milestone → getMilestoneHistory` | Validator lifecycle and `Milestone` struct shape |
-| `subscribe → payToContact` | Fee flow; subscription record shape |
-| `pause_contract → write fails with error 9` | `parseContractError` correctly maps error code 9 → "Contract is paused" |
-| ABI mismatch (deliberate) | Swapped argument order is rejected on-chain (shows the harness catches real drift) |
+| Suite                                                     | What it catches                                                                    |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `get_contract_version`                                    | Pinned WASM version matches `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts`       |
+| `register_player → getPlayer`                             | Full `PlayerVitals` struct encoding/decoding (field names, types, order)           |
+| `add_validator → approve_milestone → getMilestoneHistory` | Validator lifecycle and `Milestone` struct shape                                   |
+| `subscribe → payToContact`                                | Fee flow; subscription record shape                                                |
+| `pause_contract → write fails with error 9`               | `parseContractError` correctly maps error code 9 → "Contract is paused"            |
+| ABI mismatch (deliberate)                                 | Swapped argument order is rejected on-chain (shows the harness catches real drift) |
 
 ### File layout
 
-| Path | Purpose |
-|---|---|
-| `docker-compose.test.yml` | stellar/quickstart local network (Soroban RPC on `:8000`) |
-| `scripts/deploy-test-contract.sh` | Fetch + verify WASM, deploy, init, write `.env.integration` |
-| `__tests__/integration/contract.int.test.ts` | Integration test suite |
-| `__tests__/integration/helpers.ts` | Keypair generation, funding, signing, polling utilities |
-| `__tests__/integration/globalSetup.ts` | Loads `.env.integration` before tests run |
-| `jest.integration.config.js` | Separate Jest project (excluded from `npm test`) |
-| `.env.integration` | **Generated, gitignored** — contains ephemeral contract ID + admin secret |
-| `.wasm-cache/` | **Gitignored** — cached WASM download, keyed by SHA-256 in CI |
+| Path                                         | Purpose                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------- |
+| `docker-compose.test.yml`                    | stellar/quickstart local network (Soroban RPC on `:8000`)                 |
+| `scripts/deploy-test-contract.sh`            | Fetch + verify WASM, deploy, init, write `.env.integration`               |
+| `__tests__/integration/contract.int.test.ts` | Integration test suite                                                    |
+| `__tests__/integration/helpers.ts`           | Keypair generation, funding, signing, polling utilities                   |
+| `__tests__/integration/globalSetup.ts`       | Loads `.env.integration` before tests run                                 |
+| `jest.integration.config.js`                 | Separate Jest project (excluded from `npm test`)                          |
+| `.env.integration`                           | **Generated, gitignored** — contains ephemeral contract ID + admin secret |
+| `.wasm-cache/`                               | **Gitignored** — cached WASM download, keyed by SHA-256 in CI             |
 
 ### Updating the pinned WASM
 
