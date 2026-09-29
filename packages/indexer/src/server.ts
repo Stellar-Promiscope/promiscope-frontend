@@ -13,6 +13,7 @@ import {
   type WalletApprovalWindow,
 } from './db/eventStore';
 import type { EventType } from './metrics/IndexerMetrics';
+import { logger } from './logger';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
@@ -346,7 +347,7 @@ function safeDecode(s: string): string | null {
 }
 
 function handleUnexpectedError(res: http.ServerResponse, err: unknown): void {
-  console.error('Unhandled indexer request error:', err);
+  logger.error('Unhandled indexer request error', { err });
   if (!res.headersSent) {
     sendJson(res, 500, { error: 'internal server error' });
   } else {
@@ -409,7 +410,7 @@ export const server = http.createServer(
  * and close the event store.
  */
 export async function shutdown(signal: string): Promise<void> {
-  console.log(`Indexer shutting down (${signal})`);
+  logger.info(`Indexer shutting down (${signal})`);
   server.close();
   if (poller) {
     await Promise.race([
@@ -424,7 +425,7 @@ export async function shutdown(signal: string): Promise<void> {
 
 export function startServer(): void {
   server.listen(PORT, () => {
-    console.log(`Indexer server listening on port ${PORT}`);
+    logger.info(`Indexer server listening on port ${PORT}`);
   });
 
   // The poller needs SOROBAN_RPC_URL/CONTRACT_ID; a config error here is a
@@ -433,7 +434,7 @@ export function startServer(): void {
   try {
     setPollerState(startEventPolling());
   } catch (err) {
-    console.error('Failed to start event poller:', err);
+    logger.error('Failed to start event poller', { err });
     setPollerState(
       null,
       err instanceof Error ? err.message : 'Failed to start event poller',
@@ -442,7 +443,7 @@ export function startServer(): void {
 
   const onSignal = (signal: NodeJS.Signals) => {
     shutdown(signal)
-      .catch((err) => console.error('Error during shutdown:', err))
+      .catch((err) => logger.error('Error during shutdown', { err }))
       .finally(() => process.exit(0));
   };
   process.once('SIGTERM', onSignal);

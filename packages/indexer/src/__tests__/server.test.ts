@@ -383,13 +383,11 @@ describe('malformed path encoding (issue #1331)', () => {
       .mockImplementationOnce(() => {
         throw new Error('boom');
       });
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     const { status } = await request('/players/player-1/events');
     expect(status).toBe(500);
     expect(server.listening).toBe(true);
 
     spy.mockRestore();
-    errSpy.mockRestore();
   });
 });

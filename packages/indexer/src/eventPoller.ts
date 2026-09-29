@@ -3,6 +3,7 @@ import { SorobanRpc, Networks, xdr, scValToNative } from '@stellar/stellar-sdk';
 import { IndexerMetrics, type EventType } from './metrics/IndexerMetrics';
 import { updateLastLedger, updateNetworkLedger } from './ledgerTracker';
 import { EventStore } from './db/eventStore';
+import { logger } from './logger';
 
 /**
  * Polls Soroban RPC's getEvents for new ScoutOff contract events and feeds
@@ -295,13 +296,17 @@ export async function pollOnce(
         // point we know the node has events for (it just reported it).
         // We record the gap so it is observable.
         const skipTo = latest.sequence;
-        console.warn(
-          `[eventPoller] Cursor ${effectiveStart} is outside the node's retention window. ` +
-            `Skipping forward to ledger ${skipTo}. ` +
-            `Events in ledgers ${effectiveStart}–${skipTo - 1} will not be indexed.`,
+        const durationMs = Date.now() - cycleStart;
+        logger.warn(
+          'Cursor is outside the node\'s retention window, skipping forward',
+          {
+            ledger: effectiveStart,
+            skipTo,
+            durationMs,
+          },
         );
         metrics.recordRetentionWindowGap(effectiveStart, skipTo);
-        metrics.recordFailure(Date.now() - cycleStart);
+        metrics.recordFailure(durationMs);
         metrics.reportCursor(skipTo);
         return skipTo;
       }
@@ -350,6 +355,14 @@ export async function pollOnce(
     lastPollError = null;
     metrics.markHealthy();
     metrics.reportCursor(nextCursor);
+
+    const durationMs = Date.now() - cycleStart;
+    logger.info('Poll completed', {
+      ledger: effectiveStart,
+      eventCount: res.events.length,
+      durationMs,
+    });
+
     return nextCursor;
   } catch (err) {
     // RPC-level failure on getLatestLedger — retry the same range next cycle.
