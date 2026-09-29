@@ -29,7 +29,8 @@ const PLAYER_SEARCH_NAME_MAX = 100;
 const RATE_LIMIT = 20;
 const WINDOW_MS = 10 * 1000;
 
-const backend = axios.create({
+const backend = createClient('players-search', {
+  timeoutMs: SEARCH_TIMEOUT_MS,
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
   headers: { 'Content-Type': 'application/json' },
 });
@@ -73,7 +74,7 @@ async function getPlayerSearch(req: NextRequest) {
     );
     return NextResponse.json(res.data);
   } catch (e: any) {
-    const status = e?.response?.status ?? 502;
+    const status = upstreamStatus(e);
     log.error('Player search proxy failed', {
       status,
       reason: e instanceof Error ? e.message : String(e),

@@ -54,6 +54,12 @@ import { SessionStore, type SessionRow } from './sessionStore';
 import { MilestoneEndorsementStore } from './milestoneEndorsementStore';
 import { UploadTrackingStore, type TrackedUpload } from './uploadTrackingStore';
 import {
+  deleteBackendUserData,
+  fetchBackendUserData,
+  isBackendUserDataConfigured,
+  type BackendUserData,
+} from './backendUserData';
+import {
   listSessionsForWallet,
   clearSessionsForWallet,
 } from './chunkedUploadStore';
@@ -253,6 +259,16 @@ export async function collectUserData(
     }
   }
 
+  if (isBackendUserDataConfigured()) {
+    try {
+      sections.backend = await fetchBackendUserData(wallet);
+    } catch (err) {
+      errors.push(
+        `backend: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   const excluded: ExcludedSection[] = [
     {
       name: 'onboardingSync',
@@ -270,6 +286,19 @@ export async function collectUserData(
         'Chat message history is held by a separate off-chain chat service (lib/messaging/* proxies to it) and is not part of this platform’s stores. Out of scope for this export; extend the registry if that service gains a wallet-scoped export.',
     },
   ];
+
+  if (!isBackendUserDataConfigured()) {
+    excluded.push({
+      name: 'backend',
+      reason:
+        'The backend data service (referrals, academies, milestone submissions) is not configured on this deployment (BACKEND_SERVICE_TOKEN is unset).',
+    });
+  }
+  excluded.push({
+    name: 'sponsorshipWaitlist',
+    reason:
+      'Sponsorship waitlist signups are keyed by email, not wallet, so they cannot be matched to this export. Contact support from the email you signed up with to export or delete that entry.',
+  });
 
   if (errors.length > 0) {
     excluded.push({
@@ -301,13 +330,21 @@ export async function collectUserData(
  * fails, so a partial deletion is never reported as success — callers
  * (app/api/data-deletion/request/route.ts) must await this and only confirm
  * success to the user once it resolves.
+ *
+ * The Express backend is called last, after every local store is cleared.
+ * If it fails (or is unconfigured in production) the local deletion still
+ * stands and the failure is returned in `failed`, so the route can report a
+ * partial deletion instead of silently claiming success. Retrying is safe:
+ * every step is idempotent.
  */
 export async function deleteUserData(wallet: string): Promise<{
   removed: Record<string, number>;
   anonymized: Record<string, number>;
+  failed: Record<string, string>;
 }> {
   const removed: Record<string, number> = {};
   const anonymized: Record<string, number> = {};
+  const failed: Record<string, string> = {};
 
   removed.watchlist = WatchlistStore.getInstance().clearForWallet(wallet);
   removed.savedSearches = SavedSearchStore.getInstance().clearForWallet(wallet);
@@ -335,5 +372,21 @@ export async function deleteUserData(wallet: string): Promise<{
   anonymized.adminAuditLog =
     AdminAuditStore.getInstance().anonymizeWallet(wallet);
 
-  return { removed, anonymized };
+  if (isBackendUserDataConfigured()) {
+    try {
+      const backend = await deleteBackendUserData(wallet);
+      for (const [k, v] of Object.entries(backend.removed)) {
+        removed[`backend.${k}`] = v;
+      }
+      for (const [k, v] of Object.entries(backend.anonymized)) {
+        anonymized[`backend.${k}`] = v;
+      }
+    } catch (err) {
+      failed.backend = err instanceof Error ? err.message : String(err);
+    }
+  } else if (process.env.NODE_ENV === 'production') {
+    failed.backend = 'Backend data service is not configured';
+  }
+
+  return { removed, anonymized, failed };
 }

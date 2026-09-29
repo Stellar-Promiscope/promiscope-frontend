@@ -11,6 +11,7 @@ module.exports = {
     '/player',
     '/validator',
     '/admin',
+    '/admin/*',
     '/api',
     '/api/*',
 
@@ -30,6 +31,9 @@ module.exports = {
     '/en/admin',
     '/fr/admin',
     '/sw/admin',
+    '/en/admin/*',
+    '/fr/admin/*',
+    '/sw/admin/*',
 
     '/en/scout/subscribe',
     '/fr/scout/subscribe',

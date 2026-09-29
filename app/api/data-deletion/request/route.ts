@@ -35,7 +35,26 @@ export async function POST(req: NextRequest) {
 
   const log = createRequestLogger(req);
   try {
-    const { removed, anonymized } = await deleteUserData(wallet);
+    const { removed, anonymized, failed } = await deleteUserData(wallet);
+    const failedStores = Object.keys(failed ?? {});
+    if (failedStores.length > 0) {
+      // Partial deletion: never report success. Retrying is safe.
+      log.error('Data deletion request partially failed', {
+        removed,
+        anonymized,
+        failed,
+      });
+      return NextResponse.json(
+        {
+          error: `Some of your data could not be deleted (${failedStores.join(', ')}). Please try again.`,
+          partial: true,
+          removed,
+          anonymized,
+          failed: failedStores,
+        },
+        { status: 502 },
+      );
+    }
     log.info('Processed data deletion request', { removed, anonymized });
     return privateJson({ success: true, removed, anonymized });
   } catch (err) {

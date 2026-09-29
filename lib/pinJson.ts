@@ -22,6 +22,7 @@
 
 import crypto from 'crypto';
 import axios from 'axios';
+import { pinTimeoutMs } from './httpClient';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ export async function pinJson(
         pinata_secret_api_key: process.env.PINATA_SECRET!,
         'Content-Type': 'application/json',
       },
+      timeout: pinTimeoutMs(0),
     },
   );
 

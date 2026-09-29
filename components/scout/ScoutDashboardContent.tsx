@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback } from 'react';
 import Link from 'next/link';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -8,23 +8,16 @@ import { useRequireWallet } from '@/hooks/useRequireWallet';
 import { useRequireSubscription } from '@/hooks/useRequireSubscription';
 import { useScout } from '@/hooks/useScout';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useMilestonesBatch } from '@/hooks/useMilestonesBatch';
-import { useDebounce } from '@/hooks/useDebounce';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { useWatchlist } from '@/hooks/useWatchlist';
-import {
-  useSavedSearches,
-  useSavedSearchNewCount,
-} from '@/hooks/useSavedSearches';
+import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useToast } from '@/components/ui/Toast';
 import useSWR from 'swr';
 import { getPlayer } from '@/lib/contract';
 import { fetchIndexerHealth, type IndexerHealth } from '@/lib/indexerClient';
 import PlayerCard from '@/components/PlayerCard';
-import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
 import PlayerFilterForm from '@/components/scout/PlayerFilterForm';
-import EmptyState from '@/components/ui/EmptyState';
 import ReferralPanel from '@/components/scout/ReferralPanel';
 import SpendingSummary from '@/components/scout/SpendingSummary';
 import OnboardingTour from '@/components/ui/OnboardingTour';
@@ -151,54 +144,14 @@ export default function ScoutDashboardContent() {
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const [searchAnnouncement, setSearchAnnouncement] = useState<string>('');
 
-  useEffect(() => {
-    if (!isRateLimited) {
-      setRemainingSec(null);
-      return;
-    }
-
-    if (retryAfterSec === null) {
-      showToast({
-        message: 'Searching too fast — please slow down and try again.',
-        variant: 'warning',
-      });
-      setRemainingSec(null);
-      return;
-    }
-
-    setRemainingSec(retryAfterSec);
-    showToast({
-      message: `Searching too fast — please wait ${retryAfterSec}s and try again.`,
-      variant: 'warning',
-    });
-  }, [isRateLimited, retryAfterSec, showToast]);
-
-  // Countdown timer for rate limit
-  useEffect(() => {
-    if (remainingSec === null || remainingSec <= 0) {
-      setRemainingSec(null);
-      return;
-    }
-    const interval = setInterval(() => {
-      setRemainingSec((prev) => (prev !== null && prev > 0 ? prev - 1 : null));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [remainingSec]);
-
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const hasLoaded = useRef(false);
-  const loadingEverStarted = useRef(false);
-  const [searchHasCompleted, setSearchHasCompleted] = useState(false);
-  const [resetKey, setResetKey] = useState(0);
-  const [renamingId, setRenamingId] = useState<number | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  const [compareIds, setCompareIds] = useState<string[]>(() =>
-    parseCompareIds(searchParams.get('ids')),
-  );
+  const filters = useScoutDashboardFilters({
+    loading,
+    isRateLimited,
+    retryAfterSec,
+    search,
+    searchByName,
+  });
+  const { compareIds, toggleCompare, handleSearch } = filters;
   const showCompareBar = compareIds.length >= 2;
   const compareLimitReached = compareIds.length >= MAX_COMPARE_PLAYERS;
 
@@ -404,8 +357,22 @@ export default function ScoutDashboardContent() {
   if (!publicKey) return null;
   if (subscriptionLoading || !isProtected) return null;
 
-  const showSkeletons = loading && !hasLoaded.current;
-  const showEmptyState = searchHasCompleted && !loading && players.length === 0;
+  const showEmptyState =
+    filters.searchHasCompleted && !loading && players.length === 0;
+
+  const renderPlayerCard = (
+    p: Player,
+    milestones?: { milestones?: Milestone[]; milestonesLoading: boolean },
+  ) => (
+    <PlayerCard
+      player={p}
+      isWatched={watchlist.isWatched(p.id)}
+      onToggleWatchlist={() => handleToggleWatchlist(p)}
+      isCompareSelected={compareIds.includes(p.id)}
+      onToggleCompare={() => toggleCompare(p.id)}
+      {...milestones}
+    />
+  );
 
   return (
     <PullToRefresh onRefresh={refetch} isLoading={loading}>
@@ -427,61 +394,9 @@ export default function ScoutDashboardContent() {
           <ExportContactsCsvButton scoutId={publicKey} />
         </div>
 
-        {subscription &&
-          (() => {
-            const daysRemaining = Math.floor(
-              (subscription.expiresAt - now / 1000) / 86400,
-            );
-            const tierLabel =
-              subscription.tier.charAt(0).toUpperCase() +
-              subscription.tier.slice(1);
-
-            if (daysRemaining <= 0) {
-              return (
-                <div
-                  data-tour="subscription-status"
-                  className="flex items-center gap-3 rounded-xl border border-red-500 bg-brand-card px-4 py-3 text-sm"
-                >
-                  <span className="text-red-400">Subscription expired</span>
-                  <Link
-                    href="/scout/subscribe"
-                    className="ml-auto text-brand-green underline hover:opacity-80 transition"
-                  >
-                    Renew
-                  </Link>
-                </div>
-              );
-            }
-
-            if (daysRemaining <= 7) {
-              return (
-                <div
-                  data-tour="subscription-status"
-                  className="flex items-center gap-3 rounded-xl border border-orange-400 bg-brand-card px-4 py-3 text-sm text-gray-200"
-                >
-                  <span>
-                    {tierLabel} — expires in {daysRemaining} day
-                    {daysRemaining !== 1 ? 's' : ''}
-                  </span>
-                  <Link
-                    href="/scout/subscribe"
-                    className="ml-auto text-brand-green underline hover:opacity-80 transition"
-                  >
-                    Renew
-                  </Link>
-                </div>
-              );
-            }
-
-            return (
-              <div
-                data-tour="subscription-status"
-                className="flex items-center gap-3 rounded-xl border border-brand-green bg-brand-card px-4 py-3 text-sm text-gray-200"
-              >
-                {tierLabel} — {daysRemaining} days remaining
-              </div>
-            );
-          })()}
+        {subscription && (
+          <SubscriptionStatusBanner subscription={subscription} />
+        )}
 
         <ReferralPanel />
 
@@ -750,15 +665,15 @@ export default function ScoutDashboardContent() {
         </div>
 
         <div
-          className={`bg-brand-card border border-gray-800 rounded-xl p-5${nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
+          className={`bg-brand-card border border-gray-800 rounded-xl p-5${filters.nameQuery ? ' opacity-50 pointer-events-none' : ''}`}
           data-tour="filter-section"
           data-testid="filter-form"
         >
           <PlayerFilterForm
             onSearch={handleSearch}
-            resetKey={resetKey}
+            resetKey={filters.resetKey}
             onSaveSearch={handleSaveSearch}
-            disabled={remainingSec !== null}
+            disabled={filters.remainingSec !== null}
           />
           <div className="mt-4 sm:max-w-xs">
             <Select
@@ -802,7 +717,7 @@ export default function ScoutDashboardContent() {
               </Link>
               <button
                 type="button"
-                onClick={handleClearCompare}
+                onClick={filters.clearCompare}
                 className="px-4 py-1.5 rounded-lg border border-gray-700 text-sm text-gray-300 hover:border-red-500 hover:text-red-400 transition"
               >
                 Clear

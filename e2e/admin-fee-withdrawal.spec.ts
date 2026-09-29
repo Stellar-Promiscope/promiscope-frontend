@@ -101,11 +101,11 @@ test.describe('Admin fee withdrawal', () => {
 
   test('displays accumulated platform fees', async ({ page }) => {
     await connectAdminWallet(page);
-    await page.goto('/en/admin');
+    await page.goto('/en/admin/fees');
 
     // Wait for admin dashboard to load
     await expect(
-      page.getByRole('heading', { name: 'Admin Dashboard' }),
+      page.getByRole('heading', { name: 'Fees', exact: true }),
     ).toBeVisible({
       timeout: 10000,
     });
@@ -122,10 +122,10 @@ test.describe('Admin fee withdrawal', () => {
     page,
   }) => {
     await connectAdminWallet(page);
-    await page.goto('/en/admin');
+    await page.goto('/en/admin/fees');
 
     await expect(
-      page.getByRole('heading', { name: 'Admin Dashboard' }),
+      page.getByRole('heading', { name: 'Fees', exact: true }),
     ).toBeVisible({
       timeout: 10000,
     });
@@ -138,10 +138,10 @@ test.describe('Admin fee withdrawal', () => {
 
   test('completes fee withdrawal flow with confirmation', async ({ page }) => {
     await connectAdminWallet(page);
-    await page.goto('/en/admin');
+    await page.goto('/en/admin/fees');
 
     await expect(
-      page.getByRole('heading', { name: 'Admin Dashboard' }),
+      page.getByRole('heading', { name: 'Fees', exact: true }),
     ).toBeVisible({
       timeout: 10000,
     });
@@ -208,6 +208,7 @@ test.describe('Admin fee withdrawal', () => {
     });
 
     await connectAdminWallet(page);
+    // The circuit breaker lives on the overview; fees on /admin/fees (#1354).
     await page.goto('/en/admin');
 
     await expect(
@@ -218,6 +219,11 @@ test.describe('Admin fee withdrawal', () => {
 
     // Verify circuit breaker shows paused status
     await expect(page.getByText(/Status:.*Paused/i)).toBeVisible();
+
+    await page.goto('/en/admin/fees');
+    await expect(
+      page.getByRole('heading', { name: 'Fees', exact: true }),
+    ).toBeVisible({ timeout: 10000 });
 
     // Withdraw button should be disabled
     const withdrawButton = page.getByRole('button', { name: /Withdraw Fees/i });
@@ -260,10 +266,10 @@ test.describe('Admin fee withdrawal', () => {
     });
 
     await connectAdminWallet(page);
-    await page.goto('/en/admin');
+    await page.goto('/en/admin/fees');
 
     await expect(
-      page.getByRole('heading', { name: 'Admin Dashboard' }),
+      page.getByRole('heading', { name: 'Fees', exact: true }),
     ).toBeVisible({
       timeout: 10000,
     });
@@ -281,10 +287,10 @@ test.describe('Admin fee withdrawal', () => {
     page,
   }) => {
     await connectAdminWallet(page);
-    await page.goto('/en/admin');
+    await page.goto('/en/admin/fees');
 
     await expect(
-      page.getByRole('heading', { name: 'Admin Dashboard' }),
+      page.getByRole('heading', { name: 'Fees', exact: true }),
     ).toBeVisible({
       timeout: 10000,
     });

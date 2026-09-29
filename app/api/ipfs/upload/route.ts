@@ -160,6 +160,7 @@ async function postIpfsUpload(req: NextRequest) {
 
   // ── 5. Forward to Pinata ────────────────────────────────────────────────────
   let cid: string;
+  const pinStartedAt = Date.now();
   try {
     const pinataForm = new FormData();
     // Pin with the detected MIME type, not the client-declared one.
@@ -184,6 +185,8 @@ async function postIpfsUpload(req: NextRequest) {
         ),
     );
     cid = data.IpfsHash;
+    const pinMs = Date.now() - pinStartedAt;
+    if (pinMs > 10_000) log.warn('Slow Pinata pin', { ip, pinMs });
   } catch (err) {
     log.error('Pinata upload failed', {
       ip,
@@ -191,7 +194,7 @@ async function postIpfsUpload(req: NextRequest) {
     });
     return NextResponse.json(
       { error: 'Failed to upload file to IPFS' },
-      { status: 502 },
+      { status: upstreamStatus(err) === 504 ? 504 : 502 },
     );
   }
 

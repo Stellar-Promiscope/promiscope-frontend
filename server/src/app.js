@@ -10,6 +10,7 @@ const referralsRouter = require('./routes/referrals');
 const academiesRouter = require('./routes/academies');
 const sponsorshipRouter = require('./routes/sponsorship');
 const milestoneSubmissionsRouter = require('./routes/milestoneSubmissions');
+const usersRouter = require('./routes/users');
 
 function createApp() {
   const app = express();
@@ -37,6 +38,7 @@ function createApp() {
   app.use('/academies', academiesRouter);
   app.use('/sponsorship', sponsorshipRouter);
   app.use('/milestone-submissions', milestoneSubmissionsRouter);
+  app.use('/users', usersRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });

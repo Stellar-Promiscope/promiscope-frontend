@@ -17,6 +17,14 @@ import { __resetForTests } from '@/lib/chunkedUploadStore';
 // the top level, so a POST /api/data-deletion/request route that didn't
 // exist at all still made every component test pass.
 
+// Only the partial-failure test sets BACKEND_SERVICE_TOKEN; every other test
+// runs with the backend unconfigured, so this mock is never reached there.
+const mockDeleteBackend = jest.fn();
+jest.mock('@/lib/backendUserData', () => ({
+  ...jest.requireActual('@/lib/backendUserData'),
+  deleteBackendUserData: (...args: unknown[]) => mockDeleteBackend(...args),
+}));
+
 const WALLET = 'GDELETE000000000000000000000000000000000000000000000000000000';
 const OTHER = 'GOTHER0000000000000000000000000000000000000000000000000000000';
 
@@ -114,5 +122,22 @@ describe('POST /api/data-deletion/request', () => {
 
     // Another wallet's data is untouched.
     expect(WatchlistStore.getInstance().list(OTHER)).toHaveLength(1);
+  });
+
+  it('reports a partial deletion (502) when the backend cascade fails', async () => {
+    process.env.BACKEND_SERVICE_TOKEN = 'test-token';
+    mockDeleteBackend.mockRejectedValueOnce(
+      new Error('timeout of 10000ms exceeded'),
+    );
+    try {
+      const res = await POST(makeRequest(WALLET));
+      expect(res.status).toBe(502);
+      const body = await res.json();
+      expect(body.partial).toBe(true);
+      expect(body.failed).toEqual(['backend']);
+      expect(body.success).toBeUndefined();
+    } finally {
+      delete process.env.BACKEND_SERVICE_TOKEN;
+    }
   });
 });

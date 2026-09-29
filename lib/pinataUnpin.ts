@@ -23,6 +23,7 @@ export async function unpinFromPinata(
         pinata_api_key: credentials.apiKey,
         pinata_secret_api_key: credentials.secret,
       },
+      timeout: BACKEND_WRITE_TIMEOUT_MS,
     });
     return { ok: true };
   } catch (err) {

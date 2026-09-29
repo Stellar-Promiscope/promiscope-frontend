@@ -1,4 +1,8 @@
-import axios from 'axios';
+import {
+  createClient,
+  BACKEND_READ_TIMEOUT_MS,
+  BACKEND_WRITE_TIMEOUT_MS,
+} from './httpClient';
 import type { Player } from '@/types';
 import { fetchWithRetry } from './fetchWithRetry';
 import { fetchValidatorEvents, type IndexedEvent } from './indexerClient';
@@ -11,7 +15,9 @@ import type { ScoutContact } from './scoutContactsCsv';
 // bundle still uses the public `NEXT_PUBLIC_API_URL` — since it isn't
 // NEXT_PUBLIC_-prefixed, this only ever resolves server-side; the browser
 // bundle sees `undefined` here and falls through. See docker-compose.yml.
-const api = axios.create({
+const api = createClient('backend', {
+  timeoutMs: BACKEND_READ_TIMEOUT_MS,
+  writeTimeoutMs: BACKEND_WRITE_TIMEOUT_MS,
   baseURL:
     process.env.API_URL_INTERNAL ||
     process.env.NEXT_PUBLIC_API_URL ||

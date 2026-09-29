@@ -164,6 +164,7 @@ async function postCompleteUpload(req: NextRequest) {
   }
 
   let cid: string;
+  const pinStartedAt = Date.now();
   try {
     cid = await withOutboundSpan(
       'pinata.pinFileToIPFS',
@@ -180,7 +181,7 @@ async function postCompleteUpload(req: NextRequest) {
     });
     return privateJson(
       { error: 'Failed to upload file to IPFS' },
-      { status: 502 },
+      { status: upstreamStatus(err) === 504 ? 504 : 502 },
     );
   }
 
