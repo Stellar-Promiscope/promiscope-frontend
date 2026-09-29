@@ -17,6 +17,10 @@ import {
   contactDetailsKey,
   purgeContactDetails,
 } from '@/lib/contactDetailsCache';
+import {
+  defaultFetchContactRelease,
+  type FetchContactRelease,
+} from '@/lib/contactReleaseClient';
 import type { ContactDetails } from '@/types';
 
 /**
@@ -28,12 +32,31 @@ import type { ContactDetails } from '@/types';
  * purged automatically after CONTACT_DETAILS_TTL_MS or immediately on
  * wallet disconnect.
  *
+ * Release flow (issue #1301): the on-chain `pay_to_contact` return value is
+ * world-readable (any account can `simulateTransaction` it for free, and
+ * contract storage is readable via `getLedgerEntries`), so plaintext must
+ * never come from the chain. After paying, the hook fetches the decrypted
+ * details from the server-side release endpoint `GET /api/contact/:id`,
+ * which verifies the `player_contacted` payment proof in the indexer before
+ * unsealing the vault row. The chain's return value is intentionally
+ * ignored — it is untrusted public output.
+ *
+ * Transitional fallback: players who have not uploaded to the vault yet
+ * have no sealed row, and the release endpoint answers 404. Only then does
+ * the hook fall back to the legacy chain return value (pre-#1301 contract
+ * behaviour), so migration doesn't break unlocks mid-rollout. New uploads
+ * must go to the vault; the fallback is removed once the contract stops
+ * returning PII.
+ *
  * `contactDetails` is keyed by (playerId, scout wallet), so any component
  * that calls this hook for the same player — e.g. ContactModal rendered
  * alongside the caller that triggered unlock() — reads the same cache
  * entry without needing to unlock again.
  */
-export function usePayToContact(playerId: string) {
+export function usePayToContact(
+  playerId: string,
+  opts: { fetchRelease?: FetchContactRelease } = {},
+) {
   const { publicKey, signOnly, xlmBalance, refreshBalance } = useWallet();
   const { show } = useToast();
   const [loading, setLoading] = useState(false);
@@ -104,9 +127,31 @@ export function usePayToContact(playerId: string) {
           return undefined;
         }
 
-        // ── 4. Sign, submit, and cache the result ───────────────────────────
-        const details = await payToContact(publicKey, playerId, signOnly);
+        // ── 4. Sign, submit, then release from the vault ──────────────────────
+        // The chain's return value is untrusted public output (issue #1301:
+        // anyone can simulate pay_to_contact for free) — release the real
+        // plaintext from the server vault, which checks payment proof.
+        const chainDetails = await payToContact(publicKey, playerId, signOnly);
         await refreshBalance();
+        let details: ContactDetails | undefined;
+        const fetchRelease = opts.fetchRelease ?? defaultFetchContactRelease;
+        const release = await fetchRelease(playerId);
+        if (release.details && release.status === 200) {
+          details = release.details;
+        } else if (release.status === 404) {
+          // No vault row yet (player hasn't uploaded) — transitional
+          // fallback to the legacy chain return value. The release
+          // endpoint answers 404 for both "no row" and "no payment proof"
+          // so unpaid scouts can't probe which players uploaded; here the
+          // scout just paid on-chain, so falling back leaks nothing extra.
+          details = chainDetails;
+        } else {
+          throw new Error(`Contact release failed (status ${release.status})`);
+        }
+        if (!details) {
+          fail('Contact details are not available for this player yet.');
+          return undefined;
+        }
         await cacheContactDetails(
           contactDetailsKey(playerId, publicKey),
           details,
@@ -120,6 +165,7 @@ export function usePayToContact(playerId: string) {
       }
     });
   }, [
+    opts.fetchRelease,
     submitGuarded,
     publicKey,
     playerId,

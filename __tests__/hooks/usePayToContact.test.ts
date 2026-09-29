@@ -43,6 +43,14 @@ jest.mock('@/lib/contactDetailsCache', () => ({
   purgeContactDetails: (...args: unknown[]) => mockPurgeContactDetails(...args),
 }));
 
+// Release-endpoint stub: default is a vault hit returning decrypted PII.
+// Individual tests override per-case (404 fallback, 503 failure).
+const mockFetchRelease = jest.fn();
+
+jest.mock('@/lib/contactReleaseClient', () => ({
+  defaultFetchContactRelease: (...args: unknown[]) => mockFetchRelease(...args),
+}));
+
 jest.mock('@/lib/contractErrorMessage', () => ({
   parseContractError: (...args: unknown[]) => mockParseContractError(args[0]),
 }));
@@ -78,6 +86,11 @@ describe('usePayToContact', () => {
     mockCacheContactDetails.mockReset();
     mockPurgeContactDetails.mockReset();
     mockIsBlockedByCounterpart.mockReset();
+    mockFetchRelease.mockReset();
+    mockFetchRelease.mockResolvedValue({
+      status: 200,
+      details: { email: 'vault@example.com', phone: null, telegram: null },
+    });
     mockParseContractError.mockImplementation((e: unknown) =>
       e instanceof Error ? e.message : 'unknown',
     );
@@ -106,16 +119,42 @@ describe('usePayToContact', () => {
       'p1',
       expect.any(Function),
     );
+    // Vault release wins over the untrusted chain return value.
+    expect(mockFetchRelease).toHaveBeenCalledWith('p1');
     expect(mockCacheContactDetails).toHaveBeenCalledWith(
       `contact:p1:${PUBLIC_KEY}`,
-      {
-        email: 'p@example.com',
-        phone: null,
-        telegram: null,
-      },
+      { email: 'vault@example.com', phone: null, telegram: null },
     );
     expect(mockRefreshBalance).toHaveBeenCalledTimes(1);
     expect(result.current.error).toBeNull();
+  });
+
+  test('vault 404 falls back to the legacy chain return value (migration window)', async () => {
+    mockFetchRelease.mockResolvedValueOnce({ status: 404 });
+    const { result } = renderHook(() => usePayToContact('p1'), { wrapper });
+
+    await act(async () => {
+      await result.current.unlock();
+    });
+
+    expect(mockCacheContactDetails).toHaveBeenCalledWith(
+      `contact:p1:${PUBLIC_KEY}`,
+      { email: 'p@example.com', phone: null, telegram: null },
+    );
+    expect(result.current.error).toBeNull();
+  });
+
+  test('vault non-404 failure surfaces an error and caches nothing', async () => {
+    mockFetchRelease.mockResolvedValueOnce({ status: 503 });
+    const { result } = renderHook(() => usePayToContact('p1'), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.unlock()).rejects.toThrow(
+        'Contact release failed (status 503)',
+      );
+    });
+
+    expect(mockCacheContactDetails).not.toHaveBeenCalled();
   });
 
   test('expired subscription: surfaces error, does not call payToContact or refreshBalance', async () => {
