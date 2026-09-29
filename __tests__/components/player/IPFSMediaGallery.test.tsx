@@ -37,6 +37,10 @@ jest.mock('next/image', () => ({
 let observerCallbacks: IntersectionObserverCallback[] = [];
 
 beforeEach(() => {
+  // Moderation denylist lookup (#1320) — nothing removed by default.
+  global.fetch = jest
+    .fn()
+    .mockResolvedValue({ ok: true, json: async () => ({ denylisted: [] }) });
   observerCallbacks = [];
   mockUseVideoPosterFrame.mockReturnValue(null);
   HTMLMediaElement.prototype.load = jest.fn();
@@ -70,6 +74,29 @@ function fireIntersection(index: number, isIntersecting: boolean) {
 }
 
 describe('IPFSMediaGallery', () => {
+  it('shows a removed placeholder instead of denylisted media (#1320)', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ denylisted: ['QmRemoved'] }),
+    });
+    render(<IPFSMediaGallery cids={['QmRemoved', 'QmKept.jpg']} />);
+
+    expect(
+      await screen.findByRole('img', { name: 'Media removed by moderation' }),
+    ).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/media/denylist?cids=QmRemoved%2CQmKept.jpg',
+    );
+    expect(screen.getByAltText('IPFS media QmKept.jpg')).toBeInTheDocument();
+  });
+
+  it('only shows the Report control when a playerId is given', () => {
+    const { rerender } = render(<IPFSMediaGallery cids={['QmA.jpg']} />);
+    expect(screen.queryByRole('button', { name: 'Report' })).toBeNull();
+    rerender(<IPFSMediaGallery cids={['QmA.jpg']} playerId="p1" />);
+    expect(screen.getByRole('button', { name: 'Report' })).toBeInTheDocument();
+  });
+
   it('renders nothing when cids is empty', () => {
     const { container } = render(<IPFSMediaGallery cids={[]} />);
     expect(container).toBeEmptyDOMElement();

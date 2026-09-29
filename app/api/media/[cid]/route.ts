@@ -6,6 +6,7 @@ import { isValidCid } from '@/lib/cid';
 import { withRouteTelemetry } from '@/lib/telemetry';
 import { IPFS_FALLBACK_GATEWAYS } from '@/lib/ipfsGateways';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { MediaModerationStore } from '@/lib/mediaModerationStore';
 
 /**
  * GET /api/media/[cid]
@@ -108,6 +109,16 @@ async function getMedia(
   // gateway requests (path traversal, query injection) through our origin.
   if (!isValidCid(cid)) {
     return errorResponse('Invalid cid', 400);
+  }
+
+  // Moderated media (issue #1320): never proxied, and never cached, so a
+  // later reinstatement takes effect. This only covers ScoutOff's own
+  // surfaces — the CID stays reachable through public IPFS gateways.
+  if (MediaModerationStore.getInstance().isDenylisted(cid)) {
+    return NextResponse.json(
+      { error: 'This media has been removed for legal or policy reasons' },
+      { status: 451, headers: { 'Cache-Control': 'no-store' } },
+    );
   }
 
   const ip = getClientIp(req);

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
+import { expect, fn, userEvent, waitFor, within } from '@storybook/test';
 import { useState } from 'react';
 import Modal from './Modal';
 import Button from './Button';
@@ -64,5 +64,36 @@ export const WithInteraction: Story = {
       );
     }
     return <Demo />;
+  },
+};
+
+/**
+ * Interaction test (issue #1322): Tab stays inside the dialog, Escape closes
+ * it, and focus returns to the trigger — in a real browser, not jsdom.
+ */
+export const FocusTrapPlay: Story = {
+  name: 'Focus trap and Escape (play)',
+  render: WithInteraction.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole('button', { name: 'Open Modal' });
+    await userEvent.click(trigger);
+
+    const dialog = await canvas.findByRole('dialog');
+    const tabbable = within(dialog).getAllByRole('button');
+    for (let i = 0; i <= tabbable.length; i++) {
+      await userEvent.tab();
+      await expect(dialog.contains(document.activeElement)).toBe(true);
+    }
+    for (let i = 0; i <= tabbable.length; i++) {
+      await userEvent.tab({ shift: true });
+      await expect(dialog.contains(document.activeElement)).toBe(true);
+    }
+
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(canvas.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(trigger).toHaveFocus());
   },
 };

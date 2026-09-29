@@ -9,6 +9,22 @@ interface LedgerInfo {
   networkLedger: number; // Latest ledger seen on-chain (0 = unknown)
 }
 
+/**
+ * Replica role (issue #1319). A single-replica (SQLite) deployment is
+ * always the leader; with Postgres only the advisory-lock holder is.
+ */
+export type ReplicaRole = 'leader' | 'follower';
+
+let role: ReplicaRole = 'leader';
+
+export function setRole(next: ReplicaRole): void {
+  role = next;
+}
+
+export function getRole(): ReplicaRole {
+  return role;
+}
+
 const state: LedgerInfo = {
   lastLedger: 0,
   timestamp: 0,
@@ -39,4 +55,5 @@ export function resetLedgerState(): void {
   state.lastLedger = 0;
   state.timestamp = 0;
   state.networkLedger = 0;
+  role = 'leader';
 }

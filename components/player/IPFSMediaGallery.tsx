@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { useVideoPosterFrame } from '@/hooks/useVideoPosterFrame';
 import { getMediaProxyUrl } from '@/lib/mediaUrl';
+import MediaReportButton from './MediaReportButton';
 
 /**
  * 10×10 gray WebP encoded as base64.
@@ -21,18 +22,68 @@ type PlaybackState = 'idle' | 'loading' | 'playing' | 'reconnecting' | 'error';
 
 interface IPFSMediaGalleryProps {
   cids: string[];
+  /** Enables the per-item "Report" control and attributes reports to this player. */
+  playerId?: string;
 }
 
-export default function IPFSMediaGallery({ cids }: IPFSMediaGalleryProps) {
+/** Fetches which of `cids` moderation has removed (issue #1320). */
+function useDenylistedCids(cids: string[]): Set<string> {
+  const [denylisted, setDenylisted] = useState<Set<string>>(new Set());
+  const key = cids.join(',');
+
+  useEffect(() => {
+    if (!key) return;
+    let cancelled = false;
+    fetch(`/api/media/denylist?cids=${encodeURIComponent(key)}`)
+      .then((res) => (res.ok ? res.json() : { denylisted: [] }))
+      .then((body: { denylisted?: string[] }) => {
+        if (!cancelled) setDenylisted(new Set(body.denylisted ?? []));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+
+  return denylisted;
+}
+
+export default function IPFSMediaGallery({
+  cids,
+  playerId,
+}: IPFSMediaGalleryProps) {
+  const denylisted = useDenylistedCids(cids);
+
   if (cids.length === 0) {
     return null;
   }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {cids.map((cid) => (
-        <IPFSMediaItem key={cid} cid={cid} />
-      ))}
+      {cids.map((cid) =>
+        denylisted.has(cid) ? (
+          <RemovedMediaItem key={cid} />
+        ) : (
+          <div key={cid} className="relative">
+            <IPFSMediaItem cid={cid} />
+            {playerId && <MediaReportButton cid={cid} playerId={playerId} />}
+          </div>
+        ),
+      )}
+    </div>
+  );
+}
+
+function RemovedMediaItem() {
+  return (
+    <div
+      className="aspect-square bg-gray-800 rounded-xl flex items-center justify-center p-4 text-center"
+      role="img"
+      aria-label="Media removed by moderation"
+    >
+      <span className="text-sm text-gray-400">
+        This media was removed for violating ScoutOff&apos;s policies.
+      </span>
     </div>
   );
 }

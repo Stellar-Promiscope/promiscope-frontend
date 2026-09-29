@@ -47,6 +47,12 @@ CREATE INDEX IF NOT EXISTS idx_events_player_ledger ON events(player_id, ledger 
 CREATE INDEX IF NOT EXISTS idx_events_type_ledger ON events(event_type, ledger DESC);
 CREATE INDEX IF NOT EXISTS idx_events_validator ON events(validator, ledger DESC);
 CREATE INDEX IF NOT EXISTS idx_events_ledger ON events(ledger DESC);
+CREATE TABLE IF NOT EXISTS checkpoint (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  last_ledger INTEGER NOT NULL,
+  network_ledger INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `;
 
 /**
@@ -131,6 +137,44 @@ export interface EventRecord {
   data: Record<string, unknown>;
   /** The content-derived id `insertEvent` deduplicates on; null for rows written before this column existed. */
   eventId: string | null;
+}
+
+/**
+ * The poller's durable resume point (issue #1319). Written in the same
+ * transaction as the event batch it covers, so a crash can never leave the
+ * checkpoint ahead of (skipped events) or behind (re-ingest, harmless given
+ * the unique `event_id`) the rows actually stored.
+ */
+export interface Checkpoint {
+  /** Last fully indexed ledger. */
+  lastLedger: number;
+  /** Network tip observed by the leader when it wrote this checkpoint. */
+  networkLedger: number;
+  /** Unix ms of the write. */
+  updatedAt: number;
+}
+
+/**
+ * The storage surface the poller and HTTP API depend on. Implemented by the
+ * synchronous SQLite `EventStore` (dev / single replica) and the async
+ * `PgEventStore` (multi-replica prod), hence the `T | Promise<T>` returns —
+ * callers always `await`.
+ */
+export interface IndexerStore {
+  insertBatch(
+    events: DecodedEvent[],
+    checkpoint: Omit<Checkpoint, 'updatedAt'>,
+  ): number | Promise<number>;
+  getCheckpoint(): Checkpoint | null | Promise<Checkpoint | null>;
+  getEvents(filter?: QueryFilter): QueryResult | Promise<QueryResult>;
+  getEventsByPlayer(
+    playerId: string,
+    filter?: Omit<QueryFilter, 'playerId'>,
+  ): QueryResult | Promise<QueryResult>;
+  getApprovalCountsForWallets(
+    range: { start: number; end: number },
+    wallets: WalletApprovalWindow[],
+  ): ApprovalCountsByWallet | Promise<ApprovalCountsByWallet>;
 }
 
 export interface QueryFilter {
@@ -378,7 +422,7 @@ export function extractVitals(data: Record<string, unknown>): ExtractedVitals {
   };
 }
 
-export class EventStore {
+export class EventStore implements IndexerStore {
   private static _instance: EventStore | null = null;
 
   private db: Database.Database;
@@ -826,6 +870,57 @@ export class EventStore {
     };
   }
 
+  /**
+   * Inserts a batch of events and advances the checkpoint in one
+   * transaction (issue #1319). If any insert throws, nothing — neither the
+   * events nor the checkpoint — is persisted. The checkpoint never moves
+   * backwards. Returns the number of newly written rows.
+   */
+  insertBatch(
+    events: DecodedEvent[],
+    checkpoint: Omit<Checkpoint, 'updatedAt'>,
+  ): number {
+    const run = this.db.transaction((): number => {
+      let inserted = 0;
+      for (const event of events) {
+        if (this.insertEvent(event)) inserted++;
+      }
+      this.db
+        .prepare(
+          `INSERT INTO checkpoint (id, last_ledger, network_ledger, updated_at)
+           VALUES (1, @last, @network, @now)
+           ON CONFLICT(id) DO UPDATE SET
+             last_ledger = MAX(last_ledger, excluded.last_ledger),
+             network_ledger = excluded.network_ledger,
+             updated_at = excluded.updated_at`,
+        )
+        .run({
+          last: checkpoint.lastLedger,
+          network: checkpoint.networkLedger,
+          now: Date.now(),
+        });
+      return inserted;
+    });
+    return run();
+  }
+
+  getCheckpoint(): Checkpoint | null {
+    const row = this.db
+      .prepare(
+        'SELECT last_ledger, network_ledger, updated_at FROM checkpoint WHERE id = 1',
+      )
+      .get() as
+      | { last_ledger: number; network_ledger: number; updated_at: number }
+      | undefined;
+    return row
+      ? {
+          lastLedger: row.last_ledger,
+          networkLedger: row.network_ledger,
+          updatedAt: row.updated_at,
+        }
+      : null;
+  }
+
   /** General event query, optionally filtered by type and/or player. */
   getEvents(filter: QueryFilter = {}): QueryResult {
     const limit = Math.min(filter.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
@@ -861,9 +956,7 @@ export class EventStore {
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
     const rows = this.db
-      .prepare(
-        `SELECT * FROM events ${where} ${order} LIMIT @limit`,
-      )
+      .prepare(`SELECT * FROM events ${where} ${order} LIMIT @limit`)
       .all(params) as EventRow[];
 
     const hasMore = rows.length > limit;

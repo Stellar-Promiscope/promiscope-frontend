@@ -1,10 +1,12 @@
 import * as http from 'http';
 import { IndexerMetrics } from './metrics/IndexerMetrics';
-import { getLastLedgerInfo, getLedgerLag } from './ledgerTracker';
+import { getLastLedgerInfo, getLedgerLag, getRole } from './ledgerTracker';
 import {
   startEventPolling,
   isEventType,
   getLastPollError,
+  loadConfigFromEnv,
+  createRpcClient,
   type EventPollerHandle,
 } from './eventPoller';
 import {
@@ -16,6 +18,8 @@ import {
   type QueryFilter,
   type WalletApprovalWindow,
 } from './db/eventStore';
+import { createPgPoolFromEnv, getStore, initStore } from './db';
+import { LeaderElector } from './leaderElection';
 import type { EventType } from './metrics/IndexerMetrics';
 import { logger } from './logger';
 
@@ -80,9 +84,31 @@ function isPollerRunning(): boolean {
   return poller?.isRunning() ?? false;
 }
 
-function handleHealth(res: http.ServerResponse): void {
-  const { lastLedger, timestamp } = getLastLedgerInfo();
+async function handleHealth(res: http.ServerResponse): Promise<void> {
+  const role = getRole();
   const now = Date.now();
+
+  if (role === 'follower') {
+    // Followers don't poll; report the leader's progress from the shared
+    // checkpoint instead of this process's (idle) ledgerTracker.
+    const checkpoint = await getStore().getCheckpoint();
+    const checkpointAgeMs = checkpoint ? now - checkpoint.updatedAt : null;
+    return sendJson(res, 200, {
+      status:
+        checkpointAgeMs !== null && checkpointAgeMs <= STALE_AFTER_MS
+          ? 'ok'
+          : 'degraded',
+      role,
+      lastLedger: checkpoint?.lastLedger ?? 0,
+      leaderLag: checkpoint
+        ? Math.max(0, checkpoint.networkLedger - checkpoint.lastLedger)
+        : null,
+      leaderCheckpointAgeMs: checkpointAgeMs,
+      uptime: Math.floor((now - startTime) / 1000),
+    });
+  }
+
+  const { lastLedger, timestamp } = getLastLedgerInfo();
   const pollerRunning = isPollerRunning();
   const ledgerLag = getLedgerLag();
   const status = computeHealthStatus({
@@ -95,6 +121,7 @@ function handleHealth(res: http.ServerResponse): void {
   });
   sendJson(res, status === 'unhealthy' ? 503 : 200, {
     status,
+    role,
     lastLedger,
     lastUpdated: timestamp > 0 ? timestamp : null,
     ledgerLag,
@@ -141,6 +168,9 @@ function handleMetrics(res: http.ServerResponse): void {
     '# HELP indexer_poller_running 1 if the event poller is running, 0 otherwise',
     '# TYPE indexer_poller_running gauge',
     `indexer_poller_running ${isPollerRunning() ? 1 : 0}`,
+    '# HELP indexer_is_leader 1 if this replica holds the polling leader lock, 0 otherwise',
+    '# TYPE indexer_is_leader gauge',
+    `indexer_is_leader ${getRole() === 'leader' ? 1 : 0}`,
   ];
 
   res.writeHead(200, {
@@ -317,36 +347,35 @@ function parseQueryFilter(
   return { ok: true, filter };
 }
 
-function handleEventsQuery(
+async function handleEventsQuery(
   url: URL,
   res: http.ServerResponse,
   playerId?: string,
-): void {
+): Promise<void> {
   const parsed = parseQueryFilter(url.searchParams);
   if (!parsed.ok) {
     return sendJson(res, 400, { error: parsed.error });
   }
 
-  const store = EventStore.getInstance();
+  const store = getStore();
   const result = playerId
-    ? store.getEventsByPlayer(playerId, parsed.filter)
-    : store.getEvents(parsed.filter);
+    ? await store.getEventsByPlayer(playerId, parsed.filter)
+    : await store.getEvents(parsed.filter);
 
   sendJson(res, 200, result);
 }
 
-function handleValidatorEventsQuery(
+async function handleValidatorEventsQuery(
   url: URL,
   res: http.ServerResponse,
   validatorAddress: string,
-): void {
+): Promise<void> {
   const parsed = parseQueryFilter(url.searchParams);
   if (!parsed.ok) {
     return sendJson(res, 400, { error: parsed.error });
   }
 
-  const store = EventStore.getInstance();
-  const result = store.getEvents({
+  const result = await getStore().getEvents({
     ...parsed.filter,
     validator: validatorAddress,
   });
@@ -566,9 +595,8 @@ async function handleApprovalCountsQuery(
     });
   }
 
-  const store = EventStore.getInstance();
   try {
-    const counts = store.getApprovalCountsForWallets(
+    const counts = await getStore().getApprovalCountsForWallets(
       { start: start as number, end: end as number },
       parsedWallets,
     );
@@ -602,7 +630,10 @@ function handleUnexpectedError(res: http.ServerResponse, err: unknown): void {
   }
 }
 
-function route(req: http.IncomingMessage, res: http.ServerResponse): void {
+function route(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void | Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
 
   if (req.method === 'GET' && url.pathname === '/health') {
@@ -651,11 +682,9 @@ function route(req: http.IncomingMessage, res: http.ServerResponse): void {
 
 export const server = http.createServer(
   (req: http.IncomingMessage, res: http.ServerResponse) => {
-    try {
-      route(req, res);
-    } catch (err) {
-      handleUnexpectedError(res, err);
-    }
+    Promise.resolve()
+      .then(() => route(req, res))
+      .catch((err) => handleUnexpectedError(res, err));
   },
 );
 
@@ -678,7 +707,10 @@ export async function shutdown(signal: string): Promise<void> {
   EventStore.getInstance().close();
 }
 
-export function startServer(): void {
+export async function startServer(): Promise<void> {
+  // With INDEXER_DATABASE_URL every replica shares one Postgres store and
+  // serves reads; only the advisory-lock holder polls (issue #1319).
+  const store = await initStore();
   server.listen(PORT, () => {
     logger.info(`Indexer server listening on port ${PORT}`);
   });
@@ -687,7 +719,25 @@ export function startServer(): void {
   // deploy-time misconfiguration, not a reason to bring the whole process
   // (and /health, which is useful for diagnosing exactly this) down.
   try {
-    setPollerState(startEventPolling());
+    const config = loadConfigFromEnv();
+    const pool = createPgPoolFromEnv();
+    const elector = pool
+      ? new LeaderElector(pool, {
+          lockKey: process.env.INDEXER_LEADER_LOCK_KEY
+            ? parseInt(process.env.INDEXER_LEADER_LOCK_KEY, 10)
+            : undefined,
+          leaseMs: config.pollIntervalMs,
+        })
+      : null;
+    setPollerState(
+      startEventPolling(
+        config,
+        createRpcClient(config),
+        IndexerMetrics.getInstance(),
+        store,
+        elector,
+      ),
+    );
   } catch (err) {
     logger.error('Failed to start event poller', { err });
     setPollerState(

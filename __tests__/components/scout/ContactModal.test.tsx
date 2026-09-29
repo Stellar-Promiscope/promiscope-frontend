@@ -34,6 +34,67 @@ beforeEach(() => {
   setHook();
 });
 
+describe('ContactModal — pay with USDC (#1321)', () => {
+  it('shows a Horizon quote with the converted XLM amount and slippage bound', async () => {
+    mockUsePayToContact.mockReturnValue({
+      contactDetails: undefined,
+      clear: jest.fn(),
+      unlock: jest.fn(),
+      unlockWithAsset: jest.fn().mockResolvedValue(undefined),
+      pendingSwap: null,
+      loading: false,
+      error: null,
+    });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        _embedded: { records: [{ source_amount: '12.3400000', path: [] }] },
+      }),
+    });
+
+    render(
+      <ContactModal
+        isOpen
+        onClose={jest.fn()}
+        playerId={PLAYER_ID}
+        feeXlm={50}
+      />,
+    );
+
+    expect(await screen.findByTestId('usdc-quote')).toHaveTextContent(
+      'Pay ~12.34 USDC (converted to 50 XLM)',
+    );
+    expect(screen.getByText(/At most 12\.4634000 USDC/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pay with USDC' })).toBeEnabled();
+  });
+
+  it('offers a retry without converting when a previous swap is pending', () => {
+    const unlock = jest.fn().mockResolvedValue(undefined);
+    mockUsePayToContact.mockReturnValue({
+      contactDetails: undefined,
+      clear: jest.fn(),
+      unlock,
+      unlockWithAsset: jest.fn(),
+      pendingSwap: { txHash: 'h', xlmAmount: 50, createdAt: Date.now() },
+      loading: false,
+      error: null,
+    });
+
+    render(
+      <ContactModal
+        isOpen
+        onClose={jest.fn()}
+        playerId={PLAYER_ID}
+        feeXlm={50}
+      />,
+    );
+
+    screen.getByRole('button', { name: 'Retry payment (50 XLM)' }).click();
+    expect(unlock).toHaveBeenCalled();
+  });
+});
+
 describe('ContactModal', () => {
   it('renders nothing when isOpen is false', () => {
     render(

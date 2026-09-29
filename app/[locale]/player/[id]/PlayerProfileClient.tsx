@@ -281,7 +281,10 @@ export default function PlayerProfileClient({
           </button>
         )}
         <div className="w-20 h-20 rounded-full bg-gray-700 overflow-hidden shrink-0">
-          <IPFSMediaGallery cids={player.ipfsHash ? [player.ipfsHash] : []} />
+          <IPFSMediaGallery
+            cids={player.ipfsHash ? [player.ipfsHash] : []}
+            playerId={player.id}
+          />
         </div>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-3">
@@ -428,10 +431,19 @@ export default function PlayerProfileClient({
             cancelLabel="Cancel"
             loading={feeCheckStatus === 'checking' || contacting}
           />
+          <button
+            type="button"
+            onClick={() => setContactModalOpen(true)}
+            disabled={contacting}
+            className="text-sm text-gray-400 underline hover:text-white disabled:opacity-50"
+          >
+            Pay with USDC instead
+          </button>
           <ContactModal
             isOpen={contactModalOpen}
             onClose={() => setContactModalOpen(false)}
             playerId={id ?? ''}
+            feeXlm={displayFee}
           />
         </div>
       )}

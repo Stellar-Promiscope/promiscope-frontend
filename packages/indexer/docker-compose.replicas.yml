@@ -1,0 +1,44 @@
+# Example: two indexer replicas sharing one Postgres (issue #1319).
+# Only the replica holding the advisory lock polls Soroban RPC; both serve
+# the read API. Kill the leader (`docker compose stop indexer-a`) and the
+# other replica takes over within one POLL_INTERVAL_MS.
+#
+#   SOROBAN_RPC_URL=... CONTRACT_ID=... \
+#     docker compose -f docker-compose.replicas.yml up --build
+
+x-indexer: &indexer
+  build: .
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &indexer-env
+    SOROBAN_RPC_URL: ${SOROBAN_RPC_URL:?set SOROBAN_RPC_URL}
+    CONTRACT_ID: ${CONTRACT_ID:?set CONTRACT_ID}
+    NETWORK_PASSPHRASE: ${NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}
+    POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-5000}
+    INDEXER_DATABASE_URL: postgres://indexer:indexer@postgres:5432/indexer
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: indexer
+      POSTGRES_PASSWORD: indexer
+      POSTGRES_DB: indexer
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U indexer']
+      interval: 2s
+      retries: 15
+    volumes:
+      - indexer-pg:/var/lib/postgresql/data
+
+  indexer-a:
+    <<: *indexer
+    ports: ['3001:3001']
+
+  indexer-b:
+    <<: *indexer
+    ports: ['3002:3001']
+
+volumes:
+  indexer-pg:

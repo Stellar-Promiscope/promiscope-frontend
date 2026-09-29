@@ -52,6 +52,9 @@ export default async function TermsPage({ params }: TermsPageProps) {
 
       <h2>{t('section6_title')}</h2>
       <p>{t('section6_content')}</p>
+
+      <h2>{t('section7_title')}</h2>
+      <p>{t('section7_content')}</p>
     </LegalPageLayout>
   );
 }

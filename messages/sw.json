@@ -365,7 +365,9 @@
     "section7_title": "7. Haki Zako na Mawasiliano",
     "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff.",
     "section8_title": "8. Huduma za Wahusika Wengine",
-    "section8_content": "Ili kuonyesha thamani za takriban kwa sarafu ya kawaida, seva zetu (si kivinjari chako) hupata kiwango cha ubadilishaji cha XLM kutoka CoinGecko na, kama mbadala, API ya umma ya Horizon ya mtandao wa Stellar; anwani yako ya IP haishirikiwi na watoa huduma hawa. Maudhui yaliyopakiwa huhifadhiwa kwenye IPFS kupitia Pinata, na ripoti za hitilafu hutumwa kwa Sentry."
+    "section8_content": "Ili kuonyesha thamani za takriban kwa sarafu ya kawaida, seva zetu (si kivinjari chako) hupata kiwango cha ubadilishaji cha XLM kutoka CoinGecko na, kama mbadala, API ya umma ya Horizon ya mtandao wa Stellar; anwani yako ya IP haishirikiwi na watoa huduma hawa. Maudhui yaliyopakiwa huhifadhiwa kwenye IPFS kupitia Pinata, na ripoti za hitilafu hutumwa kwa Sentry.",
+    "section9_title": "9. Ripoti za maudhui",
+    "section9_content": "Unaporipoti maudhui tunahifadhi kitambulisho chake (CID), mchezaji husika, sababu na maelezo uliyotoa, pamoja na alama isiyoweza kurudishwa ya anwani ya pochi yako au anwani ya IP, inayotumika tu kuunganisha ripoti zinazojirudia na kuzuia matumizi mabaya. Maamuzi ya wasimamizi hurekodiwa katika kumbukumbu yetu ya ukaguzi wa msimamizi. Hatushiriki utambulisho wa waliyoripoti na mchezaji aliyeripotiwa."
   },
   "terms": {
     "back_to_home": "Rudi Nyumbani",
@@ -384,7 +386,9 @@
     "section5_title": "5. Haki Miliki",
     "section5_content": "Wachezaji wanabaki na umiliki wa maudhui ya wasifu wao na data binafsi. Kwa kuwasilisha maudhui kwa ScoutOff, unatupa leseni ya kuonyesha maudhui hayo kwa madhumuni ya uendeshaji wa jukwaa pekee. Msimbo wa jukwaa ni chanzo huria.",
     "section6_title": "6. Kanusho na Vikwazo",
-    "section6_content": "ScoutOff inatolewa 'kama ilivyo' bila dhamana. Hatuwajibiki kwa usahihi wa taarifa za wachezaji, maudhui ya IPFS, hasara kutokana na matatizo ya mtandao wa blockchain, au hitilafu za mikataba mahiri. Dhima yetu haitazidi ada ulizotulipa katika miezi 12 kabla ya madai."
+    "section6_content": "ScoutOff inatolewa 'kama ilivyo' bila dhamana. Hatuwajibiki kwa usahihi wa taarifa za wachezaji, maudhui ya IPFS, hasara kutokana na matatizo ya mtandao wa blockchain, au hitilafu za mikataba mahiri. Dhima yetu haitazidi ada ulizotulipa katika miezi 12 kabla ya madai.",
+    "section7_title": "Kuripoti na kuondoa maudhui",
+    "section7_content": "Mtu yeyote anaweza kuripoti picha au video ya mchezaji kutoka kwenye galeri ya wasifu (sababu: uchi, vurugu, kujifanya mtu mwingine, hakimiliki, nyingine). Wasimamizi wetu hukagua ripoti na wanaweza kuondoa maudhui yanayokiuka masharti haya au sheria. Maudhui yaliyoondolewa hayaonyeshwi tena wala kutolewa na ScoutOff, na yanaweza pia kuondolewa kwenye huduma yetu ya kuhifadhi IPFS baada ya muda mfupi wa neema. Kwa kuwa IPFS ni mtandao wa umma, uondoaji unatumika kwa ScoutOff pekee: maudhui hayo yanaweza kuendelea kupatikana kupitia lango za umma za IPFS au nodi zinazoyahifadhi kivyao. Wamiliki wa hakimiliki na yeyote aliyeathirika wanaweza pia kuwasiliana nasi kuomba kuondolewa, nasi tutashughulikia maombi halali haraka."
   },
   "settings": {
     "back_to_home": "Rudi Nyumbani",

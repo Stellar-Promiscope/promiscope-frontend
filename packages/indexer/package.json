@@ -11,10 +11,12 @@
     "test": "cd ../.. && npx jest packages/indexer"
   },
   "dependencies": {
-    "@scoutoff/contract-events": "0.1.0"
+    "@scoutoff/contract-events": "0.1.0",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "@types/node": "^20.14.2"
+    "@types/node": "^20.14.2",
+    "@types/pg": "^8.23.1",
+    "typescript": "^6.0.3"
   }
 }

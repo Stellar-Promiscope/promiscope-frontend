@@ -5,8 +5,13 @@ import {
   type EventType as SharedEventType,
 } from '@scoutoff/contract-events';
 import { IndexerMetrics, type EventType } from './metrics/IndexerMetrics';
-import { updateLastLedger, updateNetworkLedger } from './ledgerTracker';
-import { EventStore } from './db/eventStore';
+import {
+  setRole,
+  updateLastLedger,
+  updateNetworkLedger,
+} from './ledgerTracker';
+import { EventStore, type IndexerStore } from './db/eventStore';
+import type { LeaderElector } from './leaderElection';
 import { logger } from './logger';
 
 /**
@@ -125,10 +130,7 @@ export function createRpcClient(config: PollerConfig): RpcClient {
   }) as unknown as RpcClient;
 }
 
-export function decodeEvent(
-  raw: RawEvent,
-  contractVersion = 1,
-): DecodedEvent {
+export function decodeEvent(raw: RawEvent, contractVersion = 1): DecodedEvent {
   const decoded = decodeSorobanEvent({
     topic: raw.topic ?? [],
     value: raw.value,
@@ -266,7 +268,7 @@ export async function pollOnce(
   rpc: RpcClient,
   metrics: IndexerMetrics,
   cursorLedger: number,
-  store: EventStore,
+  store: IndexerStore,
 ): Promise<number> {
   const cycleStart = Date.now();
 
@@ -292,7 +294,7 @@ export async function pollOnce(
         const skipTo = latest.sequence;
         const durationMs = Date.now() - cycleStart;
         logger.warn(
-          'Cursor is outside the node\'s retention window, skipping forward',
+          "Cursor is outside the node's retention window, skipping forward",
           {
             ledger: effectiveStart,
             skipTo,
@@ -312,37 +314,56 @@ export async function pollOnce(
     }
 
     let nextCursor = cursorLedger > 0 ? cursorLedger : effectiveStart;
+    const decodedBatch: Array<{ event: DecodedEvent; decodeMs: number }> = [];
 
-    // The whole batch is written in one SQLite transaction (issue #1333),
-    // so a hard kill mid-batch leaves either all of it or none of it on
-    // disk. Inserts are idempotent on eventId, so re-polling the same range
-    // after a restart can't produce duplicates either.
-    store.transaction(() => {
-      for (const raw of res.events) {
-        const eventStart = Date.now();
-        try {
-          const decoded = decodeEvent(raw, config.contractVersion);
-          store.insertEvent(decoded);
-          metrics.recordSuccess(
-            decoded.type,
-            Date.now() - eventStart,
-            JSON.stringify(decoded.data).length,
-          );
-        } catch {
-          // Malformed or unrecognized event from our own contract — a real
-          // processing failure, not a transient RPC error, but still must
-          // not stop the loop from advancing past it.
-          metrics.recordFailure(Date.now() - eventStart);
-        }
-
-        if (raw.ledger >= nextCursor) {
-          nextCursor = raw.ledger + 1;
-        }
+    for (const raw of res.events) {
+      const eventStart = Date.now();
+      try {
+        const event = decodeEvent(raw, config.contractVersion);
+        // Serialise up front: an event the store can't persist must be
+        // skipped on its own (as before batching), not fail the whole
+        // batch and pin the cursor on this range forever.
+        JSON.stringify(event.data);
+        decodedBatch.push({ event, decodeMs: Date.now() - eventStart });
+      } catch {
+        // Malformed or unrecognized event from our own contract — a real
+        // processing failure, not a transient RPC error, but still must
+        // not stop the loop from advancing past it.
+        metrics.recordFailure(Date.now() - eventStart);
       }
-    });
+
+      if (raw.ledger >= nextCursor) {
+        nextCursor = raw.ledger + 1;
+      }
+    }
 
     if (res.events.length === 0) {
       nextCursor = Math.max(nextCursor, res.latestLedger + 1);
+    }
+
+    // Events and checkpoint commit together (issue #1319): if the write
+    // fails, neither lands and the same range is retried next cycle.
+    const writeStart = Date.now();
+    try {
+      await store.insertBatch(
+        decodedBatch.map((d) => d.event),
+        {
+          lastLedger: Math.max(nextCursor - 1, 0),
+          networkLedger: latest.sequence,
+        },
+      );
+    } catch {
+      metrics.recordFailure(Date.now() - cycleStart);
+      metrics.reportCursor(cursorLedger);
+      return cursorLedger;
+    }
+    const writeMs = Date.now() - writeStart;
+    for (const { event, decodeMs } of decodedBatch) {
+      metrics.recordSuccess(
+        event.type,
+        decodeMs + writeMs,
+        JSON.stringify(event.data).length,
+      );
     }
 
     updateLastLedger(Math.max(nextCursor - 1, 0));
@@ -383,16 +404,42 @@ export function startEventPolling(
   config: PollerConfig = loadConfigFromEnv(),
   rpc: RpcClient = createRpcClient(config),
   metrics: IndexerMetrics = IndexerMetrics.getInstance(),
-  store: EventStore = EventStore.getInstance(),
+  store: IndexerStore = EventStore.getInstance(),
+  elector: LeaderElector | null = null,
 ): EventPollerHandle {
   let cursor = config.startLedger;
+  let wasLeader = false;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let inFlight: Promise<void> = Promise.resolve();
 
   function tick(): void {
     inFlight = (async () => {
-      cursor = await pollOnce(config, rpc, metrics, cursor, store);
+      try {
+        // Without an elector (single replica) this process is always leader.
+        const isLeader = elector ? await elector.tick() : true;
+        setRole(isLeader ? 'leader' : 'follower');
+
+        if (isLeader) {
+          if (!wasLeader) {
+            // Fresh start or takeover: resume from the shared checkpoint.
+            const checkpoint = await store.getCheckpoint();
+            if (checkpoint && checkpoint.lastLedger + 1 > cursor) {
+              cursor = checkpoint.lastLedger + 1;
+            }
+          }
+          wasLeader = true;
+          if (!stopped) {
+            cursor = await pollOnce(config, rpc, metrics, cursor, store);
+          }
+        } else {
+          // Lost (or never held) the lock: stop polling immediately.
+          wasLeader = false;
+        }
+      } catch (err) {
+        console.error('[eventPoller] poll cycle failed:', err);
+        metrics.recordFailure(0);
+      }
       if (!stopped) {
         timer = setTimeout(tick, config.pollIntervalMs);
       }
@@ -405,6 +452,7 @@ export function startEventPolling(
     async stop(): Promise<void> {
       stopped = true;
       if (timer) clearTimeout(timer);
+      void elector?.release();
       await inFlight;
     },
     isRunning(): boolean {

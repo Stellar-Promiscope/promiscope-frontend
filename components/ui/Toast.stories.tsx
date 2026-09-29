@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { expect, userEvent, waitFor, within } from '@storybook/test';
 import { useState } from 'react';
 import { ToastProvider, useToast } from './Toast';
 import Button from './Button';
@@ -131,5 +132,40 @@ export const AllVariants: Story = {
       );
     }
     return <Demo />;
+  },
+};
+
+/**
+ * Interaction test (issue #1322, regression for #624): three toasts stack
+ * without overlapping, then auto-dismiss after their default 4 s duration.
+ */
+export const StackAndDismissPlay: Story = {
+  name: 'Stack and auto-dismiss (play)',
+  render: AllVariants.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Success' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Error' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Info' }));
+
+    const toasts = await waitFor(() => {
+      const found = page.getAllByLabelText(/ notification: /);
+      expect(found).toHaveLength(3);
+      return found;
+    });
+
+    const rects = toasts
+      .map((t) => t.getBoundingClientRect())
+      .sort((a, b) => a.top - b.top);
+    for (let i = 1; i < rects.length; i++) {
+      await expect(rects[i].top).toBeGreaterThanOrEqual(rects[i - 1].bottom);
+    }
+
+    await waitFor(
+      () => expect(page.queryAllByLabelText(/ notification: /)).toHaveLength(0),
+      { timeout: 6000 },
+    );
   },
 };

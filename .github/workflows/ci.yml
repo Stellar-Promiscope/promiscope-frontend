@@ -328,6 +328,11 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run build-storybook
+      # Interaction tests (issue #1322): runs every story's play function in
+      # a real Chromium against the static build, plus axe a11y checks
+      # (.storybook/test-runner.ts). A failing assertion fails the job.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test-storybook:ci
 
   lighthouse:
     runs-on: ubuntu-latest

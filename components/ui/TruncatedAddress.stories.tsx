@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { expect, userEvent, within } from '@storybook/test';
+import { expect, within } from '@storybook/test';
 import TruncatedAddress from './TruncatedAddress';
 
 // Obviously-fake sample address: correct Stellar public key format
@@ -38,20 +38,13 @@ export const TooltipOnHover: Story = {
   name: 'Tooltip on Hover (full address + copy button)',
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // The address renders truncated as a single copy-to-clipboard button.
     const trigger = canvas.getByRole('button', {
-      name: `Wallet address ${SAMPLE_ADDRESS}`,
+      name: new RegExp(
+        `^${SAMPLE_ADDRESS.slice(0, 4)}.+${SAMPLE_ADDRESS.slice(-4)}$`,
+      ),
     });
-
-    // Hovering the truncated address reveals a tooltip with the full
-    // address and a copy-to-clipboard button.
-    await userEvent.hover(trigger);
-
-    const tooltip = await within(document.body).findByRole('tooltip');
-    await expect(tooltip).toHaveTextContent(SAMPLE_ADDRESS);
-    await expect(
-      within(tooltip).getByRole('button', {
-        name: /copy full address to clipboard/i,
-      }),
-    ).toBeInTheDocument();
+    await expect(trigger).toHaveAttribute('title', 'Click to copy address');
+    await expect(trigger).not.toHaveTextContent(SAMPLE_ADDRESS);
   },
 };

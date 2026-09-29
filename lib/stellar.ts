@@ -123,7 +123,7 @@ export async function pollTransaction(
  * Signs the provided XDR using `signFn`, submits it via the RPC node, polls
  * until the transaction is confirmed, and returns the final transaction result.
  */
-const HORIZON_URL =
+export const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon-testnet.stellar.org';
 
 /**
