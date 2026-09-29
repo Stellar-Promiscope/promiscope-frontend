@@ -20,6 +20,13 @@ function makeRequest(wallet?: string): NextRequest {
   return new NextRequest('http://localhost/api/admin/health', { headers });
 }
 
+// Dependency checks are covered in __tests__/lib/healthChecks.test.ts.
+jest.mock('@/lib/healthChecks', () => ({
+  runDependencyChecks: jest.fn(async () => ({
+    redis: { status: 'not_configured', latencyMs: 0 },
+  })),
+}));
+
 const originalFetch = global.fetch;
 const originalIndexerUrl = process.env.NEXT_PUBLIC_INDEXER_API_URL;
 const originalApiUrlInternal = process.env.API_URL_INTERNAL;
@@ -76,6 +83,16 @@ describe('GET /api/admin/health', () => {
       status: 'ok',
       lastLedger: 42,
       uptime: 100,
+    });
+  });
+
+  it('includes the per-dependency checks', async () => {
+    global.fetch = jest
+      .fn()
+      .mockImplementation(async () => jsonResponse(200, { status: 'ok' }));
+    const body = await (await GET(makeRequest(ADMIN))).json();
+    expect(body.checks).toEqual({
+      redis: { status: 'not_configured', latencyMs: 0 },
     });
   });
 

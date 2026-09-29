@@ -175,13 +175,13 @@ describe('FeeRevenueChart', () => {
 
     // Totals: 3+5+2 = 10 contact, 7+9+12 = 28 subscription, 38 total
     expect(screen.getByText('Contact Fees')).toBeInTheDocument();
-    expect(screen.getByText(/10\.00\s*XLM/i)).toBeInTheDocument();
+    expect(screen.getByText(/^10\.00\s*XLM$/i)).toBeInTheDocument();
 
     expect(screen.getByText('Subscriptions')).toBeInTheDocument();
-    expect(screen.getByText(/28\.00\s*XLM/i)).toBeInTheDocument();
+    expect(screen.getByText(/^28\.00\s*XLM$/i)).toBeInTheDocument();
 
     expect(screen.getByText('Total')).toBeInTheDocument();
-    expect(screen.getByText(/38\.00\s*XLM/i)).toBeInTheDocument();
+    expect(screen.getByText(/^38\.00\s*XLM$/i)).toBeInTheDocument();
 
     // Chart container is rendered
     expect(screen.getByTestId('responsive-container')).toBeInTheDocument();
@@ -218,12 +218,12 @@ describe('FeeRevenueChart', () => {
     render(<FeeRevenueChart />);
 
     // 2020-01-01 is outside 30d, so not included in default total
-    expect(screen.queryByText(/300\.00\s*XLM/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^300\.00\s*XLM$/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'All-time' }));
 
     // Now the old entry is included: contact 10+100=110, sub 28+200=228, total 338
-    expect(screen.getByText(/338\.00\s*XLM/i)).toBeInTheDocument();
+    expect(screen.getByText(/^338\.00\s*XLM$/i)).toBeInTheDocument();
   });
 
   // ── Fee drift warning ────────────────────────────────────────────────────────

@@ -1,7 +1,12 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useId, useState, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { TourStep } from '@/hooks/useOnboardingTour';
+import { findVisibleStepIndex, isTourTargetVisible } from '@/lib/tourSteps';
+
+function selectorIsVisible(selector: string): boolean {
+  return isTourTargetVisible(document.querySelector(selector));
+}
 
 interface OnboardingTourProps {
   isVisible: boolean;
@@ -13,6 +18,8 @@ interface OnboardingTourProps {
   onDismiss: () => void;
   onSkip: () => void;
   onComplete: () => void;
+  /** Jump to a step; used to skip steps whose target is missing or hidden. */
+  onGoToStep?: (index: number) => void;
 }
 
 export default function OnboardingTour({
@@ -25,6 +32,7 @@ export default function OnboardingTour({
   onDismiss,
   onSkip,
   onComplete,
+  onGoToStep,
 }: OnboardingTourProps) {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{
@@ -32,9 +40,47 @@ export default function OnboardingTour({
     left: number;
   }>({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const previousStepRef = useRef(currentStep);
+  // Id of the step whose target has been confirmed visible; the popover is
+  // only rendered for that step so it never points at nothing.
+  const [shownStepId, setShownStepId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isVisible || !currentStepData) return;
+
+    const direction = currentStep < previousStepRef.current ? -1 : 1;
+    previousStepRef.current = currentStep;
+
+    if (!selectorIsVisible(currentStepData.targetSelector)) {
+      setShownStepId(null);
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(
+          `[OnboardingTour] skipping step "${currentStepData.id}": target ${currentStepData.targetSelector} is missing or hidden`,
+        );
+      }
+      const next = findVisibleStepIndex(
+        steps,
+        currentStep + direction,
+        direction,
+        selectorIsVisible,
+      );
+      if (next !== -1 && onGoToStep) onGoToStep(next);
+      else if (direction === 1 || !onGoToStep) onComplete();
+      else {
+        // Nothing visible behind us; look forward instead.
+        const forward = findVisibleStepIndex(
+          steps,
+          currentStep + 1,
+          1,
+          selectorIsVisible,
+        );
+        if (forward !== -1) onGoToStep(forward);
+        else onComplete();
+      }
+      return;
+    }
+    setShownStepId(currentStepData.id);
 
     const updatePosition = () => {
       const target = document.querySelector(currentStepData.targetSelector);
@@ -75,9 +121,24 @@ export default function OnboardingTour({
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, currentStepData]);
 
-  if (!isVisible || !currentStepData) return null;
+  const isShown =
+    isVisible && !!currentStepData && shownStepId === currentStepData.id;
+
+  // Move focus into the popover and close it on Escape.
+  useEffect(() => {
+    if (!isShown) return;
+    tooltipRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onDismiss();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isShown, shownStepId, onDismiss]);
+
+  if (!isShown || !currentStepData) return null;
 
   const isLastStep = currentStep === steps.length - 1;
   const isFirstStep = currentStep === 0;
@@ -104,6 +165,10 @@ export default function OnboardingTour({
       {/* Tooltip */}
       <div
         ref={tooltipRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className="fixed z-50 bg-brand-card border border-gray-300 dark:border-gray-700 rounded-lg shadow-2xl max-w-xs p-4 pointer-events-auto"
         style={{
           top: `${tooltipPosition.top}px`,
@@ -126,7 +191,10 @@ export default function OnboardingTour({
         </div>
 
         {/* Content */}
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+        <h3
+          id={titleId}
+          className="text-sm font-semibold text-gray-900 dark:text-white mb-2"
+        >
           {currentStepData.title}
         </h3>
         <p className="text-xs text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">

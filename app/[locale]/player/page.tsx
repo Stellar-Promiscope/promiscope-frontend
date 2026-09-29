@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -22,7 +22,8 @@ import BackupWalletModal from '@/components/player/BackupWalletModal';
 import OfflineQueueBanner from '@/components/player/OfflineQueueBanner';
 import OnboardingTour from '@/components/ui/OnboardingTour';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import { playerTourSteps, PLAYER_TOUR_ID } from '@/lib/tourSteps';
+import { getTourSteps, PLAYER_TOUR_ID } from '@/lib/tourSteps';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { getEarnedBadgeIds, BADGE_DEFINITIONS } from '@/lib/badges';
 import type { Milestone, Player, PlayerVitals } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
@@ -52,9 +53,14 @@ function PlayerDashboardContent() {
 
   const offlineQueue = useOfflineQueue();
 
+  const isMobile = useIsMobile();
+  const tourSteps = useMemo(
+    () => getTourSteps('player', { isMobile }),
+    [isMobile],
+  );
   const tour = useOnboardingTour(
     PLAYER_TOUR_ID,
-    playerTourSteps,
+    tourSteps,
     publicKey ?? undefined,
   );
 
@@ -304,6 +310,7 @@ function PlayerDashboardContent() {
         onDismiss={tour.dismissTour}
         onSkip={tour.skipTour}
         onComplete={tour.completeTour}
+        onGoToStep={tour.goToStep}
       />
       <div className="max-w-2xl mx-auto flex flex-col gap-8">
         <h1 className="text-3xl font-bold text-white">{t('title')}</h1>

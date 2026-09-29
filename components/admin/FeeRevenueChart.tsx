@@ -15,6 +15,8 @@ import { useFeeRevenue } from '@/hooks/useFeeRevenue';
 import { useFeeDriftDetection } from '@/hooks/useFeeDriftDetection';
 import { formatXlm } from '@/lib/formatXlm';
 import EmptyState from '@/components/ui/EmptyState';
+import ChartDataTable from '@/components/admin/ChartDataTable';
+import { summarizeFeeRevenue } from '@/lib/chartSummary';
 
 const BRAND_GREEN = '#00C853';
 const BRAND_BLUE = '#3B82F6';
@@ -27,6 +29,8 @@ const PERIODS = [
 ] as const;
 
 type PeriodKey = (typeof PERIODS)[number]['key'];
+
+const SUBSCRIPTION_PATTERN_ID = 'fee-revenue-subscription-stripes';
 
 const TOOLTIP_STYLE = {
   backgroundColor: '#111827',
@@ -54,16 +58,31 @@ export default function FeeRevenueChart() {
   const { hasDrift, warningMessage } = useFeeDriftDetection();
   const [period, setPeriod] = useState<PeriodKey>('30');
 
-  const filtered = useMemo(() => {
-    if (!data) return [];
-    const selected = PERIODS.find((p) => p.key === period);
-    if (!selected || selected.days === null) return data.daily;
+  const selectedDays = PERIODS.find((p) => p.key === period)?.days ?? null;
+
+  const { filtered, previousTotalXlm } = useMemo(() => {
+    if (!data) return { filtered: [], previousTotalXlm: null };
+    if (selectedDays === null) {
+      return { filtered: data.daily, previousTotalXlm: null };
+    }
 
     const cutoff = new Date();
-    cutoff.setUTCDate(cutoff.getUTCDate() - selected.days);
+    cutoff.setUTCDate(cutoff.getUTCDate() - selectedDays);
     const cutoffKey = cutoff.toISOString().slice(0, 10);
-    return data.daily.filter((d) => d.date >= cutoffKey);
-  }, [data, period]);
+    const previousCutoff = new Date(cutoff);
+    previousCutoff.setUTCDate(previousCutoff.getUTCDate() - selectedDays);
+    const previousKey = previousCutoff.toISOString().slice(0, 10);
+    const previous = data.daily.filter(
+      (d) => d.date >= previousKey && d.date < cutoffKey,
+    );
+    return {
+      filtered: data.daily.filter((d) => d.date >= cutoffKey),
+      previousTotalXlm:
+        previous.length === 0
+          ? null
+          : previous.reduce((sum, d) => sum + d.totalXlm, 0),
+    };
+  }, [data, selectedDays]);
 
   const totals = useMemo(
     () =>
@@ -92,6 +111,8 @@ export default function FeeRevenueChart() {
           {PERIODS.map((p) => (
             <button
               key={p.key}
+              type="button"
+              aria-pressed={period === p.key}
               onClick={() => setPeriod(p.key)}
               className={`px-3 py-1.5 rounded-md text-sm transition ${
                 period === p.key
@@ -150,40 +171,89 @@ export default function FeeRevenueChart() {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart
-              data={filtered}
-              margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatBucketLabel}
-                tick={{ fill: '#9CA3AF', fontSize: 11 }}
-                minTickGap={24}
-              />
-              <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} width={40} />
-              <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                labelStyle={{ color: '#E5E7EB' }}
-                labelFormatter={(label) => formatBucketLabel(String(label))}
-              />
-              <Legend wrapperStyle={{ fontSize: 12, color: '#9CA3AF' }} />
-              <Bar
-                dataKey="contactFeeXlm"
-                name="Contact Fees"
-                stackId="fees"
-                fill={BRAND_GREEN}
-              />
-              <Bar
-                dataKey="subscriptionXlm"
-                name="Subscriptions"
-                stackId="fees"
-                fill={BRAND_BLUE}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <figure className="flex flex-col gap-2">
+            <figcaption className="text-sm text-gray-300">
+              {summarizeFeeRevenue({
+                totalXlm: totals.totalXlm,
+                previousTotalXlm,
+                days: selectedDays,
+              })}
+            </figcaption>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart
+                data={filtered}
+                margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                accessibilityLayer
+              >
+                <defs>
+                  {/* Stripes keep the two stacked series distinguishable without colour. */}
+                  <pattern
+                    id={SUBSCRIPTION_PATTERN_ID}
+                    width={6}
+                    height={6}
+                    patternUnits="userSpaceOnUse"
+                    patternTransform="rotate(45)"
+                  >
+                    <rect width={6} height={6} fill={BRAND_BLUE} />
+                    <line
+                      x1={0}
+                      y1={0}
+                      x2={0}
+                      y2={6}
+                      stroke="#E5E7EB"
+                      strokeWidth={2}
+                    />
+                  </pattern>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatBucketLabel}
+                  tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                  minTickGap={24}
+                />
+                <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} width={40} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={{ color: '#E5E7EB' }}
+                  labelFormatter={(label) => formatBucketLabel(String(label))}
+                />
+                <Legend wrapperStyle={{ fontSize: 12, color: '#9CA3AF' }} />
+                <Bar
+                  dataKey="contactFeeXlm"
+                  name="Contact Fees"
+                  stackId="fees"
+                  fill={BRAND_GREEN}
+                  legendType="square"
+                />
+                <Bar
+                  dataKey="subscriptionXlm"
+                  name="Subscriptions"
+                  stackId="fees"
+                  fill={`url(#${SUBSCRIPTION_PATTERN_ID})`}
+                  legendType="diamond"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+            <ChartDataTable
+              caption="Daily fee revenue (XLM)"
+              rows={filtered}
+              rowKey={(d) => d.date}
+              columns={[
+                { header: 'Date', render: (d) => formatBucketLabel(d.date) },
+                {
+                  header: 'Contact Fees',
+                  render: (d) => formatXlm(d.contactFeeXlm),
+                },
+                {
+                  header: 'Subscriptions',
+                  render: (d) => formatXlm(d.subscriptionXlm),
+                },
+                { header: 'Total', render: (d) => formatXlm(d.totalXlm) },
+              ]}
+            />
+          </figure>
         </>
       )}
     </section>

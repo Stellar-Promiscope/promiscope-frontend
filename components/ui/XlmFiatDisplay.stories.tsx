@@ -9,7 +9,7 @@ import { CURRENCY_PREFERENCE_KEY } from '@/lib/storageKeys';
 //
 //   • useCurrencyPreference — reads localStorage; works fine in Storybook
 //     (returns USD by default when storage is empty).
-//   • useXlmUsdRate — fires a real CoinGecko fetch. That makes the "loading"
+//   • useXlmUsdRate — fires a real /api/rates/xlm fetch. That makes the "loading"
 //     state impossible to pin down in a story and introduces flaky network
 //     dependency. We pre-fill the module-level in-memory cache the hook uses
 //     so it resolves synchronously on first render with no network call.
@@ -22,7 +22,7 @@ import { CURRENCY_PREFERENCE_KEY } from '@/lib/storageKeys';
 //
 // For the LoadingExchangeRate story we deliberately leave the cache empty
 // (rate=null), which keeps the hook in its initial loading: true, rate: null
-// state — identical to how it behaves before the first CoinGecko response.
+// state — identical to how it behaves before the first rate response.
 
 const STORAGE_KEY = CURRENCY_PREFERENCE_KEY;
 

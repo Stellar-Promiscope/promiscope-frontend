@@ -2,6 +2,9 @@ import type { TourStep } from '@/hooks/useOnboardingTour';
 
 export const SCOUT_TOUR_ID = 'scout_dashboard';
 export const PLAYER_TOUR_ID = 'player_dashboard';
+export const VALIDATOR_TOUR_ID = 'validator_dashboard';
+
+export type TourRole = 'player' | 'scout' | 'validator';
 
 export const scoutTourSteps: TourStep[] = [
   {
@@ -18,6 +21,8 @@ export const scoutTourSteps: TourStep[] = [
     description:
       'Your wallet securely stores your identity and subscription details. Make sure to connect it to get started.',
     targetSelector: '[data-tour="wallet-button"]',
+    // The wallet button lives in the collapsed hamburger menu on mobile.
+    mobileTargetSelector: '[aria-controls="mobile-nav"]',
     position: 'bottom',
   },
   {
@@ -61,6 +66,8 @@ export const playerTourSteps: TourStep[] = [
     description:
       'Your wallet is your identity on the blockchain. Connect it to register as a player and track your progress.',
     targetSelector: '[data-tour="wallet-button"]',
+    // The wallet button lives in the collapsed hamburger menu on mobile.
+    mobileTargetSelector: '[aria-controls="mobile-nav"]',
     position: 'bottom',
   },
   {
@@ -88,3 +95,93 @@ export const playerTourSteps: TourStep[] = [
     position: 'top',
   },
 ];
+
+export const validatorTourSteps: TourStep[] = [
+  {
+    id: 'validator-welcome',
+    title: 'Welcome to Validator Dashboard',
+    description:
+      'Review and approve player milestones submitted for verification. Start by connecting your wallet.',
+    targetSelector: 'h1',
+    position: 'bottom',
+  },
+  {
+    id: 'validator-wallet',
+    title: 'Connect Your Wallet',
+    description:
+      'Your wallet proves you are a registered validator. Approvals are signed with it.',
+    targetSelector: '[data-tour="wallet-button"]',
+    mobileTargetSelector: '[aria-controls="mobile-nav"]',
+    position: 'bottom',
+  },
+  {
+    id: 'validator-queue',
+    title: 'Review Pending Milestones',
+    description:
+      'Milestones awaiting your review appear here. Check the evidence before approving or rejecting.',
+    targetSelector: '[data-tour="validator-queue"]',
+    position: 'top',
+  },
+];
+
+const STEPS_BY_ROLE: Record<TourRole, TourStep[]> = {
+  player: playerTourSteps,
+  scout: scoutTourSteps,
+  validator: validatorTourSteps,
+};
+
+export const TOUR_ID_BY_ROLE: Record<TourRole, string> = {
+  player: PLAYER_TOUR_ID,
+  scout: SCOUT_TOUR_ID,
+  validator: VALIDATOR_TOUR_ID,
+};
+
+/**
+ * Returns the tour steps for `role`, dropping steps behind a disabled feature
+ * flag and swapping in mobile-specific targets (or dropping steps that have
+ * none) when `isMobile`.
+ */
+export function getTourSteps(
+  role: TourRole,
+  {
+    isMobile = false,
+    flags = {},
+  }: { isMobile?: boolean; flags?: Record<string, boolean> } = {},
+): TourStep[] {
+  return STEPS_BY_ROLE[role]
+    .filter((step) => !step.flag || flags[step.flag] === true)
+    .filter((step) => !isMobile || !step.desktopOnly)
+    .map((step) =>
+      isMobile && step.mobileTargetSelector
+        ? { ...step, targetSelector: step.mobileTargetSelector }
+        : step,
+    );
+}
+
+/** True when `el` is rendered and takes up space in the layout. */
+export function isTourTargetVisible(el: Element | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  // offsetParent is null for display:none (and position:fixed elements, so
+  // fall back to the bounding box for those).
+  if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') {
+    return false;
+  }
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+/**
+ * Index of the first step at or after `from` (moving in `direction`) whose
+ * target is visible, or -1 when there is none.
+ */
+export function findVisibleStepIndex(
+  steps: TourStep[],
+  from: number,
+  direction: 1 | -1,
+  isVisible: (selector: string) => boolean,
+): number {
+  for (let i = from; i >= 0 && i < steps.length; i += direction) {
+    if (isVisible(steps[i].targetSelector)) return i;
+  }
+  return -1;
+}

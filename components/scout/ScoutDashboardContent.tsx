@@ -28,7 +28,8 @@ import EmptyState from '@/components/ui/EmptyState';
 import ReferralPanel from '@/components/scout/ReferralPanel';
 import SpendingSummary from '@/components/scout/SpendingSummary';
 import OnboardingTour from '@/components/ui/OnboardingTour';
-import { scoutTourSteps, SCOUT_TOUR_ID } from '@/lib/tourSteps';
+import { getTourSteps, SCOUT_TOUR_ID } from '@/lib/tourSteps';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import type { Player, PlayerFilter } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import ScrollToTop from '@/components/ui/ScrollToTop';
@@ -83,9 +84,14 @@ export default function ScoutDashboardContent() {
   const searchParams = useSearchParams();
   const t = useTranslations('scout_dashboard');
 
+  const isMobile = useIsMobile();
+  const tourSteps = useMemo(
+    () => getTourSteps('scout', { isMobile }),
+    [isMobile],
+  );
   const tour = useOnboardingTour(
     SCOUT_TOUR_ID,
-    scoutTourSteps,
+    tourSteps,
     publicKey ?? undefined,
   );
 
@@ -413,6 +419,7 @@ export default function ScoutDashboardContent() {
         onDismiss={tour.dismissTour}
         onSkip={tour.skipTour}
         onComplete={tour.completeTour}
+        onGoToStep={tour.goToStep}
       />
       <div className="flex flex-col gap-8">
         <div className="flex flex-wrap items-center justify-between gap-3">

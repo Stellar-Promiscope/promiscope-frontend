@@ -347,7 +347,9 @@
     "section6_title": "6. Uhifadhi na Ufutaji",
     "section6_content": "Data za on-chain ni za kudumu na haziwezi kufutwa. Data za off-chain zinahifadhiwa kwa muda unaohitajika. Unaweza kuomba ufutaji wa data zako za off-chain kupitia mipangilio ya akaunti. Tumia kitendo cha 'Omba Ufutaji wa Data' katika Mipangilio ya Akaunti. Uhamishaji na ufutaji wa data zako unajumuisha orodha yako ya ufuatiliaji, utafutaji uliohifadhiwa, mipangilio na hali ya kusomwa ya arifa, mizozo na uidhinishaji wa hatua muhimu, wachezaji uliowatazama hivi karibuni, vipindi vya kuingia (ikiwa ni pamoja na taarifa za kifaa na kivinjari), na rekodi za upakiaji. Ufutaji pia unakuondoa kwenye vifaa vyote. Rekodi za upakiaji huhifadhiwa bila pochi yako ili midia iliyoachwa bado iweze kusafishwa, na maingizo ya kumbukumbu ya ukaguzi wa msimamizi hufanywa kuwa bila jina badala ya kufutwa.",
     "section7_title": "7. Haki Zako na Mawasiliano",
-    "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff."
+    "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff.",
+    "section8_title": "8. Huduma za Wahusika Wengine",
+    "section8_content": "Ili kuonyesha thamani za takriban kwa sarafu ya kawaida, seva zetu (si kivinjari chako) hupata kiwango cha ubadilishaji cha XLM kutoka CoinGecko na, kama mbadala, API ya umma ya Horizon ya mtandao wa Stellar; anwani yako ya IP haishirikiwi na watoa huduma hawa. Maudhui yaliyopakiwa huhifadhiwa kwenye IPFS kupitia Pinata, na ripoti za hitilafu hutumwa kwa Sentry."
   },
   "terms": {
     "back_to_home": "Rudi Nyumbani",

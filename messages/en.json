@@ -347,7 +347,9 @@
     "section6_title": "6. Retention and Deletion",
     "section6_content": "On-chain data is permanent and cannot be deleted. Off-chain data is retained for as long as necessary. You can request deletion of your off-chain data through account settings. Use the ‘Request Data Deletion’ action in Account Settings. Your data export and deletion request cover your watchlist, saved searches, notification settings and read state, milestone disputes and endorsements, recently viewed players, login sessions (including device/browser information), and upload records. Deletion also signs you out of all devices. Upload records are kept with your wallet removed so orphaned media can still be cleaned up, and admin audit log entries are anonymized rather than deleted.",
     "section7_title": "7. Your Rights and Contact",
-    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels."
+    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels.",
+    "section8_title": "8. Third-Party Services",
+    "section8_content": "To show approximate fiat values, our servers (not your browser) fetch the XLM exchange rate from CoinGecko and, as a fallback, the Stellar network's public Horizon API; your IP address is not shared with these providers. Uploaded media is pinned to IPFS through Pinata, and error reports are sent to Sentry."
   },
   "terms": {
     "back_to_home": "Back to Home",
