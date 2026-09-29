@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Milestone } from '@/types';
+import type { Milestone, Player } from '@/types';
 
 /**
  * Client for packages/indexer's query API — the off-chain, SQLite-backed
@@ -30,6 +30,7 @@ const indexerApi = axios.create({
 
 export type IndexedEventType =
   | 'player_registered'
+  | 'profile_updated'
   | 'milestone_approved'
   | 'milestone_revoked'
   | 'scout_subscribed'
@@ -82,6 +83,58 @@ export const fetchValidatorEvents = (
       params,
     })
     .then((r) => r.data);
+
+// ── Scout discovery (issue #1298) ─────────────────────────────────────────────
+
+/** Query params for GET /players — the paginated, filterable discovery list. */
+export interface ListPlayersParams {
+  /** Exact-match region; omit/empty = all regions. */
+  region?: string;
+  /** Exact-match position; omit/empty = all positions. */
+  position?: string;
+  /** Minimum progress level (0–3). */
+  minLevel?: number;
+  /** Opaque keyset cursor — `nextCursor` from a previous page. */
+  cursor?: string;
+  /** Page size; the endpoint caps it at 50. */
+  limit?: number;
+  /** Only players created after this unix-seconds timestamp (saved-search "new since last viewed" badge). */
+  createdAfter?: number;
+}
+
+export interface ListPlayersResponse {
+  /** Page of players in the same shape `getPlayer` returns (`milestones` always [] — the grid loads those in batch). */
+  players: Player[];
+  /** Pass as `cursor` to fetch the next page; null when exhausted. */
+  nextCursor: string | null;
+  /** Total players matching the filters, independent of the cursor. */
+  total: number;
+}
+
+/**
+ * Fetches one page of scout-discovery players from the indexer — the
+ * paginated replacement for an on-chain `filter_players` simulation, whose
+ * unbounded Vec eventually exceeds Soroban's read limits (issue #1298).
+ */
+export const listPlayers = (
+  params: ListPlayersParams = {},
+): Promise<ListPlayersResponse> =>
+  indexerApi.get('/players', { params }).then((r) => r.data);
+
+/** GET /health — indexer liveness/ledger-lag snapshot (via the proxy). */
+export interface IndexerHealth {
+  status: 'starting' | 'ok' | 'degraded' | 'unhealthy';
+  /** Last ledger sequence the indexer has ingested. */
+  lastLedger: number;
+  /** Network head minus lastLedger — drives the "up to N ledgers behind" hint. */
+  ledgerLag: number;
+  pollerRunning: boolean;
+  lastError?: string | null;
+  uptime: number;
+}
+
+export const fetchIndexerHealth = (): Promise<IndexerHealth> =>
+  indexerApi.get('/health').then((r) => r.data);
 
 const MAX_PAGES = 10; // caps at 10 * 200 = 2000 events per player before giving up
 

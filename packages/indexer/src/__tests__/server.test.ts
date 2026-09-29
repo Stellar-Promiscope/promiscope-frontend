@@ -391,3 +391,172 @@ describe('malformed path encoding (issue #1331)', () => {
     spy.mockRestore();
   });
 });
+
+// ── GET /players (issue #1298) ───────────────────────────────────────────────
+
+describe('GET /players', () => {
+  let seq = 0;
+
+  function seedRegistration(
+    playerId: string,
+    opts: {
+      ledger?: number;
+      timestamp?: number;
+      region?: string;
+      position?: string;
+      level?: number;
+    } = {},
+  ): void {
+    seq += 1;
+    const ledger = opts.ledger ?? 1_000 + seq;
+    const timestamp = opts.timestamp ?? 1_700_000_000 + seq;
+    const store = EventStore.getInstance();
+    store.insertEvent({
+      type: 'player_registered',
+      ledger,
+      timestamp,
+      data: {
+        player_id: playerId,
+        wallet: 'GWALLET',
+        ipfs_hash: `cid-${playerId}`,
+        vitals: {
+          name: `Player ${playerId}`,
+          age: 20,
+          position: opts.position ?? 'ST',
+          region: opts.region ?? 'West Africa',
+          nationality: 'Nigeria',
+        },
+      },
+      eventId: `srv-players-${seq}`,
+    });
+    if (opts.level !== undefined && opts.level > 0) {
+      seq += 1;
+      store.insertEvent({
+        type: 'milestone_approved',
+        ledger: ledger + 1,
+        timestamp: 1_700_000_000 + seq,
+        data: {
+          player_id: playerId,
+          milestone_id: `m-${playerId}`,
+          new_level: opts.level,
+        },
+        eventId: `srv-players-${seq}`,
+      });
+    }
+  }
+
+  test('returns 200 with { players, nextCursor, total } in Player shape', async () => {
+    seedRegistration('p1');
+    seedRegistration('p2', { region: 'East Africa' });
+
+    const { status, body, contentType } = await request('/players');
+    expect(status).toBe(200);
+    expect(contentType).toContain('application/json');
+    const json = JSON.parse(body);
+    expect(json.total).toBe(2);
+    expect(json.nextCursor).toBeNull();
+    expect(json.players).toHaveLength(2);
+    expect(json.players[0]).toEqual({
+      id: expect.any(String),
+      wallet: 'GWALLET',
+      vitals: {
+        name: expect.any(String),
+        age: 20,
+        position: 'ST',
+        region: expect.any(String),
+        nationality: 'Nigeria',
+      },
+      ipfsHash: expect.any(String),
+      progressLevel: expect.any(Number),
+      milestones: [],
+      createdAt: expect.any(Number),
+    });
+  });
+
+  test('applies region and minLevel filters', async () => {
+    seedRegistration('p1', { region: 'West Africa', level: 0 });
+    seedRegistration('p2', { region: 'East Africa', level: 2 });
+    seedRegistration('p3', { region: 'West Africa', level: 3 });
+
+    const region = await request(
+      '/players?region=' + encodeURIComponent('West Africa'),
+    );
+    expect(JSON.parse(region.body).total).toBe(2);
+
+    const leveled = await request('/players?minLevel=3');
+    const leveledJson = JSON.parse(leveled.body);
+    expect(leveledJson.total).toBe(1);
+    expect(leveledJson.players[0].id).toBe('p3');
+  });
+
+  test('paginates with the returned cursor', async () => {
+    for (let i = 1; i <= 5; i++) seedRegistration(`pg${i}`, { ledger: i * 10 });
+
+    const first = JSON.parse((await request('/players?limit=2')).body);
+    expect(first.players).toHaveLength(2);
+    expect(first.total).toBe(5);
+    expect(first.nextCursor).toEqual(expect.any(String));
+
+    const second = JSON.parse(
+      (
+        await request(
+          `/players?limit=2&cursor=${encodeURIComponent(first.nextCursor)}`,
+        )
+      ).body,
+    );
+    expect(second.players).toHaveLength(2);
+    expect(second.players.map((p: { id: string }) => p.id)).toEqual([
+      'pg3',
+      'pg2',
+    ]);
+    // No overlap between pages
+    const firstIds = first.players.map((p: { id: string }) => p.id);
+    expect(
+      second.players.some((p: { id: string }) => firstIds.includes(p.id)),
+    ).toBe(false);
+  });
+
+  test('caps limit at 50', async () => {
+    for (let i = 1; i <= 55; i++)
+      seedRegistration(`cap${i}`, { ledger: i * 10 });
+
+    const json = JSON.parse((await request('/players?limit=1000')).body);
+    expect(json.players).toHaveLength(50);
+    expect(json.total).toBe(55);
+  });
+
+  test('filters by createdAfter', async () => {
+    seedRegistration('old', { ledger: 10, timestamp: 1_000 });
+    seedRegistration('new', { ledger: 9_999, timestamp: 2_000 });
+
+    const json = JSON.parse((await request('/players?createdAfter=1500')).body);
+    expect(json.total).toBe(1);
+    expect(json.players[0].id).toBe('new');
+  });
+
+  test.each([
+    ['limit=0', '/players?limit=0'],
+    ['limit=abc', '/players?limit=abc'],
+    ['minLevel=9', '/players?minLevel=9'],
+    ['minLevel=-1', '/players?minLevel=-1'],
+    ['createdAfter=x', '/players?createdAfter=x'],
+    ['oversized region', `/players?region=${'x'.repeat(101)}`],
+    [
+      'malformed cursor',
+      `/players?cursor=${encodeURIComponent(Buffer.from('nope').toString('base64url'))}`,
+    ],
+  ])('returns 400 for invalid %s', async (_label, path) => {
+    const { status, body } = await request(path);
+    expect(status).toBe(400);
+    expect(JSON.parse(body).error).toEqual(expect.any(String));
+  });
+
+  test('does not shadow the /players/:id/events route', async () => {
+    seedRegistration('p1');
+    const events = await request('/players/p1/events');
+    expect(events.status).toBe(200);
+    const json = JSON.parse(events.body);
+    expect(json.events).toHaveLength(1);
+    expect(json.events[0].type).toBe('player_registered');
+  });
+});

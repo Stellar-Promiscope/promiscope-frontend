@@ -9,6 +9,9 @@ import {
 } from './eventPoller';
 import {
   EventStore,
+  decodePlayerCursor,
+  type PlayerQueryFilter,
+  type PlayerRecord,
   type QueryFilter,
   type WalletApprovalWindow,
 } from './db/eventStore';
@@ -145,6 +148,12 @@ function handleMetrics(res: http.ServerResponse): void {
 const PLAYER_EVENTS_PATH = /^\/players\/([^/]+)\/events$/;
 const VALIDATOR_EVENTS_PATH = /^\/validators\/([^/]+)\/events$/;
 
+/**
+ * Max length for a region/position filter value — guards against absurd
+ * query strings; real values are short slugs/labels ("West Africa", "ST").
+ */
+const MAX_FILTER_VALUE_LENGTH = 100;
+
 function sendJson(
   res: http.ServerResponse,
   status: number,
@@ -227,6 +236,127 @@ function handleValidatorEventsQuery(
   });
 
   sendJson(res, 200, result);
+}
+
+/**
+ * Parses and validates query params for GET /players (issue #1298):
+ * `region`, `position`, `minLevel` (0–3), `cursor` (opaque keyset token from
+ * a previous page), `createdAfter` (unix seconds), `limit` (positive
+ * integer; values above 50 are capped by the store per the endpoint's
+ * `limit ≤ 50` contract).
+ */
+function parsePlayersQuery(searchParams: URLSearchParams):
+  | {
+      ok: true;
+      filter: PlayerQueryFilter;
+    }
+  | { ok: false; error: string } {
+  const filter: PlayerQueryFilter = {};
+
+  const region = searchParams.get('region');
+  if (region !== null) {
+    if (region.length > MAX_FILTER_VALUE_LENGTH) {
+      return { ok: false, error: 'region is too long' };
+    }
+    if (region !== '') filter.region = region;
+  }
+
+  const position = searchParams.get('position');
+  if (position !== null) {
+    if (position.length > MAX_FILTER_VALUE_LENGTH) {
+      return { ok: false, error: 'position is too long' };
+    }
+    if (position !== '') filter.position = position;
+  }
+
+  const minLevelParam = searchParams.get('minLevel');
+  if (minLevelParam !== null) {
+    const minLevel = Number(minLevelParam);
+    if (!Number.isInteger(minLevel) || minLevel < 0 || minLevel > 3) {
+      return {
+        ok: false,
+        error: 'minLevel must be an integer between 0 and 3',
+      };
+    }
+    filter.minLevel = minLevel;
+  }
+
+  const limitParam = searchParams.get('limit');
+  if (limitParam !== null) {
+    const limit = Number(limitParam);
+    if (!Number.isInteger(limit) || limit <= 0) {
+      return { ok: false, error: 'limit must be a positive integer' };
+    }
+    filter.limit = limit;
+  }
+
+  const cursor = searchParams.get('cursor');
+  if (cursor !== null) {
+    if (decodePlayerCursor(cursor) === null) {
+      return { ok: false, error: 'cursor is not a valid pagination cursor' };
+    }
+    filter.cursor = cursor;
+  }
+
+  const createdAfterParam = searchParams.get('createdAfter');
+  if (createdAfterParam !== null) {
+    const createdAfter = Number(createdAfterParam);
+    if (!Number.isInteger(createdAfter) || createdAfter < 0) {
+      return {
+        ok: false,
+        error: 'createdAfter must be a non-negative integer timestamp',
+      };
+    }
+    filter.createdAfter = createdAfter;
+  }
+
+  return { ok: true, filter };
+}
+
+/**
+ * Maps a materialized row to the frontend's `Player` shape (vitals nested
+ * under one key, `milestones` always an empty array — the scout grid loads
+ * milestones in batch via useMilestonesBatch, never from discovery).
+ */
+function toApiPlayer(record: PlayerRecord) {
+  return {
+    id: record.id,
+    wallet: record.wallet,
+    vitals: {
+      name: record.name,
+      age: record.age,
+      position: record.position,
+      region: record.region,
+      nationality: record.nationality,
+    },
+    ipfsHash: record.ipfsHash,
+    progressLevel: record.progressLevel,
+    milestones: [],
+    createdAt: record.createdAt,
+  };
+}
+
+/** GET /players — paginated, filterable scout-discovery query. */
+function handlePlayersQuery(url: URL, res: http.ServerResponse): void {
+  const parsed = parsePlayersQuery(url.searchParams);
+  if (!parsed.ok) {
+    return sendJson(res, 400, { error: parsed.error });
+  }
+
+  try {
+    const result = EventStore.getInstance().getPlayers(parsed.filter);
+    sendJson(res, 200, {
+      players: result.players.map(toApiPlayer),
+      nextCursor: result.nextCursor,
+      total: result.total,
+    });
+  } catch (err) {
+    // getPlayers throws only for a malformed cursor (re-validated here as
+    // defense in depth — the parse above already rejected obvious garbage).
+    sendJson(res, 400, {
+      error: err instanceof Error ? err.message : 'Invalid query',
+    });
+  }
 }
 
 const MAX_BODY_BYTES = 64 * 1024; // generous for a few hundred wallet+since pairs
@@ -367,6 +497,11 @@ function route(req: http.IncomingMessage, res: http.ServerResponse): void {
   }
   if (req.method === 'GET' && url.pathname === '/events') {
     return handleEventsQuery(url, res);
+  }
+  // Exact match — must precede the /players/:id/events regex below (which
+  // wouldn't match it anyway, but the ordering documents the intent).
+  if (req.method === 'GET' && url.pathname === '/players') {
+    return handlePlayersQuery(url, res);
   }
   if (req.method === 'POST' && url.pathname === '/validators/approval-counts') {
     handleApprovalCountsQuery(req, res).catch((err) =>

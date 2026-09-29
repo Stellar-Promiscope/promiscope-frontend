@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
-// Same-origin proxy for packages/indexer's query API (issue #1332). The
+// Same-origin proxy for packages/indexer's query API (issue #1332, extended
+// by #1298 for /players and /health). The
 // indexer sends no CORS headers and has no auth or rate limiting of its own,
 // so browser code (lib/indexerClient.ts) calls /api/indexer/* instead of the
 // indexer origin, and this route forwards only the allow-listed query routes
@@ -14,6 +15,8 @@ const CACHE_CONTROL = 'public, s-maxage=10, stale-while-revalidate=30';
 
 const GET_ROUTES = [
   /^events$/,
+  /^health$/,
+  /^players$/,
   /^players\/[^/]+\/events$/,
   /^validators\/[^/]+\/events$/,
 ];

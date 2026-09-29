@@ -23,8 +23,10 @@ jest.mock('axios', () => {
 import axios from 'axios';
 import {
   fetchEvents,
+  fetchIndexerHealth,
   fetchPlayerEvents,
   getMilestoneHistoryFromIndexer,
+  listPlayers,
 } from '@/lib/indexerClient';
 
 beforeAll(() => {
@@ -288,5 +290,64 @@ describe('getMilestoneHistoryFromIndexer', () => {
     await expect(getMilestoneHistoryFromIndexer('player-1')).rejects.toThrow(
       'network error',
     );
+  });
+});
+
+// ── Scout discovery (issue #1298) ─────────────────────────────────────────────
+
+describe('listPlayers', () => {
+  it('GETs /players with the filter and cursor params', async () => {
+    const page = { players: [], nextCursor: 'abc', total: 42 };
+    mockGet.mockResolvedValue({ data: page });
+
+    const result = await listPlayers({
+      region: 'West Africa',
+      position: 'ST',
+      minLevel: 1,
+      cursor: 'abc',
+      limit: 50,
+      createdAfter: 1_700_000_000,
+    });
+
+    expect(mockGet).toHaveBeenCalledWith('/players', {
+      params: {
+        region: 'West Africa',
+        position: 'ST',
+        minLevel: 1,
+        cursor: 'abc',
+        limit: 50,
+        createdAfter: 1_700_000_000,
+      },
+    });
+    expect(result).toEqual(page);
+  });
+
+  it('defaults to an empty params object', async () => {
+    mockGet.mockResolvedValue({
+      data: { players: [], nextCursor: null, total: 0 },
+    });
+
+    await listPlayers();
+
+    expect(mockGet).toHaveBeenCalledWith('/players', { params: {} });
+  });
+});
+
+describe('fetchIndexerHealth', () => {
+  it('GETs /health and returns the lag snapshot', async () => {
+    const health = {
+      status: 'ok',
+      lastLedger: 123,
+      ledgerLag: 4,
+      pollerRunning: true,
+      uptime: 10,
+    };
+    mockGet.mockResolvedValue({ data: health });
+
+    const result = await fetchIndexerHealth();
+
+    expect(mockGet).toHaveBeenCalledWith('/health');
+    expect(result.lastLedger).toBe(123);
+    expect(result.ledgerLag).toBe(4);
   });
 });

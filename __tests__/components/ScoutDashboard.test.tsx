@@ -45,8 +45,19 @@ jest.mock('@/hooks/useScout', () => ({
 
 jest.mock('@/lib/contract', () => ({
   getPlayer: jest.fn(),
-  filterPlayers: jest.fn(),
   getMilestoneHistoryBatch: jest.fn().mockResolvedValue({}),
+}));
+
+// Discovery reads the indexer now (issue #1298); the dashboard polls
+// /health for the ledger-lag hint — stub it so no real request is attempted.
+jest.mock('@/lib/indexerClient', () => ({
+  fetchIndexerHealth: jest.fn().mockResolvedValue({
+    status: 'ok',
+    lastLedger: 100,
+    ledgerLag: 0,
+    pollerRunning: true,
+    uptime: 1,
+  }),
 }));
 
 jest.mock('next/navigation', () => ({
@@ -142,8 +153,15 @@ import ScoutDashboard from '@/app/[locale]/scout/page';
 
 const EMPTY_SCOUT = {
   players: [],
+  total: 0,
   loading: false,
   error: null,
+  isRateLimited: false,
+  retryAfterSec: null,
+  hasNextPage: false,
+  loadMore: jest.fn(),
+  searchId: null,
+  refetch: jest.fn(),
   search: mockSearch,
   searchByName: jest.fn(),
 };
@@ -166,6 +184,7 @@ function simulateSearchCycle(
       ...EMPTY_SCOUT,
       loading: false,
       players: resultPlayers,
+      total: resultPlayers.length,
     });
     rerender(<ScoutDashboard />);
   });

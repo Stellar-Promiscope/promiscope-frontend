@@ -64,10 +64,12 @@
     "search_player": "Rechercher un joueur par adresse de portefeuille",
     "player_not_found": "Joueur non trouvé",
     "no_players": "Aucun joueur trouvé",
-    "players_found": "{count, plural, one {# joueur trouvé} other {# joueurs trouvés}}"
+    "players_found": "{count, plural, one {# joueur trouvé} other {# joueurs trouvés}}",
+    "results_behind": "Les résultats peuvent être en retard d'au plus {count, plural, one {# ledger} other {# ledgers}}"
   },
   "player_profile": {
-    "back_to_scout_dashboard": "← Retour au tableau de bord des scouts"
+    "back_to_scout_dashboard": "← Retour au tableau de bord des scouts",
+    "verified_on_chain": "Vérifié sur la chaîne"
   },
   "player_dashboard": {
     "title": "Tableau de bord des joueurs",

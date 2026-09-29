@@ -12,11 +12,13 @@ import { mockSorobanRpc } from './fixtures/mock-contract';
  * rather than an approximation — a task the browser itself reports as
  * blocking the main thread for >20ms (the 55fps budget) is the same signal
  * Chrome DevTools' Performance panel surfaces, just captured programmatically
- * so it can run unattended in CI. Sidesteps mocking Soroban RPC's XDR
- * encoding for 5,000 synthetic players by driving the *name search* path
- * (`/api/players/search`, a plain JSON Next.js route) instead of the
- * contract `filter_players` path — this test is about scroll/render
- * performance and DOM bounding, not contract read correctness.
+ * so it can run unattended in CI. Sidesteps mocking either data source for
+ * 5,000 synthetic players by driving the *name search* path
+ * (`/api/players/search`, a plain JSON Next.js route) rather than the grid's
+ * filter path (`/api/indexer/players`, which needs a stubbed indexer with
+ * cursor pagination — see `__tests__/hooks/useInfinitePlayers.test.ts` for
+ * that coverage). This test is about scroll/render performance and DOM
+ * bounding, not data-source correctness.
  */
 
 function makeSyntheticPlayers(count: number) {

@@ -215,7 +215,7 @@ scout-off-frontend/
 - `get_milestone_history(player_id)` — ordered on-chain milestone history.
 - `get_validators()` — active validator list.
 - `get_subscription(scout)` — current scout tier and expiry.
-- `filter_players(region, position, min_level)` — discover players by filters.
+- `filter_players(region, position, min_level)` — discover players by filters. Note the **Scout Dashboard does not call this**: an unbounded `filter_players` simulation eventually exceeds Soroban's read-only limits, so the dashboard reads the indexer's paginated `GET /players` (issue #1298) — see `packages/indexer/README.md`. The contract query remains available for on-chain integrations.
 - `health()` — contract health check.
 
 ## Progress model

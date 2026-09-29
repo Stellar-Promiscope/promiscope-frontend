@@ -7,11 +7,13 @@ import { useScout } from '@/hooks/useScout';
 import { SearchRateLimitedError } from '@/lib/api';
 import type { Player } from '@/types';
 
-const mockFilterPlayers = jest.fn();
+const mockListPlayers = jest.fn();
 const mockSearchPlayersByName = jest.fn();
 
-jest.mock('@/lib/contract', () => ({
-  filterPlayers: (...args: unknown[]) => mockFilterPlayers(...args),
+// Discovery is indexer-backed since issue #1298 — no @/lib/contract mock
+// exists here anymore because useScout no longer imports it.
+jest.mock('@/lib/indexerClient', () => ({
+  listPlayers: (...args: unknown[]) => mockListPlayers(...args),
 }));
 
 jest.mock('@/lib/api', () => ({
@@ -55,16 +57,16 @@ const makePlayer = (id: string, archived = false): Player =>
 describe('useScout', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFilterPlayers.mockReset();
+    mockListPlayers.mockReset();
     mockSearchPlayersByName.mockReset();
   });
 
   test('search(filter) populates players and filters out archived profiles', async () => {
-    mockFilterPlayers.mockResolvedValueOnce([
-      makePlayer('p1'),
-      makePlayer('p2', true),
-      makePlayer('p3'),
-    ]);
+    mockListPlayers.mockResolvedValueOnce({
+      players: [makePlayer('p1'), makePlayer('p2', true), makePlayer('p3')],
+      nextCursor: null,
+      total: 3,
+    });
 
     const { result } = renderHook(() => useScout(), { wrapper });
 
@@ -80,7 +82,15 @@ describe('useScout', () => {
       expect(result.current.players.map((p) => p.id)).toEqual(['p1', 'p3']),
     );
 
-    expect(mockFilterPlayers).toHaveBeenCalledWith('EU', 'forward', 0);
+    expect(mockListPlayers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        region: 'EU',
+        position: 'forward',
+        minLevel: 0,
+        limit: 50,
+      }),
+    );
+    expect(result.current.total).toBe(3);
     expect(result.current.error).toBeNull();
     expect(result.current.isRateLimited).toBe(false);
   });
@@ -100,23 +110,50 @@ describe('useScout', () => {
     );
 
     expect(mockSearchPlayersByName).toHaveBeenCalledWith('alice');
-    expect(mockFilterPlayers).not.toHaveBeenCalled();
+    expect(mockListPlayers).not.toHaveBeenCalled();
   });
 
-  test('SearchRateLimitedError surfaces isRateLimited + retryAfterSec', async () => {
-    mockFilterPlayers.mockRejectedValueOnce(
+  test('loadMore appends the next cursor page', async () => {
+    mockListPlayers.mockImplementation(async (params: { cursor?: string }) => {
+      if (params.cursor === 'cursor-1') {
+        return { players: [makePlayer('p2')], nextCursor: null, total: 2 };
+      }
+      return {
+        players: [makePlayer('p1')],
+        nextCursor: 'cursor-1',
+        total: 2,
+      };
+    });
+
+    const { result } = renderHook(() => useScout(), { wrapper });
+
+    act(() => result.current.search({ region: '', position: '', minLevel: 0 }));
+
+    await waitFor(() =>
+      expect(result.current.players.map((p) => p.id)).toEqual(['p1']),
+    );
+    expect(result.current.hasNextPage).toBe(true);
+
+    act(() => result.current.loadMore());
+
+    await waitFor(() =>
+      expect(result.current.players.map((p) => p.id)).toEqual(['p1', 'p2']),
+    );
+    expect(result.current.hasNextPage).toBe(false);
+    expect(result.current.total).toBe(2);
+    expect(mockListPlayers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: 'cursor-1' }),
+    );
+  });
+
+  test('SearchRateLimitedError from the name-search backend surfaces isRateLimited + retryAfterSec', async () => {
+    mockSearchPlayersByName.mockRejectedValueOnce(
       new SearchRateLimitedError('slow down', 42),
     );
 
     const { result } = renderHook(() => useScout(), { wrapper });
 
-    act(() =>
-      result.current.search({
-        region: 'EU',
-        position: 'forward',
-        minLevel: 0,
-      }),
-    );
+    act(() => result.current.searchByName('alice'));
 
     await waitFor(() => expect(result.current.error).toMatch(/slow down/));
 
@@ -125,7 +162,7 @@ describe('useScout', () => {
   });
 
   test('non-rate-limit error surfaces message verbatim and isRateLimited=false', async () => {
-    mockFilterPlayers.mockRejectedValueOnce(new Error('RPC failed'));
+    mockListPlayers.mockRejectedValueOnce(new Error('RPC failed'));
 
     const { result } = renderHook(() => useScout(), { wrapper });
 
@@ -143,7 +180,11 @@ describe('useScout', () => {
   });
 
   test('empty result is not an error (Falsy array, not null)', async () => {
-    mockFilterPlayers.mockResolvedValueOnce([]);
+    mockListPlayers.mockResolvedValueOnce({
+      players: [],
+      nextCursor: null,
+      total: 0,
+    });
 
     const { result } = renderHook(() => useScout(), { wrapper });
 
@@ -161,7 +202,11 @@ describe('useScout', () => {
   });
 
   test('refetch re-runs the in-flight search (mutate is called)', async () => {
-    mockFilterPlayers.mockResolvedValue([makePlayer('p1')]);
+    mockListPlayers.mockResolvedValue({
+      players: [makePlayer('p1')],
+      nextCursor: null,
+      total: 1,
+    });
 
     const { result } = renderHook(() => useScout(), { wrapper });
 
@@ -174,12 +219,12 @@ describe('useScout', () => {
     );
 
     await waitFor(() => expect(result.current.players.length).toBe(1));
-    const callsBefore = mockFilterPlayers.mock.calls.length;
+    const callsBefore = mockListPlayers.mock.calls.length;
 
     await act(async () => {
       await result.current.refetch();
     });
 
-    expect(mockFilterPlayers.mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(mockListPlayers.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 });

@@ -18,7 +18,9 @@ import {
 } from '@/hooks/useSavedSearches';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useToast } from '@/components/ui/Toast';
+import useSWR from 'swr';
 import { getPlayer } from '@/lib/contract';
+import { fetchIndexerHealth, type IndexerHealth } from '@/lib/indexerClient';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardSkeleton from '@/components/PlayerCardSkeleton';
 import PlayerFilterForm from '@/components/scout/PlayerFilterForm';
@@ -89,13 +91,32 @@ export default function ScoutDashboardContent() {
 
   const {
     players: unsortedPlayers,
+    total,
     loading,
     isRateLimited,
     retryAfterSec,
+    hasNextPage,
+    loadMore,
+    searchId,
     search,
     searchByName,
     refetch,
   } = useScout();
+
+  // Indexer freshness (issue #1298): GET /health's ledgerLag drives the
+  // "results may be up to N ledgers behind" hint — discovery now reads the
+  // indexer, so a lagging poller means slightly stale results.
+  const { data: indexerHealth } = useSWR<IndexerHealth>(
+    'scout:indexer-health',
+    fetchIndexerHealth,
+    {
+      refreshInterval: 60_000,
+      dedupingInterval: 30_000,
+      revalidateOnFocus: false,
+      errorRetryCount: 1,
+    },
+  );
+  const ledgerLag = indexerHealth?.ledgerLag ?? 0;
   const { subscription } = useSubscription();
 
   // Issue #556: sort is kept in the `sort` query param so it survives a
@@ -216,12 +237,15 @@ export default function ScoutDashboardContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const gridRef = useRef<VirtualizedPlayerGridHandle>(null);
 
-  // Reset to page 1 whenever the result set changes identity (new
-  // search/filter results replace `players` with a new array reference).
+  // Reset to page 1 whenever a *different* search starts (new filter, name
+  // query, or saved-search apply). Keyed on searchId rather than the
+  // `players` array so appending a cursor-paginated page (issue #1298) —
+  // which also creates a new array reference — doesn't yank the scout back
+  // to the top mid-scroll.
   useEffect(() => {
     setCurrentPage(1);
     gridRef.current?.scrollToItemIndex(0);
-  }, [players]);
+  }, [searchId]);
 
   const goToPage = useCallback(
     (page: number) => {
@@ -814,7 +838,16 @@ export default function ScoutDashboardContent() {
           <>
             {players.length > 0 && (
               <p className="text-sm text-gray-400">
-                {players.length} player{players.length !== 1 ? 's' : ''} found
+                {total} player{total !== 1 ? 's' : ''} found
+              </p>
+            )}
+
+            {ledgerLag > 0 && (
+              <p
+                data-testid="indexer-lag-hint"
+                className="text-xs text-gray-500"
+              >
+                {t('results_behind', { count: ledgerLag })}
               </p>
             )}
 
@@ -822,6 +855,8 @@ export default function ScoutDashboardContent() {
               ref={gridRef}
               items={players}
               getKey={(p) => p.id}
+              hasMore={hasNextPage}
+              onEndReached={loadMore}
               renderItem={(p) => (
                 <PlayerCard
                   player={p}
@@ -862,8 +897,17 @@ export default function ScoutDashboardContent() {
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
-                    onClick={() => setPage(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
+                    onClick={() => {
+                      if (currentPage >= totalPages && hasNextPage) {
+                        // At the end of what's loaded — fetch the next
+                        // cursor page (issue #1298); the following click
+                        // advances into it.
+                        loadMore();
+                      } else {
+                        setPage(currentPage + 1);
+                      }
+                    }}
+                    disabled={currentPage >= totalPages && !hasNextPage}
                     aria-label="Next page"
                     data-testid="pagination-next"
                     className="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 disabled:opacity-40 hover:border-brand-green transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"

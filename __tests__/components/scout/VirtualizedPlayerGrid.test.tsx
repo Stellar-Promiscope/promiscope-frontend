@@ -359,3 +359,119 @@ describe('VirtualizedPlayerGrid — accessibility', () => {
     expect(screen.queryByText('Item 199')).not.toBeInTheDocument();
   });
 });
+
+// ── Infinite-scroll end detection (issue #1298) ───────────────────────────────
+
+describe('VirtualizedPlayerGrid — onEndReached', () => {
+  it('fires once when content is within the threshold of the bottom', () => {
+    // jsdom reports clientHeight 0, so with 3 rows × 50 px = 150 px of
+    // content and the default 240 px threshold, the "bottom" is reached
+    // immediately on mount.
+    const onEndReached = jest.fn();
+    render(
+      <VirtualizedPlayerGrid<TestItem>
+        items={makeItems(3)}
+        getKey={(item) => item.id}
+        renderItem={(item) => <div role="article">{item.label}</div>}
+        estimatedRowHeight={50}
+        hasMore
+        onEndReached={onEndReached}
+      />,
+    );
+
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+
+    // Repeated scroll events while parked at the bottom must not re-fire it
+    // (the latch) — a fetch in flight shouldn't be duplicated per tick.
+    const container = screen.getByTestId('player-grid');
+    act(() => {
+      container.dispatchEvent(new Event('scroll'));
+      container.dispatchEvent(new Event('scroll'));
+    });
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+  });
+
+  it('never fires when hasMore is false', () => {
+    const onEndReached = jest.fn();
+    render(
+      <VirtualizedPlayerGrid<TestItem>
+        items={makeItems(3)}
+        getKey={(item) => item.id}
+        renderItem={(item) => <div role="article">{item.label}</div>}
+        estimatedRowHeight={50}
+        hasMore={false}
+        onEndReached={onEndReached}
+      />,
+    );
+
+    expect(onEndReached).not.toHaveBeenCalled();
+  });
+
+  it('does not fire while content still overflows the threshold', () => {
+    const onEndReached = jest.fn();
+    render(
+      <VirtualizedPlayerGrid<TestItem>
+        items={makeItems(10)}
+        getKey={(item) => item.id}
+        renderItem={(item) => <div role="article">{item.label}</div>}
+        estimatedRowHeight={50} // 500 px total > 240 px threshold
+        hasMore
+        onEndReached={onEndReached}
+      />,
+    );
+
+    expect(onEndReached).not.toHaveBeenCalled();
+
+    // Scrolling near the bottom (500 px − 240 px threshold = 260 px) fires it.
+    const container = screen.getByTestId('player-grid');
+    Object.defineProperty(container, 'scrollTop', {
+      value: 300,
+      writable: true,
+    });
+    act(() => {
+      container.dispatchEvent(new Event('scroll'));
+    });
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-arms after a new page is appended and fires again at the new bottom', () => {
+    const onEndReached = jest.fn();
+    const items = makeItems(3);
+    const { rerender } = render(
+      <VirtualizedPlayerGrid<TestItem>
+        items={items}
+        getKey={(item) => item.id}
+        renderItem={(item) => <div role="article">{item.label}</div>}
+        estimatedRowHeight={50}
+        hasMore
+        onEndReached={onEndReached}
+      />,
+    );
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+
+    // Page 2 arrives: more items grow the scroll height past the threshold,
+    // which releases the latch.
+    rerender(
+      <VirtualizedPlayerGrid<TestItem>
+        items={makeItems(10)}
+        getKey={(item) => item.id}
+        renderItem={(item) => <div role="article">{item.label}</div>}
+        estimatedRowHeight={50}
+        hasMore
+        onEndReached={onEndReached}
+      />,
+    );
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+
+    // Scroll into the new bottom → second arrival fires again.
+    const container = screen.getByTestId('player-grid');
+    Object.defineProperty(container, 'scrollTop', {
+      value: 400,
+      writable: true,
+    });
+    act(() => {
+      container.dispatchEvent(new Event('scroll'));
+    });
+    expect(onEndReached).toHaveBeenCalledTimes(2);
+  });
+});

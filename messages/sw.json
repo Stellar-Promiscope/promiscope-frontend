@@ -122,10 +122,12 @@
     "search_player": "TODO: Machine-translated - Tafuta mchezaji kwa anwani ya pochi",
     "player_not_found": "TODO: Machine-translated - Mchezaji hajafikiwa",
     "no_players": "TODO: Machine-translated - Hakuna wachezaji waliopatikana",
-    "players_found": "{count, plural, one {mchezaji # amepatikana} other {wachezaji # wamepatikana}}"
+    "players_found": "{count, plural, one {mchezaji # amepatikana} other {wachezaji # wamepatikana}}",
+    "results_behind": "Matokeo yanaweza kuwa nyuma ya {count, plural, one {ledger #} other {ledgers #}}"
   },
   "player_profile": {
-    "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout"
+    "back_to_scout_dashboard": "← Rudi kwenye Dashibodi ya Scout",
+    "verified_on_chain": "Imethibitishwa kwenye blockchain"
   },
   "player_dashboard": {
     "title": "Dashibodi ya Mchezaji",

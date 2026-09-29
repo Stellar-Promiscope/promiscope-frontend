@@ -848,41 +848,6 @@ export async function payToContact(
 }
 
 /**
- * Queries the contract for players matching all supplied filter criteria.
- *
- * All three parameters are required by the contract ABI. Pass an empty string
- * for `region` or `position` to match players regardless of that field. Pass
- * `0` for `minLevel` to include players at every progress level.
- *
- * This is a read-only simulation — no transaction is built or submitted.
- *
- * @param region   - Geographic region to filter by (e.g. `"West Africa"`).
- *                   Pass `""` to include players from all regions.
- * @param position - Playing position to filter by (e.g. `"Forward"`).
- *                   Pass `""` to include players of all positions.
- * @param minLevel - Minimum {@link ProgressLevel} a player must have reached
- *                   (0 = Unverified, 1 = Verified Identity, 2 = Performance Milestones,
- *                   3 = Elite Tier). Pass `0` to return players at all levels.
- * @returns A Promise resolving to an array of {@link Player} records that satisfy
- *          all three criteria. Returns an empty array when no players match.
- *
- * @throws {ContractError} ContractPaused (9) — All operations are blocked while the
- *                                               contract is administratively paused.
- * @throws {Error} If the RPC simulation request fails or returns an unexpected result.
- */
-export async function filterPlayers(
-  region: string,
-  position: string,
-  minLevel: number,
-) {
-  return simulateTx('filter_players', [
-    nativeToScVal(region, { type: 'string' }),
-    nativeToScVal(position, { type: 'string' }),
-    nativeToScVal(minLevel, { type: 'u32' }),
-  ]);
-}
-
-/**
  * Retrieve all validators currently authorized in the contract.
  *
  * @returns An array of ValidatorInfo objects containing validator address and join timestamp.
@@ -1055,7 +1020,8 @@ export async function buildWithdrawFees(adminKey: string) {
  * operations on the contract (subscriptions, pay-to-contact, milestone approvals,
  * and revocations) are blocked until the contract is unpaused via
  * {@link buildUnpauseContract}. Read-only calls such as {@link getPlayer} and
- * {@link filterPlayers} remain available while the contract is paused.
+ * the contract's `filter_players` query remain available while paused (the
+ * frontend reads discovery lists from the indexer — issue #1298).
  *
  * @param adminKey - The admin wallet's Stellar public key. Used as both the
  *                   fee-payer source account and the on-chain authorization signer.
@@ -1095,8 +1061,9 @@ export async function buildUnpauseContract(adminKey: string) {
  *
  * When the contract is paused all write operations are blocked and any attempt
  * to execute a write transaction will throw {@link ContractError} ContractPaused (9).
- * Read-only operations (e.g. {@link getPlayer}, {@link filterPlayers}) continue
- * to work normally while the contract is paused.
+ * Read-only operations (e.g. {@link getPlayer} and the contract's
+ * `filter_players` query) continue to work normally while the contract is
+ * paused.
  *
  * Use this alongside {@link getContractHealth} when deciding whether to show
  * the maintenance banner or disable write-action buttons in the UI.

@@ -11,7 +11,7 @@
  * Design:
  *  - better-sqlite3: synchronous, embedded, zero-ops file database. No
  *    separate DB server to run/deploy alongside a small indexer process.
- *  - One `events` table shared by all 7 event types. Type-specific fields
+ *  - One `events` table shared by all 8 event types. Type-specific fields
  *    (e.g. `new_level` on milestone_approved, `fee_xlm` on scout_subscribed)
  *    live in the `data` JSON column rather than as dedicated columns —
  *    conservative schema, per the issue's guidance not to generalize before
@@ -72,6 +72,52 @@ const UNIQUE_EVENT_ID_INDEX = `
 CREATE UNIQUE INDEX IF NOT EXISTS idx_events_event_id ON events(event_id);
 `;
 
+/**
+ * Materialized player projection (issue #1298) — one row per registered
+ * player, maintained from the event stream so scout discovery never has to
+ * run an unpaginated `filter_players` simulation against Soroban (whose
+ * read-only CPU/memory/ledger-entry limits are exceeded once the registry
+ * grows to a few hundred players).
+ *
+ * Projection sources:
+ *  - `player_registered` — upserts the row (id, wallet, ipfs hash, vitals).
+ *  - `profile_updated`   — refreshes ipfs hash / vitals when the payload
+ *    carries them.
+ *  - `milestone_approved` / `milestone_revoked` — maintain `progress_level`
+ *    (approve: `MAX(current, new_level)`; revoke: one-step decrement, which
+ *    is what the contract applies on chain).
+ *
+ * Vitals are extracted tolerantly (nested `vitals` object or flat fields)
+ * because no Rust contract source lives in this repository to confirm the
+ * event wire format against — the same ASSUMPTION documented on
+ * `eventPoller.decodeEvent` and in README.md. A payload without vitals
+ * leaves those columns NULL; filters simply won't match such rows.
+ *
+ * `wallet` is nullable so a milestone for a player registered before the
+ * indexer started still creates a (partial) row rather than being dropped —
+ * it is backfilled if a replayed `player_registered` event arrives later.
+ */
+const PLAYERS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS players (
+  player_id TEXT PRIMARY KEY,
+  wallet TEXT,
+  name TEXT,
+  age INTEGER,
+  position TEXT,
+  region TEXT,
+  nationality TEXT,
+  ipfs_hash TEXT,
+  progress_level INTEGER NOT NULL DEFAULT 0,
+  created_ledger INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_ledger INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_players_cursor ON players(created_ledger DESC, player_id DESC);
+CREATE INDEX IF NOT EXISTS idx_players_region ON players(region);
+CREATE INDEX IF NOT EXISTS idx_players_position ON players(position);
+CREATE INDEX IF NOT EXISTS idx_players_level ON players(progress_level);
+`;
+
 export interface EventRecord {
   id: number;
   type: EventType;
@@ -103,6 +149,91 @@ export interface QueryResult {
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+
+/**
+ * Page size bounds for GET /players (issue #1298): the endpoint's contract
+ * is `limit ≤ 50`, so requests above 50 are capped here rather than
+ * rejected — same silent-cap convention as the event endpoints use for
+ * MAX_LIMIT.
+ */
+const DEFAULT_PLAYERS_LIMIT = 50;
+const MAX_PLAYERS_LIMIT = 50;
+
+/** Filter + cursor for the materialized players query (GET /players). */
+export interface PlayerQueryFilter {
+  /** Exact-match region; empty/omitted = all regions. */
+  region?: string;
+  /** Exact-match position; empty/omitted = all positions. */
+  position?: string;
+  /** Minimum progress level (0–3); 0/omitted = every level. */
+  minLevel?: number;
+  /** Only players created strictly after this unix-seconds timestamp — powers the saved-search "new since last viewed" badge. */
+  createdAfter?: number;
+  /** Opaque keyset cursor from a previous page's `nextCursor`. */
+  cursor?: string;
+  /** Page size, capped at MAX_PLAYERS_LIMIT. */
+  limit?: number;
+}
+
+/** Flat materialized-player row, camelCased for API consumers. */
+export interface PlayerRecord {
+  id: string;
+  wallet: string;
+  name: string;
+  age: number;
+  position: string;
+  region: string;
+  nationality: string;
+  ipfsHash: string;
+  progressLevel: number;
+  createdAt: number;
+  updatedLedger: number;
+}
+
+export interface PlayersQueryResult {
+  players: PlayerRecord[];
+  /** Pass as `cursor` on the next call; null when the result set is exhausted. */
+  nextCursor: string | null;
+  /** Total rows matching the filters, independent of the cursor — lets the dashboard show an accurate "N players found" without loading every page. */
+  total: number;
+}
+
+/**
+ * Keyset cursor over the stable order key `(created_ledger DESC,
+ * player_id DESC)`. Encoded as base64url of `${ledger}:${playerId}` so
+ * clients treat it as opaque (the format may evolve without breaking
+ * callers that only echo it back).
+ */
+export function encodePlayerCursor(ledger: number, playerId: string): string {
+  return Buffer.from(`${ledger}:${playerId}`, 'utf8').toString('base64url');
+}
+
+/** Decodes a cursor produced by encodePlayerCursor; null when malformed. */
+export function decodePlayerCursor(
+  cursor: string,
+): { ledger: number; playerId: string } | null {
+  if (
+    typeof cursor !== 'string' ||
+    cursor.length === 0 ||
+    cursor.length > 512
+  ) {
+    return null;
+  }
+  let raw: string;
+  try {
+    raw = Buffer.from(cursor, 'base64url').toString('utf8');
+  } catch {
+    return null;
+  }
+  const sep = raw.indexOf(':');
+  if (sep <= 0) return null;
+  const ledger = Number(raw.slice(0, sep));
+  const playerId = raw.slice(sep + 1);
+  if (!Number.isInteger(ledger) || ledger < 0 || playerId.length === 0) {
+    return null;
+  }
+  return { ledger, playerId };
+}
 
 /** One wallet + the earliest timestamp (inclusive) whose approvals should count for it. */
 export interface WalletApprovalWindow {
@@ -156,12 +287,89 @@ function rowToRecord(row: EventRow): EventRecord {
   };
 }
 
+/** Raw row shape of the materialized `players` table. */
+interface PlayerRow {
+  player_id: string;
+  wallet: string | null;
+  name: string | null;
+  age: number | null;
+  position: string | null;
+  region: string | null;
+  nationality: string | null;
+  ipfs_hash: string | null;
+  progress_level: number;
+  created_ledger: number;
+  created_at: number;
+  updated_ledger: number;
+}
+
+/**
+ * Maps a players row to the API record. NULL vitals become empty values
+ * (the frontend's `PlayerVitals` has no nullable fields) — a player
+ * registered without vitals in the event payload renders with placeholders
+ * and simply won't match region/position filters, rather than being hidden.
+ */
+function rowToPlayerRecord(row: PlayerRow): PlayerRecord {
+  return {
+    id: row.player_id,
+    wallet: row.wallet ?? '',
+    name: row.name ?? '',
+    age: row.age ?? 0,
+    position: row.position ?? '',
+    region: row.region ?? '',
+    nationality: row.nationality ?? '',
+    ipfsHash: row.ipfs_hash ?? '',
+    progressLevel: row.progress_level,
+    createdAt: row.created_at,
+    updatedLedger: row.updated_ledger,
+  };
+}
+
 function fieldAsString(
   data: Record<string, unknown>,
   key: string,
 ): string | null {
   const v = data[key];
   return typeof v === 'string' ? v : null;
+}
+
+/** Vitals columns as stored on the materialized players row. */
+export interface ExtractedVitals {
+  name: string | null;
+  age: number | null;
+  position: string | null;
+  region: string | null;
+  nationality: string | null;
+}
+
+/**
+ * Tolerantly extracts a player's vitals from an event payload (issue
+ * #1298). Accepts either a nested `vitals` object (the on-chain
+ * `PlayerVitals` shape) or the same fields flattened onto the payload
+ * itself; anything missing/ill-typed comes back as NULL and is stored as
+ * NULL (never coerced to a misleading empty value).
+ */
+export function extractVitals(data: Record<string, unknown>): ExtractedVitals {
+  const source =
+    typeof data.vitals === 'object' && data.vitals !== null
+      ? (data.vitals as Record<string, unknown>)
+      : data;
+  const str = (key: string): string | null =>
+    typeof source[key] === 'string' ? (source[key] as string) : null;
+  const ageRaw = source.age;
+  const ageNum =
+    typeof ageRaw === 'number'
+      ? ageRaw
+      : typeof ageRaw === 'string' && ageRaw.trim() !== ''
+        ? Number(ageRaw)
+        : NaN;
+  return {
+    name: str('name'),
+    age: Number.isFinite(ageNum) ? ageNum : null,
+    position: str('position'),
+    region: str('region'),
+    nationality: str('nationality'),
+  };
 }
 
 export class EventStore {
@@ -194,6 +402,7 @@ export class EventStore {
     this.migrateEventIdColumn();
     this.db.exec(UNIQUE_EVENT_ID_INDEX);
     this.db.exec(VALIDATOR_TIMESTAMP_INDEX);
+    this.db.exec(PLAYERS_SCHEMA);
   }
 
   /**
@@ -252,25 +461,34 @@ export class EventStore {
    *
    * Returns whether a new row was actually written, so callers can tell a
    * genuinely new event apart from a duplicate re-poll.
+   *
+   * The event insert and the `players` projection it drives run in one
+   * SQLite transaction, so the materialized table can never diverge from
+   * the event log (issue #1298): either both land or neither does.
    */
   insertEvent(decoded: DecodedEvent): boolean {
-    const result = this.db
-      .prepare(
-        `INSERT OR IGNORE INTO events (event_type, player_id, scout, validator, ledger, timestamp, data, event_id, inserted_at)
-         VALUES (@event_type, @player_id, @scout, @validator, @ledger, @timestamp, @data, @event_id, @inserted_at)`,
-      )
-      .run({
-        event_type: decoded.type,
-        player_id: fieldAsString(decoded.data, 'player_id'),
-        scout: fieldAsString(decoded.data, 'scout'),
-        validator: fieldAsString(decoded.data, 'validator'),
-        ledger: decoded.ledger,
-        timestamp: decoded.timestamp,
-        data: JSON.stringify(decoded.data),
-        event_id: decoded.eventId,
-        inserted_at: Date.now(),
-      });
-    const inserted = result.changes > 0;
+    const inserted = this.db.transaction(() => {
+      const result = this.db
+        .prepare(
+          `INSERT OR IGNORE INTO events (event_type, player_id, scout, validator, ledger, timestamp, data, event_id, inserted_at)
+           VALUES (@event_type, @player_id, @scout, @validator, @ledger, @timestamp, @data, @event_id, @inserted_at)`,
+        )
+        .run({
+          event_type: decoded.type,
+          player_id: fieldAsString(decoded.data, 'player_id'),
+          scout: fieldAsString(decoded.data, 'scout'),
+          validator: fieldAsString(decoded.data, 'validator'),
+          ledger: decoded.ledger,
+          timestamp: decoded.timestamp,
+          data: JSON.stringify(decoded.data),
+          event_id: decoded.eventId,
+          inserted_at: Date.now(),
+        });
+      const wrote = result.changes > 0;
+      if (wrote) this.applyProjection(decoded);
+      return wrote;
+    })();
+
     if (inserted && decoded.type === 'milestone_approved') {
       // A new approval can change any in-flight approval-counts result, so
       // drop the cache rather than serve a stale rollup until the TTL
@@ -278,6 +496,245 @@ export class EventStore {
       this.approvalCountsCache.clear();
     }
     return inserted;
+  }
+
+  /**
+   * Applies one decoded event to the materialized `players` table. Called
+   * from inside insertEvent's transaction and only for events that were
+   * genuinely new, so the exactly-once guarantee on `event_id` doubles as a
+   * no-double-apply guarantee for level increments/decrements.
+   */
+  private applyProjection(decoded: DecodedEvent): void {
+    switch (decoded.type) {
+      case 'player_registered':
+        this.upsertRegisteredPlayer(decoded);
+        break;
+      case 'profile_updated':
+        this.applyProfileUpdate(decoded);
+        break;
+      case 'milestone_approved':
+        this.applyMilestoneApproved(decoded);
+        break;
+      case 'milestone_revoked':
+        this.applyMilestoneRevoked(decoded);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * player_registered → insert-or-refresh the player row.
+   *
+   * COALESCE on every updatable column means a replayed registration never
+   * clobbers richer existing data with NULLs, and a skeleton row created
+   * earlier by a milestone event gets its wallet/vitals backfilled when the
+   * registration event is (re)played.
+   */
+  private upsertRegisteredPlayer(decoded: DecodedEvent): void {
+    const playerId = fieldAsString(decoded.data, 'player_id');
+    if (!playerId) return;
+    const vitals = extractVitals(decoded.data);
+    this.db
+      .prepare(
+        `INSERT INTO players (player_id, wallet, name, age, position, region, nationality, ipfs_hash, progress_level, created_ledger, created_at, updated_ledger)
+         VALUES (@player_id, @wallet, @name, @age, @position, @region, @nationality, @ipfs_hash, 0, @ledger, @timestamp, @ledger)
+         ON CONFLICT(player_id) DO UPDATE SET
+           wallet = COALESCE(excluded.wallet, players.wallet),
+           name = COALESCE(excluded.name, players.name),
+           age = COALESCE(excluded.age, players.age),
+           position = COALESCE(excluded.position, players.position),
+           region = COALESCE(excluded.region, players.region),
+           nationality = COALESCE(excluded.nationality, players.nationality),
+           ipfs_hash = COALESCE(excluded.ipfs_hash, players.ipfs_hash),
+           created_ledger = MIN(players.created_ledger, excluded.created_ledger),
+           created_at = MIN(players.created_at, excluded.created_at),
+           updated_ledger = excluded.updated_ledger`,
+      )
+      .run({
+        player_id: playerId,
+        wallet: fieldAsString(decoded.data, 'wallet'),
+        name: vitals.name,
+        age: vitals.age,
+        position: vitals.position,
+        region: vitals.region,
+        nationality: vitals.nationality,
+        ipfs_hash: fieldAsString(decoded.data, 'ipfs_hash'),
+        ledger: decoded.ledger,
+        timestamp: decoded.timestamp,
+      });
+  }
+
+  /**
+   * profile_updated → refresh media/vitals on an existing row. Creates a
+   * skeleton first (INSERT OR IGNORE) so an out-of-order update for a
+   * player whose registration hasn't been indexed yet doesn't vanish.
+   */
+  private applyProfileUpdate(decoded: DecodedEvent): void {
+    const playerId = fieldAsString(decoded.data, 'player_id');
+    if (!playerId) return;
+    const vitals = extractVitals(decoded.data);
+    this.ensurePlayerSkeleton(playerId, decoded);
+    this.db
+      .prepare(
+        `UPDATE players SET
+           ipfs_hash = COALESCE(@ipfs_hash, ipfs_hash),
+           name = COALESCE(@name, name),
+           age = COALESCE(@age, age),
+           position = COALESCE(@position, position),
+           region = COALESCE(@region, region),
+           nationality = COALESCE(@nationality, nationality),
+           updated_ledger = @ledger
+         WHERE player_id = @player_id`,
+      )
+      .run({
+        player_id: playerId,
+        ipfs_hash: fieldAsString(decoded.data, 'ipfs_hash'),
+        name: vitals.name,
+        age: vitals.age,
+        position: vitals.position,
+        region: vitals.region,
+        nationality: vitals.nationality,
+        ledger: decoded.ledger,
+      });
+  }
+
+  /**
+   * milestone_approved → progress_level = MAX(current, new_level). MAX (not
+   * plain assignment) so a re-delivered or out-of-order event can't lower a
+   * level the chain has already advanced past; a payload without `new_level`
+   * leaves the level untouched (the row still gets created).
+   */
+  private applyMilestoneApproved(decoded: DecodedEvent): void {
+    const playerId = fieldAsString(decoded.data, 'player_id');
+    if (!playerId) return;
+    this.ensurePlayerSkeleton(playerId, decoded);
+    const newLevel = decoded.data.new_level;
+    if (typeof newLevel !== 'number' || !Number.isInteger(newLevel)) return;
+    this.db
+      .prepare(
+        `UPDATE players SET progress_level = MAX(progress_level, @new_level), updated_ledger = @ledger
+         WHERE player_id = @player_id`,
+      )
+      .run({
+        player_id: playerId,
+        new_level: newLevel,
+        ledger: decoded.ledger,
+      });
+  }
+
+  /**
+   * milestone_revoked → one-step decrement (what the contract applies on
+   * chain), floored at 0. Safe from double-decrement because projection
+   * only runs for genuinely new events.
+   */
+  private applyMilestoneRevoked(decoded: DecodedEvent): void {
+    const playerId = fieldAsString(decoded.data, 'player_id');
+    if (!playerId) return;
+    this.ensurePlayerSkeleton(playerId, decoded);
+    this.db
+      .prepare(
+        `UPDATE players SET progress_level = MAX(progress_level - 1, 0), updated_ledger = @ledger
+         WHERE player_id = @player_id`,
+      )
+      .run({ player_id: playerId, ledger: decoded.ledger });
+  }
+
+  /** Creates a vitals-less row for an unknown player (see PLAYERS_SCHEMA). */
+  private ensurePlayerSkeleton(playerId: string, decoded: DecodedEvent): void {
+    this.db
+      .prepare(
+        `INSERT OR IGNORE INTO players (player_id, progress_level, created_ledger, created_at, updated_ledger)
+         VALUES (@player_id, 0, @ledger, @timestamp, @ledger)`,
+      )
+      .run({
+        player_id: playerId,
+        ledger: decoded.ledger,
+        timestamp: decoded.timestamp,
+      });
+  }
+
+  /**
+   * Paginated, filterable query over the materialized players table (issue
+   * #1298) — the scout-discovery replacement for an unpaginated
+   * `filter_players` simulation.
+   *
+   * Ordered by the stable key (created_ledger DESC, player_id DESC) with
+   * keyset pagination on that same pair, so page cost stays proportional to
+   * page size — no OFFSET scan degradation as the registry grows, and no
+   * skipped/duplicated rows when new players register mid-pagination.
+   *
+   * `total` runs the same filter clauses minus the cursor, so callers can
+   * show an accurate "N players found" without fetching every page.
+   */
+  getPlayers(filter: PlayerQueryFilter = {}): PlayersQueryResult {
+    const limit = Math.min(
+      Math.max(filter.limit ?? DEFAULT_PLAYERS_LIMIT, 1),
+      MAX_PLAYERS_LIMIT,
+    );
+
+    const clauses: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (filter.region) {
+      clauses.push('region = @region');
+      params.region = filter.region;
+    }
+    if (filter.position) {
+      clauses.push('position = @position');
+      params.position = filter.position;
+    }
+    if (filter.minLevel !== undefined && filter.minLevel > 0) {
+      clauses.push('progress_level >= @minLevel');
+      params.minLevel = filter.minLevel;
+    }
+    if (filter.createdAfter !== undefined) {
+      clauses.push('created_at > @createdAfter');
+      params.createdAfter = filter.createdAfter;
+    }
+
+    const filterWhere =
+      clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+
+    const total = (
+      this.db
+        .prepare(`SELECT COUNT(*) AS count FROM players ${filterWhere}`)
+        .get(params) as { count: number }
+    ).count;
+
+    const pageClauses = [...clauses];
+    if (filter.cursor !== undefined) {
+      const decoded = decodePlayerCursor(filter.cursor);
+      if (!decoded) throw new Error('invalid cursor');
+      pageClauses.push(
+        '(created_ledger < @cursorLedger OR (created_ledger = @cursorLedger AND player_id < @cursorId))',
+      );
+      params.cursorLedger = decoded.ledger;
+      params.cursorId = decoded.playerId;
+    }
+    const pageWhere =
+      pageClauses.length > 0 ? `WHERE ${pageClauses.join(' AND ')}` : '';
+
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM players ${pageWhere}
+         ORDER BY created_ledger DESC, player_id DESC
+         LIMIT @limit`,
+      )
+      .all({ ...params, limit: limit + 1 }) as PlayerRow[];
+
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+
+    return {
+      players: page.map(rowToPlayerRecord),
+      nextCursor:
+        hasMore && last
+          ? encodePlayerCursor(last.created_ledger, last.player_id)
+          : null,
+      total,
+    };
   }
 
   /** General event query, optionally filtered by type and/or player. */

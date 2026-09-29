@@ -12,8 +12,8 @@ jest.mock('@/lib/savedSearchClient', () => ({
 jest.mock('@/components/ui/Toast', () => ({
   useToast: jest.fn(),
 }));
-jest.mock('@/lib/contract', () => ({
-  filterPlayers: jest.fn(),
+jest.mock('@/lib/indexerClient', () => ({
+  listPlayers: jest.fn(),
 }));
 
 import {
@@ -22,7 +22,7 @@ import {
   removeSavedSearch,
   saveSearch,
 } from '@/lib/savedSearchClient';
-import { filterPlayers } from '@/lib/contract';
+import { listPlayers } from '@/lib/indexerClient';
 import { useToast } from '@/components/ui/Toast';
 import {
   useSavedSearches,
@@ -33,7 +33,7 @@ const mockFetch = fetchSavedSearches as jest.Mock;
 const mockSave = saveSearch as jest.Mock;
 const mockRemove = removeSavedSearch as jest.Mock;
 const mockMarkViewed = markSavedSearchViewed as jest.Mock;
-const mockFilterPlayers = filterPlayers as jest.Mock;
+const mockListPlayers = listPlayers as jest.Mock;
 const mockUseToast = useToast as jest.Mock;
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -64,7 +64,11 @@ beforeEach(() => {
   mockSave.mockResolvedValue(ENTRY);
   mockRemove.mockResolvedValue(undefined);
   mockMarkViewed.mockResolvedValue({ ...ENTRY, lastViewedAt: 12345 });
-  mockFilterPlayers.mockResolvedValue([]);
+  mockListPlayers.mockResolvedValue({
+    players: [],
+    nextCursor: null,
+    total: 0,
+  });
 });
 
 afterEach(() => {
@@ -180,12 +184,14 @@ describe('useSavedSearchNewCount', () => {
     );
   }
 
-  test('counts matching players created after lastViewedAt', async () => {
-    mockFilterPlayers.mockResolvedValue([
-      { id: 'p1', createdAt: 100, archived: false },
-      { id: 'p2', createdAt: 50, archived: false },
-      { id: 'p3', createdAt: 200, archived: false },
-    ]);
+  test('counts players created after lastViewedAt via the indexer total', async () => {
+    // The count is now server-side: one `limit=1` request whose `total`
+    // reflects the createdAfter filter (issue #1298), not a full result list.
+    mockListPlayers.mockResolvedValue({
+      players: [],
+      nextCursor: null,
+      total: 2,
+    });
 
     const { result } = renderHook(
       () => useSavedSearchNewCount({ region: 'Lagos' }, 75),
@@ -198,16 +204,28 @@ describe('useSavedSearchNewCount', () => {
     });
 
     expect(result.current).toBe(2);
+    expect(mockListPlayers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        region: 'Lagos',
+        createdAfter: 75,
+        limit: 1,
+      }),
+    );
   });
 
-  test('excludes archived players from the count', async () => {
-    mockFilterPlayers.mockResolvedValue([
-      { id: 'p1', createdAt: 100, archived: true },
-      { id: 'p2', createdAt: 100, archived: false },
-    ]);
+  test('passes position and minLevel filters through to the count query', async () => {
+    mockListPlayers.mockResolvedValue({
+      players: [],
+      nextCursor: null,
+      total: 5,
+    });
 
     const { result } = renderHook(
-      () => useSavedSearchNewCount({ region: 'Lagos' }, 0),
+      () =>
+        useSavedSearchNewCount(
+          { region: 'Lagos', position: 'Forward', minLevel: 2 },
+          0,
+        ),
       { wrapper: countWrapper },
     );
 
@@ -216,11 +234,19 @@ describe('useSavedSearchNewCount', () => {
       await Promise.resolve();
     });
 
-    expect(result.current).toBe(1);
+    expect(result.current).toBe(5);
+    expect(mockListPlayers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        region: 'Lagos',
+        position: 'Forward',
+        minLevel: 2,
+        createdAfter: 0,
+      }),
+    );
   });
 
   test('returns 0 while data has not loaded yet', () => {
-    mockFilterPlayers.mockReturnValue(new Promise(() => {}));
+    mockListPlayers.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(
       () => useSavedSearchNewCount({ region: 'Lagos' }, 0),
       { wrapper: countWrapper },

@@ -69,7 +69,6 @@ import {
   getContactFee,
   getPlatformFees,
   getContractPaused,
-  filterPlayers,
   getContractVersion,
   checkContractCompatibility,
   assertContractCompatible,
@@ -496,15 +495,6 @@ describe('logTrialOffer', () => {
   });
 });
 
-// ── filterPlayers (no address params — must never throw ValidationError) ──────
-
-describe('filterPlayers', () => {
-  test('does not throw for any string arguments', async () => {
-    await expect(filterPlayers('EU', 'MF', 1)).resolves.not.toThrow();
-    expect(mockRpc.simulateTransaction).toHaveBeenCalled();
-  });
-});
-
 // ── ValidationError shape ─────────────────────────────────────────────────────
 
 describe('ValidationError', () => {
@@ -569,12 +559,15 @@ describe('parseContractError', () => {
 // ── simulateTx error surfacing ────────────────────────────────────────────────
 
 describe('simulateTx — human-readable errors', () => {
+  // Uses getValidators as the read-only vehicle — filterPlayers, the
+  // previous one, was removed in issue #1298 (discovery moved to the
+  // indexer's paginated GET /players).
   test('maps contract error code in simulation result to readable message', async () => {
     mockRpc.simulateTransaction.mockResolvedValueOnce({
       error: 'Error(Contract, #3)',
     } as any);
 
-    await expect(filterPlayers('', '', 0)).rejects.toThrow(CONTRACT_ERRORS[3]);
+    await expect(getValidators()).rejects.toThrow(CONTRACT_ERRORS[3]);
   });
 
   test('unknown contract code surfaces the code number, not raw JSON', async () => {
@@ -582,7 +575,7 @@ describe('simulateTx — human-readable errors', () => {
       error: 'Error(Contract, #42)',
     } as any);
 
-    const err = await filterPlayers('', '', 0).catch((e) => e);
+    const err = await getValidators().catch((e) => e);
     expect(err.message).toMatch(/42/);
     expect(err.message).not.toContain('"error"');
   });
@@ -590,7 +583,7 @@ describe('simulateTx — human-readable errors', () => {
   test('no raw JSON in error message when error field is absent', async () => {
     mockRpc.simulateTransaction.mockResolvedValueOnce({ events: [] } as any);
 
-    const err = await filterPlayers('', '', 0).catch((e) => e);
+    const err = await getValidators().catch((e) => e);
     expect(err.message).not.toMatch(/\{/); // no JSON object literals
     expect(err.message).not.toMatch(/"events"/);
   });

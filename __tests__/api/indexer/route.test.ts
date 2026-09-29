@@ -75,9 +75,49 @@ describe('/api/indexer proxy', () => {
     expect(res.status).toBe(400);
   });
 
+  it('forwards the paginated GET /players discovery query (issue #1298)', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(200, { players: [], nextCursor: null, total: 0 }),
+      );
+
+    const req = new NextRequest(
+      'http://localhost/api/indexer/players?region=West%20Africa&minLevel=1&limit=50',
+    );
+    const res = await GET(req, ctx('players'));
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://indexer.internal:3001/players?region=West%20Africa&minLevel=1&limit=50',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      players: [],
+      nextCursor: null,
+      total: 0,
+    });
+  });
+
+  it('forwards GET /health for the ledger-lag hint (issue #1298)', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(200, { status: 'ok', lastLedger: 100, ledgerLag: 2 }),
+      );
+
+    const req = new NextRequest('http://localhost/api/indexer/health');
+    const res = await GET(req, ctx('health'));
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://indexer.internal:3001/health',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(res.status).toBe(200);
+  });
+
   it.each([
     ['GET', 'metrics'],
-    ['GET', 'health'],
     ['GET', 'players/p1/events/extra'],
     ['GET', 'validators/approval-counts'],
     ['POST', 'events'],

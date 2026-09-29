@@ -97,7 +97,10 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
-    const translations: Record<string, (params?: { count?: number }) => string> = {
+    const translations: Record<
+      string,
+      (params?: { count?: number }) => string
+    > = {
       'scout_dashboard.no_players': () => 'No players found',
       'scout_dashboard.players_found': ({ count }: { count: number }) =>
         `${count} ${count === 1 ? 'player' : 'players'} found`,
@@ -225,10 +228,17 @@ const mockGetPlayer = getPlayer as jest.Mock;
 
 const EMPTY_SCOUT = {
   players: [],
+  // Server-side match count from the indexer (issue #1298). The results
+  // header renders this rather than `players.length`, because `players`
+  // only holds the pages fetched so far while `total` counts every match.
+  total: 0,
   loading: false,
   error: null,
   isRateLimited: false,
   retryAfterSec: null,
+  hasNextPage: false,
+  loadMore: jest.fn(),
+  searchId: 0,
   search: mockSearch,
   searchByName: mockSearchByName,
   refetch: jest.fn(),
@@ -302,6 +312,9 @@ function simulateSearchCycle(
       ...EMPTY_SCOUT,
       loading: false,
       players: resultPlayers,
+      // A single page holds every match in these tests, so the indexer's
+      // `total` equals the number of rows returned.
+      total: resultPlayers.length,
     });
     rerender(<ScoutDashboardContent />);
   });

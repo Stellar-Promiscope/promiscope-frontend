@@ -16,25 +16,30 @@ import type { Player, Milestone } from '@/types';
 // ── Mocks ────────────────────────────────────────────────────────────────────
 jest.mock('@/lib/contract', () => ({
   getPlayer: jest.fn(),
-  filterPlayers: jest.fn(),
   getMilestoneHistory: jest.fn(),
 }));
 
 // useMilestoneHistory reads from the indexer first, falling back to the
 // contract only when the indexer errors — force that fallback path here so
 // these dedup tests keep exercising getMilestoneHistory directly.
+// `listPlayers` is the indexer-backed discovery call useScout deduplicates
+// over (issue #1298).
 jest.mock('@/lib/indexerClient', () => ({
   getMilestoneHistoryFromIndexer: jest.fn(),
+  listPlayers: jest.fn(),
 }));
 
-import { getPlayer, filterPlayers, getMilestoneHistory } from '@/lib/contract';
-import { getMilestoneHistoryFromIndexer } from '@/lib/indexerClient';
+import { getPlayer, getMilestoneHistory } from '@/lib/contract';
+import {
+  getMilestoneHistoryFromIndexer,
+  listPlayers,
+} from '@/lib/indexerClient';
 import { usePlayer } from '@/hooks/usePlayer';
 import { useScout } from '@/hooks/useScout';
 import { useMilestoneHistory } from '@/hooks/useMilestoneHistory';
 
 const mockGetPlayer = getPlayer as jest.Mock;
-const mockFilterPlayers = filterPlayers as jest.Mock;
+const mockListPlayers = listPlayers as jest.Mock;
 const mockGetMilestoneHistory = getMilestoneHistory as jest.Mock;
 const mockGetMilestoneHistoryFromIndexer =
   getMilestoneHistoryFromIndexer as jest.Mock;
@@ -156,8 +161,12 @@ describe('usePlayer — SWR deduplication', () => {
 
 // ── useScout deduplication ────────────────────────────────────────────────────
 describe('useScout — SWR deduplication', () => {
-  test('two hooks searching with identical filters share a single filterPlayers call', async () => {
-    mockFilterPlayers.mockResolvedValue([PLAYER]);
+  test('two hooks searching with identical filters share a single listPlayers call', async () => {
+    mockListPlayers.mockResolvedValue({
+      players: [PLAYER],
+      nextCursor: null,
+      total: 1,
+    });
     const wrapper = makeWrapper();
 
     const { result } = renderHook(() => ({ r1: useScout(), r2: useScout() }), {
@@ -180,13 +189,17 @@ describe('useScout — SWR deduplication', () => {
       await Promise.resolve();
     });
 
-    expect(mockFilterPlayers).toHaveBeenCalledTimes(1);
+    expect(mockListPlayers).toHaveBeenCalledTimes(1);
     expect(result.current.r1.players).toEqual([PLAYER]);
     expect(result.current.r2.players).toEqual([PLAYER]);
   });
 
-  test('different filter combos fire separate filterPlayers calls', async () => {
-    mockFilterPlayers.mockResolvedValue([]);
+  test('different filter combos fire separate listPlayers calls', async () => {
+    mockListPlayers.mockResolvedValue({
+      players: [],
+      nextCursor: null,
+      total: 0,
+    });
     const wrapper = makeWrapper();
 
     const { result } = renderHook(() => ({ r1: useScout(), r2: useScout() }), {
@@ -211,7 +224,7 @@ describe('useScout — SWR deduplication', () => {
       await Promise.resolve();
     });
 
-    expect(mockFilterPlayers).toHaveBeenCalledTimes(2);
+    expect(mockListPlayers).toHaveBeenCalledTimes(2);
   });
 });
 

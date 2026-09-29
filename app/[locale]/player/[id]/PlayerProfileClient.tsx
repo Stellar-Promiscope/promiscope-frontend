@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Star } from 'lucide-react';
+import { ShieldCheck, Star } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { usePlayer } from '@/hooks/usePlayer';
 import { usePayToContact } from '@/hooks/usePayToContact';
@@ -266,9 +266,23 @@ export default function PlayerProfileClient({
           <IPFSMediaGallery cids={player.ipfsHash ? [player.ipfsHash] : []} />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">
-            {player.vitals.name}
-          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-white">
+              {player.vitals.name}
+            </h1>
+            {/*
+              Discovery lists come from the indexer (issue #1298); this
+              profile page still reads through getPlayer's on-chain
+              simulation, so surface that authority explicitly.
+            */}
+            <span
+              data-testid="verified-on-chain"
+              className="inline-flex items-center gap-1 rounded-full border border-brand-green bg-brand-green/10 px-2 py-0.5 text-xs font-medium text-brand-green"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('verified_on_chain')}
+            </span>
+          </div>
           <p className="text-gray-400 text-sm mt-1">
             {player.vitals.position} · {player.vitals.region} · Age{' '}
             {player.vitals.age}

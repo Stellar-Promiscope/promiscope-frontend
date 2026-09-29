@@ -153,6 +153,19 @@ export interface VirtualizedPlayerGridProps<T> {
   height?: string;
   className?: string;
   'data-testid'?: string;
+  /**
+   * Called once each time the user scrolls within `endReachedThresholdPx`
+   * of the bottom while `hasMore` is true — the infinite-scroll hook point
+   * for cursor-paginated results (issue #1298). Guarded by an internal
+   * latch so a parked-at-bottom scroll handler doesn't re-fire it every
+   * tick; the latch re-arms when new items grow the scroll height or the
+   * user scrolls back up.
+   */
+  onEndReached?: () => void;
+  /** Whether more pages exist. `onEndReached` is never called when false. */
+  hasMore?: boolean;
+  /** How many px from the bottom triggers onEndReached. Default 240. */
+  endReachedThresholdPx?: number;
 }
 
 /**
@@ -198,6 +211,9 @@ function VirtualizedPlayerGridInner<T>(
     height = '70vh',
     className,
     'data-testid': testId = 'player-grid',
+    onEndReached,
+    hasMore = false,
+    endReachedThresholdPx = 240,
   }: VirtualizedPlayerGridProps<T>,
   ref: Ref<VirtualizedPlayerGridHandle>,
 ) {
@@ -270,6 +286,35 @@ function VirtualizedPlayerGridInner<T>(
   const visibleRows = rows.slice(startIndex, endIndex);
   const topSpacerHeight = prefixSums[startIndex];
   const bottomSpacerHeight = Math.max(0, totalHeight - prefixSums[endIndex]);
+
+  // ── Infinite-scroll end detection (issue #1298) ────────────────────────────
+  // Fires onEndReached at most once per "arrival" at the bottom: the latch
+  // blocks repeat calls while the user sits at the bottom (e.g. waiting for
+  // a fetch), and re-arms when the scroll height grows (new page appended)
+  // or the user scrolls away from the bottom.
+  const endReachedLatchRef = useRef(false);
+
+  useEffect(() => {
+    if (!onEndReached || !hasMore || totalHeight <= 0) return;
+    const reached =
+      scrollTop + viewportHeight >= totalHeight - endReachedThresholdPx;
+    if (reached) {
+      if (!endReachedLatchRef.current) {
+        endReachedLatchRef.current = true;
+        onEndReached();
+      }
+    } else {
+      endReachedLatchRef.current = false;
+    }
+  }, [
+    onEndReached,
+    hasMore,
+    scrollTop,
+    viewportHeight,
+    totalHeight,
+    endReachedThresholdPx,
+    items.length,
+  ]);
 
   // ── ResizeObserver: measure visible row heights after render ────────────
 

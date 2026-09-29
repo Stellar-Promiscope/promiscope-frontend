@@ -47,10 +47,12 @@
     "search_player": "Search player by wallet address",
     "player_not_found": "Player not found",
     "no_players": "No players found",
-    "players_found": "{count, plural, one {# player found} other {# players found}}"
+    "players_found": "{count, plural, one {# player found} other {# players found}}",
+    "results_behind": "Results may be up to {count, plural, one {# ledger} other {# ledgers}} behind"
   },
   "player_profile": {
-    "back_to_scout_dashboard": "← Back to Scout Dashboard"
+    "back_to_scout_dashboard": "← Back to Scout Dashboard",
+    "verified_on_chain": "Verified on-chain"
   },
   "player_dashboard": {
     "title": "Player Dashboard",

@@ -42,7 +42,8 @@ Stellar Network
              ▼                                 ▼
 ┌───────────────────────────────────────────────────────────────┐
 │  HTTP Server (server.ts)                                       │
-│  GET /health  GET /metrics  GET /events  GET /players/:id/events│
+│  GET /health  GET /metrics  GET /events  GET /players          │
+│  GET /players/:id/events  GET /validators/:addr/events         │
 │  Port: 3001 (default)                                           │
 └───────────────────────────────────────────────────────────────┘
 ```
@@ -135,7 +136,7 @@ cp ../../.env.example ../../.env.local
 
 ## Indexed Event Schema
 
-The indexer processes seven event types emitted by the ScoutOff contract. All events carry a `ledger` sequence number and `timestamp` (Unix seconds) sourced from the Soroban event envelope.
+The indexer processes eight event types emitted by the ScoutOff contract. All events carry a `ledger` sequence number and `timestamp` (Unix seconds) sourced from the Soroban event envelope.
 
 `eventPoller.ts`'s `decodeEvent` assumes the common Soroban convention —
 `topic[0]` is a Symbol equal to the event name, `value` is a Map/struct
@@ -154,6 +155,17 @@ Emitted when a player calls `register_player`.
 | `ipfs_hash` | `string` | IPFS CID of the initial media upload |
 | `ledger`    | `number` | Ledger sequence                      |
 | `timestamp` | `number` | Unix timestamp (seconds)             |
+
+### `profile_updated`
+
+Emitted when a player calls `update_profile` (issue #1298 adds this event type so profile refreshes update the materialized players projection).
+
+| Field       | Type     | Description                     |
+| ----------- | -------- | ------------------------------- |
+| `player_id` | `string` | On-chain player identifier      |
+| `ipfs_hash` | `string` | IPFS CID of the refreshed media |
+| `ledger`    | `number` | Ledger sequence                 |
+| `timestamp` | `number` | Unix timestamp (seconds)        |
 
 ### `milestone_approved`
 
@@ -302,7 +314,7 @@ const metrics = IndexerMetrics.getInstance(mockNow);
 | Column        | Type    | Description                                                             |
 | ------------- | ------- | ----------------------------------------------------------------------- |
 | `id`          | INTEGER | Autoincrement primary key                                               |
-| `event_type`  | TEXT    | One of the 7 documented event types                                     |
+| `event_type`  | TEXT    | One of the 8 documented event types                                     |
 | `player_id`   | TEXT    | `data.player_id` when present (NULL otherwise) — indexed                |
 | `scout`       | TEXT    | `data.scout` when present (NULL otherwise)                              |
 | `validator`   | TEXT    | `data.validator` when present (NULL otherwise)                          |
@@ -315,9 +327,88 @@ Design rationale: `event_type`, `player_id`, `scout`, `validator`, and `ledger` 
 
 This schema is enough to reconstruct, per player: the current approved-milestone set (apply `milestone_approved` in ledger order, remove on a later `milestone_revoked` for the same `milestone_id` — see `lib/indexerClient.ts`'s `getMilestoneHistoryFromIndexer` on the frontend), subscription history (`scout_subscribed` events by `scout`), and contact-unlock history (`player_contacted` events by `player_id` or `scout`).
 
+### Materialized players table (issue #1298)
+
+Alongside `events`, `eventStore.ts` maintains a `players` table — one row per registered player — so scout discovery never runs an unpaginated `filter_players` simulation against Soroban (whose read-only CPU/memory/ledger-entry limits are exceeded once the registry grows to a few hundred players).
+
+| Column           | Type    | Description                                                       |
+| ---------------- | ------- | ----------------------------------------------------------------- |
+| `player_id`      | TEXT    | Primary key                                                       |
+| `wallet`         | TEXT    | Player's Stellar public key (NULL for skeleton rows)              |
+| `name`           | TEXT    | Vitals — NULL when the event payload carried no vitals            |
+| `age`            | INTEGER | Vitals                                                            |
+| `position`       | TEXT    | Vitals — indexed                                                  |
+| `region`         | TEXT    | Vitals — indexed                                                  |
+| `nationality`    | TEXT    | Vitals                                                            |
+| `ipfs_hash`      | TEXT    | Latest media CID                                                  |
+| `progress_level` | INTEGER | 0–3 — indexed                                                     |
+| `created_ledger` | INTEGER | Registration ledger (earliest known) — part of the pagination key |
+| `created_at`     | INTEGER | Registration timestamp (unix seconds)                             |
+| `updated_ledger` | INTEGER | Ledger of the last event that touched this row                    |
+
+Projection rules (applied inside the same SQLite transaction as the event insert, and only for genuinely new events — the `event_id` unique index guarantees exactly-once application):
+
+- `player_registered` upserts the row; vitals are extracted tolerantly from either a nested `vitals` object or flat payload fields (see the ASSUMPTION note on `eventPoller.decodeEvent` — no contract source lives in this repo to confirm the wire format). Missing vitals stay NULL and simply never match region/position filters.
+- `profile_updated` refreshes `ipfs_hash` and any vitals present in the payload.
+- `milestone_approved` sets `progress_level = MAX(current, new_level)`; `milestone_revoked` decrements it by one (floored at 0).
+- A milestone for an unknown player creates a skeleton row that a later (replayed) registration backfills.
+
+Queries paginate with **keyset cursor over `(created_ledger DESC, player_id DESC)`** — a stable, total order — so page cost stays proportional to page size and pages never skip or duplicate rows when new players register mid-pagination. Seed a local 10,000-player registry for benchmarking with:
+
+```bash
+npm run seed:players --workspace @scoutoff/indexer -- --count 10000
+time curl 'localhost:3001/players?limit=50&region=West%20Africa'
+```
+
 ### HTTP API
 
-The indexer exposes four endpoints from `server.ts`:
+The indexer exposes these endpoints from `server.ts`:
+
+#### `GET /players`
+
+Paginated, filterable scout-discovery query over the materialized players table (issue #1298). Replaces the dashboard's on-chain `filter_players` call; the frontend consumes it via `lib/indexerClient.ts#listPlayers` and `hooks/useInfinitePlayers`.
+
+| Query param    | Required | Description                                                                                               |
+| -------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| `region`       | No       | Exact-match region. Empty/omitted = all regions. `400` if longer than 100 chars.                          |
+| `position`     | No       | Exact-match position. Empty/omitted = all positions. `400` if longer than 100 chars.                      |
+| `minLevel`     | No       | Minimum progress level, integer 0–3. `400` otherwise.                                                     |
+| `cursor`       | No       | Opaque keyset cursor — pass the previous page's `nextCursor`. `400` if malformed.                         |
+| `limit`        | No       | Page size, default 50, **capped at 50**. `400` if not a positive integer.                                 |
+| `createdAfter` | No       | Only players created strictly after this unix-seconds timestamp (saved-search "new since viewed" counts). |
+
+```bash
+curl 'http://localhost:3001/players?region=West%20Africa&minLevel=1&limit=50'
+```
+
+```json
+{
+  "players": [
+    {
+      "id": "player-1",
+      "wallet": "GVALIDATOR...",
+      "vitals": {
+        "name": "Ava Rodriguez",
+        "age": 21,
+        "position": "ST",
+        "region": "West Africa",
+        "nationality": "Ghana"
+      },
+      "ipfsHash": "QmHash",
+      "progressLevel": 2,
+      "milestones": [],
+      "createdAt": 1700000000
+    }
+  ],
+  "nextCursor": "MTIzNDU2Nzg5OnBsYXllci0x",
+  "total": 8421
+}
+```
+
+- Ordering: newest registration first (`created_ledger DESC, player_id DESC`).
+- `nextCursor` is `null` on the last page; it is opaque — echo it back unchanged.
+- `total` counts every row matching the filters, independent of the cursor — the dashboard shows it as "N players found" without fetching every page.
+- `milestones` is always `[]`: the scout grid loads milestones in batch separately; profile pages verify against the chain via `getPlayer`.
 
 #### `GET /events`
 
@@ -325,7 +416,7 @@ Query events across all players, optionally filtered.
 
 | Query param | Required | Description                                                                                                            |
 | ----------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `type`      | No       | One of the 7 documented event types. `400` if unrecognized.                                                            |
+| `type`      | No       | One of the 8 documented event types. `400` if unrecognized.                                                            |
 | `player_id` | No       | Not applicable here — use `/players/:id/events` instead.                                                               |
 | `limit`     | No       | Page size, default 50, capped at 200. `400` if not a positive integer.                                                 |
 | `before`    | No       | Keyset cursor: only returns events with `ledger` strictly less than this value. Pass the previous page's `nextCursor`. |
@@ -473,9 +564,11 @@ npx jest packages/indexer --coverage
 
 Test files live in:
 
-- `src/__tests__/server.test.ts` — HTTP server endpoint tests, including `/events` and `/players/:id/events`
+- `src/__tests__/server.test.ts` — HTTP server endpoint tests, including `/players`, `/events` and `/players/:id/events`
 - `src/__tests__/eventPoller.test.ts` — event decoding, poll-cycle ledger advancement, RPC/decode error handling, and event persistence, against a mocked RPC client and an in-memory `EventStore`
 - `src/db/__tests__/eventStore.test.ts` — `EventStore` unit tests (schema, insert, type/player filters, ordering, keyset pagination)
+- `src/db/__tests__/playersStore.test.ts` — materialized `players` projection + `getPlayers` filters/cursor pagination (issue #1298)
+- `src/db/__tests__/playersPerf.test.ts` — performance guard: first page of 10k seeded players in under 1 s (issue #1298 acceptance)
 - `src/metrics/__tests__/` — `IndexerMetrics` unit tests (singleton, counters, sliding window, p95, health flag)
 
 ---
@@ -483,3 +576,5 @@ Test files live in:
 ## Frontend Integration
 
 `lib/indexerClient.ts` (root of the frontend app, not this package) is the reference client for this query API, configured via the server-only `INDEXER_API_URL_INTERNAL` (default `http://localhost:3001`); in the browser it calls the Next.js same-origin proxy at `/api/indexer/*` instead, since this server sends no CORS headers. `hooks/useMilestoneHistory.ts` reads a player's milestone history from `GET /players/:id/events` first, falling back to a direct Soroban contract simulation only if the indexer is unreachable — the intended data path this package exists to serve, and the pattern future hooks (activity feeds, subscription history) should follow instead of calling Horizon/Soroban RPC directly. See `lib/indexerClient.ts`'s `getMilestoneHistoryFromIndexer` for the event-log-to-milestone-list reconstruction.
+
+For scout discovery (issue #1298), `lib/indexerClient.ts#listPlayers` fetches one page of `GET /players` and `hooks/useInfinitePlayers.ts` wires it to `useSWRInfinite` (50-player pages, opaque cursors) — the dashboard's `VirtualizedPlayerGrid` requests the next page when the user scrolls near the bottom. Unlike milestone history, discovery deliberately has **no** on-chain `filter_players` fallback: that simulation returns every matching player in one Vec and eventually exceeds Soroban's read-only limits, which is the failure this endpoint exists to prevent. Single-record reads stay on-chain (`getPlayer`), so profile pages remain authoritative and are badged "Verified on-chain". The dashboard also polls `GET /health` (proxied) to show a "results may be up to N ledgers behind" hint when the poller lags.

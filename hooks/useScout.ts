@@ -1,57 +1,58 @@
 'use client';
 import { useState, useCallback } from 'react';
-import useSWR, { mutate as globalMutate } from 'swr';
-import { filterPlayers } from '@/lib/contract';
+import useSWR from 'swr';
 import { searchPlayersByName, SearchRateLimitedError } from '@/lib/api';
 import { rankByFuzzyMatch } from '@/lib/fuzzyMatch';
+import {
+  useInfinitePlayers,
+  scoutSearchKey,
+  invalidateScoutSearch,
+} from './useInfinitePlayers';
 import type { Player, PlayerFilter } from '@/types';
 
+// Re-exported for existing consumers (useSavedSearches) — the key helpers
+// moved into useInfinitePlayers when discovery became cursor-paginated
+// (issue #1298) but keep their original name and format.
+export { scoutSearchKey, invalidateScoutSearch };
+
+type ScoutMode =
+  | { kind: 'idle' }
+  | { kind: 'name'; name: string }
+  | { kind: 'filter'; filter: PlayerFilter };
+
 /**
- * Cache key scheme for useScout:
- *   "scout:search:{region}:{position}:{minLevel}"
+ * Scout discovery (issue #1298).
  *
- * All filter dimensions are encoded in the key so different filter combos
- * get separate cache entries. SWR deduplicates concurrent requests for the
- * same key, preventing duplicate RPC calls within the deduplication window.
+ * Two modes:
+ *  - name search → the backend's /players/search proxy (unchanged; it
+ *    returns the full result set, so no cursor pagination here);
+ *  - filter search → useInfinitePlayers, i.e. the indexer's paginated
+ *    GET /players. The on-chain `filter_players` simulation is gone from
+ *    this path: it returns every matching Player in one Vec and eventually
+ *    exceeds Soroban's read-only simulation limits as the registry grows.
  */
-export function scoutSearchKey(filter: PlayerFilter): string {
-  return `scout:search:${filter.region ?? ''}:${filter.position ?? ''}:${filter.minLevel ?? 0}`;
-}
-
-/**
- * Imperatively invalidate a specific scout search result.
- * Call after a write operation that changes the player list (e.g. registration).
- */
-export function invalidateScoutSearch(filter: PlayerFilter): Promise<void> {
-  return globalMutate(scoutSearchKey(filter)) as Promise<void>;
-}
-
 export function useScout() {
-  const [searchKey, setSearchKey] = useState<string | null>(null);
+  const [mode, setMode] = useState<ScoutMode>({ kind: 'idle' });
 
-  const { data, error, isValidating, mutate } = useSWR<Player[]>(
-    searchKey,
+  const nameKey = mode.kind === 'name' ? `scout:name:${mode.name}` : null;
+  const {
+    data: nameResults,
+    error: nameError,
+    isValidating: nameValidating,
+    mutate: nameMutate,
+  } = useSWR<Player[]>(
+    nameKey,
     async (key: string) => {
-      if (key.startsWith('scout:name:')) {
-        const name = key.slice('scout:name:'.length);
-        const results = await searchPlayersByName(name);
-        // Typo-tolerant ranking: exact/substring matches lead and close
-        // misspellings still float to the top. Threshold 0 means we only
-        // reorder — the backend already decided what's a match (it may use
-        // signals a client-side edit-distance check can't see, e.g.
-        // aliases), so we never hide a result it chose to return.
-        const ranked = rankByFuzzyMatch(results, name, (p) => p.vitals.name, 0);
-        // Filter out archived profiles
-        return ranked.filter((p) => !p.archived);
-      }
-      // contract filter key: "scout:contract:{region}:{position}:{minLevel}"
-      const parts = key.split(':');
-      const region = parts[2] ?? '';
-      const position = parts[3] ?? '';
-      const minLevel = Number(parts[4] ?? 0);
-      const results = await filterPlayers(region, position, minLevel);
+      const name = key.slice('scout:name:'.length);
+      const results = await searchPlayersByName(name);
+      // Typo-tolerant ranking: exact/substring matches lead and close
+      // misspellings still float to the top. Threshold 0 means we only
+      // reorder — the backend already decided what's a match (it may use
+      // signals a client-side edit-distance check can't see, e.g.
+      // aliases), so we never hide a result it chose to return.
+      const ranked = rankByFuzzyMatch(results, name, (p) => p.vitals.name, 0);
       // Filter out archived profiles
-      return (results as Player[]).filter((p) => !p.archived);
+      return ranked.filter((p) => !p.archived);
     },
     {
       dedupingInterval: 60_000,
@@ -60,24 +61,56 @@ export function useScout() {
     },
   );
 
-  /** Trigger a search with the given filter. */
+  const infinite = useInfinitePlayers(
+    mode.kind === 'filter' ? mode.filter : null,
+  );
+
+  const isFilterMode = mode.kind === 'filter';
+  const players = isFilterMode ? infinite.players : (nameResults ?? []);
+
+  /** Stable identity of the current search — changes only when the user starts a different search, not when a page is appended. */
+  const searchId =
+    mode.kind === 'idle'
+      ? null
+      : mode.kind === 'name'
+        ? `scout:name:${mode.name}`
+        : scoutSearchKey(mode.filter);
+
+  /** Trigger a filter search with the given filter (indexer-backed, paginated). */
   const search = useCallback((filter: PlayerFilter) => {
-    setSearchKey(scoutSearchKey(filter));
+    setMode({ kind: 'filter', filter });
   }, []);
 
   const searchByName = useCallback((name: string) => {
-    setSearchKey(`scout:name:${name}`);
+    setMode({ kind: 'name', name });
   }, []);
 
+  const refetch = useCallback((): Promise<void> => {
+    return isFilterMode ? infinite.refetch() : (nameMutate() as Promise<void>);
+  }, [isFilterMode, infinite.refetch, nameMutate]);
+
   return {
-    players: data ?? [],
-    loading: isValidating,
-    error: error?.message ?? null,
-    isRateLimited: error instanceof SearchRateLimitedError,
+    players,
+    /**
+     * Total players matching the current filter (server-side count from
+     * GET /players). On the name-search path the backend returns the full
+     * result set, so the local length *is* the total.
+     */
+    total: isFilterMode ? infinite.total : players.length,
+    loading: isFilterMode ? infinite.loading : nameValidating,
+    error: isFilterMode ? infinite.error : (nameError?.message ?? null),
+    isRateLimited: nameError instanceof SearchRateLimitedError,
     retryAfterSec:
-      error instanceof SearchRateLimitedError ? error.retryAfterSec : null,
+      nameError instanceof SearchRateLimitedError
+        ? nameError.retryAfterSec
+        : null,
+    /** Whether another page can be fetched (filter mode only). */
+    hasNextPage: isFilterMode && infinite.hasNextPage,
+    /** Fetch the next page of the current filter search. */
+    loadMore: infinite.loadMore,
+    searchId,
     search,
     searchByName,
-    refetch: () => mutate() as Promise<void>,
+    refetch,
   };
 }

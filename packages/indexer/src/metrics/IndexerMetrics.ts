@@ -13,6 +13,7 @@
 
 export type EventType =
   | 'player_registered'
+  | 'profile_updated'
   | 'milestone_approved'
   | 'milestone_revoked'
   | 'scout_subscribed'
@@ -120,6 +121,7 @@ export class IndexerMetrics {
   private _totalBytesIngested = 0;
   private _eventCounts: Record<EventType, number> = {
     player_registered: 0,
+    profile_updated: 0,
     milestone_approved: 0,
     milestone_revoked: 0,
     scout_subscribed: 0,
