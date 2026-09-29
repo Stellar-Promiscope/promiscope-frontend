@@ -5,7 +5,10 @@ import {
   CHUNK_SIZE_BYTES,
   ChunkTooLargeError,
   TotalSizeExceededError,
+  UploadSessionNotFoundError,
+  ChunkIndexOutOfRangeError,
 } from '@/lib/chunkedUploadStore';
+import { createRequestLogger } from '@/lib/logger';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { getSessionWallet } from '@/lib/session';
 
@@ -124,22 +127,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: 413 });
     }
     // An out-of-range index is a validation error, not a missing session.
-    if (err instanceof Error && err.message === 'Chunk index out of range') {
+    if (err instanceof ChunkIndexOutOfRangeError) {
       return apiError(
         ApiErrorCode.CHUNK_INDEX_OUT_OF_RANGE,
         400,
         'Chunk index out of range',
       );
     }
-    const message =
-      err instanceof Error ? err.message : 'Failed to write chunk';
-    if (!/not found or expired/i.test(message)) {
-      return NextResponse.json({ error: message }, { status: 400 });
+    if (err instanceof UploadSessionNotFoundError) {
+      return apiError(
+        ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
+        404,
+        'Upload session not found or expired',
+      );
     }
-    return apiError(
-      ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
-      404,
-      'Upload session not found or expired',
+    createRequestLogger(req).error('Failed to write upload chunk', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json(
+      { error: 'Failed to write chunk' },
+      { status: 500 },
     );
   }
 }

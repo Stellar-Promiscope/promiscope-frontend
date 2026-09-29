@@ -17,7 +17,7 @@ decentralized ethos. The app needs:
 
 Alternatives considered:
 
-- **ipfs.io / cloudflare-ipfs.com** — Public gateways only; no upload API.
+- **ipfs.io / dweb.link** — Public gateways only; no upload API.
   Files would need to be pinned via a separate service or local IPFS node.
 - **Infura IPFS** — Offers both upload and gateway but is Ethereum-ecosystem
   aligned; the project has no existing Infura dependency.
@@ -33,7 +33,7 @@ Use **Pinata** for both uploading and primary gateway serving:
 - **Upload:** Server-side calls to `api.pinata.cloud/pinning/pinFileToIPFS`
   via the `PINATA_API_KEY` and `PINATA_SECRET` environment variables.
 - **Serving:** Primary read gateway at `gateway.pinata.cloud/ipfs`, with
-  fallbacks to `ipfs.io/ipfs` and `cloudflare-ipfs.com/ipfs`.
+  fallbacks to `ipfs.io/ipfs` and `dweb.link/ipfs`.
 
 All media is served through a self-hosted **proxy route** (`/api/media/[cid]`)
 rather than exposing the raw gateway URL in HTML. This proxy:
@@ -64,7 +64,7 @@ Key implementation files:
 - Single provider for upload + read simplifies the architecture.
 - The proxy layer provides CDN caching, signed URLs, and hotlink protection
   that raw gateway URLs cannot offer.
-- Fallback gateways (`ipfs.io`, `cloudflare-ipfs.com`) provide resilience if
+- Fallback gateways (`ipfs.io`, `dweb.link`) provide resilience if
   Pinata's gateway is unreachable.
 
 **Negative:**

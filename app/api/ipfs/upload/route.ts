@@ -7,6 +7,11 @@ import { getSessionWallet } from '@/lib/session';
 import { createRequestLogger } from '@/lib/logger';
 import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
 import {
+  getPinataCredentials,
+  getMissingPinataEnvVars,
+  PINATA_NOT_CONFIGURED_ERROR,
+} from '@/lib/pinataConfig';
+import {
   verifyUploadedContent,
   UploadVerificationError,
 } from '@/lib/uploadVerification';
@@ -38,6 +43,16 @@ const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
 async function postIpfsUpload(req: NextRequest) {
   const log = createRequestLogger(req);
+  const pinata = getPinataCredentials();
+  if (!pinata) {
+    log.error('Pinata credentials missing; IPFS uploads disabled', {
+      missing: getMissingPinataEnvVars().join(', '),
+    });
+    return NextResponse.json(
+      { error: PINATA_NOT_CONFIGURED_ERROR },
+      { status: 503 },
+    );
+  }
   const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
   const key = wallet ? `ipfs-upload:wallet:${wallet}` : `ipfs-upload:${ip}`;
@@ -151,8 +166,8 @@ async function postIpfsUpload(req: NextRequest) {
           pinataForm,
           {
             headers: {
-              pinata_api_key: process.env.PINATA_API_KEY!,
-              pinata_secret_api_key: process.env.PINATA_SECRET!,
+              pinata_api_key: pinata.apiKey,
+              pinata_secret_api_key: pinata.secret,
             },
           },
         ),

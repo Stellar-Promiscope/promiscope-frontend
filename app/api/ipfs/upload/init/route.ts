@@ -3,6 +3,12 @@ import { initSession } from '@/lib/chunkedUploadStore';
 import { getSessionWallet } from '@/lib/session';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { privateJson } from '@/lib/httpResponses';
+import { createRequestLogger } from '@/lib/logger';
+import {
+  getPinataCredentials,
+  getMissingPinataEnvVars,
+  PINATA_NOT_CONFIGURED_ERROR,
+} from '@/lib/pinataConfig';
 
 export const runtime = 'nodejs';
 
@@ -26,6 +32,16 @@ const MIN_CHUNK_SIZE_BYTES = 64 * 1024;
 const MAX_CHUNKS = 5000;
 
 export async function POST(req: NextRequest) {
+  const log = createRequestLogger(req);
+  if (!getPinataCredentials()) {
+    log.error('Pinata credentials missing; IPFS uploads disabled', {
+      missing: getMissingPinataEnvVars().join(', '),
+    });
+    return privateJson(
+      { error: PINATA_NOT_CONFIGURED_ERROR },
+      { status: 503 },
+    );
+  }
   const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
   const key = wallet ? `wallet:${wallet}` : ip;

@@ -19,7 +19,7 @@ describe('lib/ipfs', () => {
   const mockCid = 'QmTest123';
   const mockPrimaryGateway = 'https://gateway.pinata.cloud/ipfs';
   const mockFallback1 = 'https://ipfs.io/ipfs';
-  const mockFallback2 = 'https://cloudflare-ipfs.com/ipfs';
+  const mockFallback2 = 'https://dweb.link/ipfs';
 
   beforeEach(() => {
     process.env.NEXT_PUBLIC_IPFS_GATEWAY = mockPrimaryGateway;

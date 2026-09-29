@@ -140,9 +140,11 @@ export function useChunkedUpload(): UseChunkedUploadResult {
           setRetryAfterSec(null);
         }
         const message =
-          err instanceof Error
-            ? err.message
-            : 'Upload failed. Please try again.';
+          (err as { response?: { status?: number } })?.response?.status === 503
+            ? 'Video uploads are temporarily unavailable. Please try again later.'
+            : err instanceof Error
+              ? err.message
+              : 'Upload failed. Please try again.';
         setError(message);
         return { cid: null, error: message };
       } finally {

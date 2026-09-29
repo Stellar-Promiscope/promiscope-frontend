@@ -391,6 +391,22 @@ export async function getSessionStatus(
   };
 }
 
+/** Thrown when an upload session does not exist or has expired. */
+export class UploadSessionNotFoundError extends Error {
+  constructor(message = 'Upload session not found or expired') {
+    super(message);
+    this.name = 'UploadSessionNotFoundError';
+  }
+}
+
+/** Thrown when a chunk index is outside the session's `[0, totalChunks)` range. */
+export class ChunkIndexOutOfRangeError extends Error {
+  constructor(message = 'Chunk index out of range') {
+    super(message);
+    this.name = 'ChunkIndexOutOfRangeError';
+  }
+}
+
 /** Persists one chunk and records it as received. Reachable from any instance. */
 export async function writeChunk(
   sessionId: string,
@@ -399,14 +415,14 @@ export async function writeChunk(
 ): Promise<SessionStatus> {
   const session = await getMetadataStore().get(sessionId);
   if (!session) {
-    throw new Error('Upload session not found or expired');
+    throw new UploadSessionNotFoundError();
   }
   if (
     !Number.isInteger(chunkIndex) ||
     chunkIndex < 0 ||
     chunkIndex >= session.totalChunks
   ) {
-    throw new Error('Chunk index out of range');
+    throw new ChunkIndexOutOfRangeError();
   }
 
   // ── Issue #1294: per-chunk + total size enforcement. A client can declare
@@ -458,7 +474,7 @@ export async function writeChunk(
   if (!updated) {
     // Rare race: the session's TTL expired between the get() above and the
     // addReceivedChunk() call.
-    throw new Error('Upload session not found or expired');
+    throw new UploadSessionNotFoundError();
   }
 
   return {
