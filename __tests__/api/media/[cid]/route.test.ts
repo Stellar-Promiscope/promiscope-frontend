@@ -48,8 +48,12 @@ describe('GET /api/media/[cid] — happy path', () => {
       headers: new Headers({ 'content-type': 'image/webp' }),
     } as unknown as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmAbc123');
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
+    });
 
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/webp');
@@ -73,8 +77,12 @@ describe('GET /api/media/[cid] — happy path', () => {
         headers: new Headers({ 'content-type': 'image/png' }),
       } as unknown as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmAbc123');
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
+    });
 
     expect(res.status).toBe(200);
     expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -86,8 +94,12 @@ describe('GET /api/media/[cid] — happy path', () => {
       status: 502,
     } as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmAbc123');
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
+    });
 
     expect(res.status).toBe(502);
   });
@@ -110,8 +122,12 @@ describe('GET /api/media/[cid] — referrer gating (no signature)', () => {
       headers: new Headers({ 'content-type': 'image/png' }),
     } as unknown as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmAbc123');
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
+    });
     expect(res.status).toBe(200);
   });
 
@@ -123,18 +139,28 @@ describe('GET /api/media/[cid] — referrer gating (no signature)', () => {
       headers: new Headers({ 'content-type': 'image/png' }),
     } as unknown as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmAbc123', {
-      referer: 'https://scoutoff.app/player/abc',
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+      {
+        referer: 'https://scoutoff.app/player/abc',
+      },
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
     });
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
     expect(res.status).toBe(200);
   });
 
   it('rejects a cross-site Referer', async () => {
-    const req = makeRequest('http://localhost:3000/api/media/QmAbc123', {
-      referer: 'https://evil-hotlinker.example/steal',
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+      {
+        referer: 'https://evil-hotlinker.example/steal',
+      },
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
     });
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
     expect(res.status).toBe(403);
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -151,10 +177,12 @@ describe('GET /api/media/[cid] — signed URL handling', () => {
     } as unknown as Response);
 
     const req = makeRequest(
-      'http://localhost:3000/api/media/QmAbc123?exp=9999999999&sig=deadbeef',
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG?exp=9999999999&sig=deadbeef',
       { referer: 'https://evil-hotlinker.example/steal' },
     );
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
+    });
     expect(res.status).toBe(200);
   });
 
@@ -162,9 +190,11 @@ describe('GET /api/media/[cid] — signed URL handling', () => {
     mockVerify.mockReturnValue(false);
 
     const req = makeRequest(
-      'http://localhost:3000/api/media/QmAbc123?exp=9999999999&sig=bad',
+      'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG?exp=9999999999&sig=bad',
     );
-    const res = await GET(req, { params: { cid: 'QmAbc123' } });
+    const res = await GET(req, {
+      params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
+    });
     expect(res.status).toBe(403);
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -182,10 +212,15 @@ describe('GET /api/media/[cid] — rate limiting', () => {
     const ip = `rate-limit-test-ip-${Math.random()}`;
     let lastRes;
     for (let i = 0; i < 121; i++) {
-      const req = makeRequest('http://localhost:3000/api/media/QmAbc123', {
-        'x-forwarded-for': ip,
+      const req = makeRequest(
+        'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
+        {
+          'x-forwarded-for': ip,
+        },
+      );
+      lastRes = await GET(req, {
+        params: { cid: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' },
       });
-      lastRes = await GET(req, { params: { cid: 'QmAbc123' } });
     }
 
     expect(lastRes!.status).toBe(429);
@@ -228,16 +263,21 @@ describe('GET /api/media/[cid] — HTTP Range support', () => {
       }),
     } as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmClip.mp4', {
-      range: 'bytes=1024-1027',
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
+      {
+        range: 'bytes=1024-1027',
+      },
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
     });
-    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
 
     expect(res.status).toBe(206);
     expect(res.headers.get('content-range')).toBe('bytes 1024-1027/20971520');
     expect(res.headers.get('content-length')).toBe('4');
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('QmClip.mp4'),
+      expect.stringContaining('QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB'),
       expect.objectContaining({
         headers: { Range: 'bytes=1024-1027' },
       }),
@@ -256,10 +296,15 @@ describe('GET /api/media/[cid] — HTTP Range support', () => {
       }),
     } as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmClip.mp4', {
-      range: 'bytes=0-1023',
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
+      {
+        range: 'bytes=0-1023',
+      },
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
     });
-    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
 
     expect(res.status).toBe(200);
     expect(res.headers.get('content-range')).toBeNull();
@@ -291,16 +336,26 @@ describe('GET /api/media/[cid] — HTTP Range support', () => {
         }),
       } as Response);
 
-    const startReq = makeRequest('http://localhost:3000/api/media/QmClip.mp4', {
-      range: 'bytes=0-4095',
+    const startReq = makeRequest(
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
+      {
+        range: 'bytes=0-4095',
+      },
+    );
+    const startRes = await GET(startReq, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
     });
-    const startRes = await GET(startReq, { params: { cid: 'QmClip.mp4' } });
     expect(startRes.status).toBe(206);
 
-    const seekReq = makeRequest('http://localhost:3000/api/media/QmClip.mp4', {
-      range: 'bytes=1048576-1048576+4095',
+    const seekReq = makeRequest(
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
+      {
+        range: 'bytes=1048576-1048576+4095',
+      },
+    );
+    const seekRes = await GET(seekReq, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
     });
-    const seekRes = await GET(seekReq, { params: { cid: 'QmClip.mp4' } });
     expect(seekRes.status).toBe(206);
     expect(seekRes.headers.get('content-range')).toContain('1048576');
   });
@@ -323,8 +378,12 @@ describe('GET /api/media/[cid] — mid-stream gateway failover', () => {
         headers: new Headers({ 'content-type': 'video/mp4' }),
       } as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmClip.mp4');
-    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
+    });
 
     expect(res.status).toBe(200);
     expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -341,8 +400,12 @@ describe('GET /api/media/[cid] — mid-stream gateway failover', () => {
       headers: new Headers({ 'content-type': 'video/mp4' }),
     } as Response);
 
-    const req = makeRequest('http://localhost:3000/api/media/QmClip.mp4');
-    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
+    });
 
     expect(res.status).toBe(502);
   });
@@ -363,10 +426,12 @@ describe('GET /api/media/[cid] — Range with signature/referrer gating', () => 
     } as unknown as Response);
 
     const req = makeRequest(
-      'http://localhost:3000/api/media/QmClip.mp4?exp=9999999999&sig=deadbeef',
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB?exp=9999999999&sig=deadbeef',
       { range: 'bytes=0-0' },
     );
-    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
+    const res = await GET(req, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
+    });
     expect(res.status).toBe(206);
   });
 
@@ -374,10 +439,12 @@ describe('GET /api/media/[cid] — Range with signature/referrer gating', () => 
     mockVerify.mockReturnValue(false);
 
     const req = makeRequest(
-      'http://localhost:3000/api/media/QmClip.mp4?exp=9999999999&sig=bad',
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB?exp=9999999999&sig=bad',
       { range: 'bytes=0-1023' },
     );
-    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
+    const res = await GET(req, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
+    });
     expect(res.status).toBe(403);
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -397,8 +464,12 @@ describe('GET /api/media/[cid] — startup latency (no-regression guard)', () =>
     } as unknown as Response);
 
     const start = performance.now();
-    const req = makeRequest('http://localhost:3000/api/media/QmClip.mp4');
-    const res = await GET(req, { params: { cid: 'QmClip.mp4' } });
+    const req = makeRequest(
+      'http://localhost:3000/api/media/QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB',
+    );
+    const res = await GET(req, {
+      params: { cid: 'QmPZ9gcCEpqKTo6aq61g2nXGUhM4iCL3ewB6LDXZCtioEB' },
+    });
     const reader = res.body!.getReader();
     await reader.read();
     const elapsed = performance.now() - start;
@@ -409,4 +480,58 @@ describe('GET /api/media/[cid] — startup latency (no-regression guard)', () =>
     expect(elapsed).toBeLessThan(500);
     expect(res.status).toBe(200);
   });
+});
+
+describe('GET /api/media/[cid] — CID validation', () => {
+  const V1_BASE32 =
+    'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi';
+
+  it.each([
+    ['CIDv0', 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG'],
+    ['CIDv1', V1_BASE32],
+  ])('accepts a valid %s and encodes the upstream URL', async (_label, cid) => {
+    mockFetchOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'image/png' }),
+    } as unknown as Response);
+
+    const res = await GET(
+      makeRequest(`http://localhost:3000/api/media/${cid}`),
+      { params: { cid } },
+    );
+
+    expect(res.status).toBe(200);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(new RegExp(`/${cid}$`)),
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    [
+      'path traversal',
+      'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG/../../ipns/something',
+    ],
+    ['encoded traversal', `${V1_BASE32}..%2F..%2Fipns%2Fsomething`],
+    [
+      'query injection',
+      'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG?filename=evil.html',
+    ],
+    ['fragment', 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG#x'],
+    ['overlong input', `b${'a'.repeat(120)}`],
+    ['non-CID string', 'QmAbc123'],
+  ])(
+    'rejects %s with an uncacheable 400 before any upstream fetch',
+    async (_label, cid) => {
+      const res = await GET(makeRequest('http://localhost:3000/api/media/x'), {
+        params: { cid },
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.headers.get('cache-control')).toBe('no-store');
+      expect(res.headers.get('cache-control')).not.toContain('immutable');
+      expect(global.fetch).not.toHaveBeenCalled();
+    },
+  );
 });

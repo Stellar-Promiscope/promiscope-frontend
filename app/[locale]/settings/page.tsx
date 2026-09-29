@@ -26,7 +26,7 @@ export default function SettingsPage({
 }) {
   const locale = params.locale;
   const t = useTranslations('settings');
-  const { isAuthenticated, disconnect } = useWallet();
+  const { isAuthenticated, disconnect, publicKey } = useWallet();
   const { show } = useToast();
   const [showDeletionModal, setShowDeletionModal] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -287,6 +287,7 @@ export default function SettingsPage({
       <DataDeletionModal
         isOpen={showDeletionModal}
         onClose={() => setShowDeletionModal(false)}
+        wallet={publicKey}
       />
     </div>
   );

@@ -13,10 +13,13 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { purgeAllContactDetails } from '@/lib/contactDetailsCache';
+import { deleteOnboardingSubmission } from '@/lib/onboardingSyncStore';
 
 interface DataDeletionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Connected wallet, used to purge its browser-only onboarding queue. */
+  wallet?: string | null;
 }
 
 type RequestStatus = 'idle' | 'confirming' | 'submitting' | 'success' | 'error';
@@ -24,6 +27,7 @@ type RequestStatus = 'idle' | 'confirming' | 'submitting' | 'success' | 'error';
 export default function DataDeletionModal({
   isOpen,
   onClose,
+  wallet,
 }: DataDeletionModalProps) {
   const t = useTranslations('dataDeletion');
   const { show } = useToast();
@@ -49,6 +53,8 @@ export default function DataDeletionModal({
       // here so a confirmed deletion request also covers it, same as the
       // existing wallet-disconnect wipe.
       await purgeAllContactDetails();
+      // Same for a pending offline onboarding submission (browser IndexedDB).
+      if (wallet) await deleteOnboardingSubmission(wallet);
 
       setStatus('success');
       show({

@@ -23,7 +23,14 @@ export function invalidatePlayerCache(walletOrId: string): Promise<void> {
   return globalMutate(playerKey(walletOrId)) as Promise<void>;
 }
 
-export function usePlayer(walletOrId: string | null) {
+/**
+ * @param fallbackData Server-fetched player (e.g. from a server component) used
+ *   as the initial value so the first render isn't a loading skeleton.
+ */
+export function usePlayer(
+  walletOrId: string | null,
+  fallbackData?: Player | null,
+) {
   const {
     data: player,
     error,
@@ -39,6 +46,7 @@ export function usePlayer(walletOrId: string | null) {
       dedupingInterval: 5_000, // no duplicate RPC calls for the same player within 5 s
       revalidateOnFocus: false,
       errorRetryCount: 2,
+      fallbackData,
     },
   );
 

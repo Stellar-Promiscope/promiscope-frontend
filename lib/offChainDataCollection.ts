@@ -12,6 +12,14 @@
  *   - notificationReadStore
  *   - milestoneDisputeStore
  *   - chunkedUploadStore (sessions tagged with the owner wallet)
+ *   - recentlyViewedStore
+ *   - sessionStore (revoked, then deleted, on deletion)
+ *   - milestoneEndorsementStore
+ *   - uploadTrackingStore (exported; wallet anonymized on deletion)
+ *
+ * Every lib/*Store.ts must be classified in WALLET_DATA_STORES or
+ * EXEMPT_STORES below — __tests__/lib/offChainDataCollection.test.ts fails
+ * when a new store is added without being classified.
  *
  * Deliberately excluded, with reasons surfaced in the payload's `excluded`
  * section:
@@ -23,6 +31,8 @@
  *     client-side: DataDeletionModal calls
  *     lib/contactDetailsCache.ts's purgeAllContactDetails() on success,
  *     the same immediate wipe wallet-disconnect already triggers.
+ *   - onboardingSyncStore: browser IndexedDB only, so no server route can
+ *     read it; DataDeletionModal purges it client-side on success.
  *   - messaging (lib/messaging/* + the external chat service): message
  *     history lives in a separate Node chat service behind its own API, not
  *     in this repo's stores. It is documented as excluded so the registry
@@ -39,6 +49,10 @@ import { NotificationPreferencesStore } from './notificationPreferencesStore';
 import { NotificationReadStore } from './notificationReadStore';
 import { MilestoneDisputeStore } from './milestoneDisputeStore';
 import { AdminAuditStore } from './adminAuditStore';
+import { RecentlyViewedStore } from './recentlyViewedStore';
+import { SessionStore, type SessionRow } from './sessionStore';
+import { MilestoneEndorsementStore } from './milestoneEndorsementStore';
+import { UploadTrackingStore, type TrackedUpload } from './uploadTrackingStore';
 import {
   listSessionsForWallet,
   clearSessionsForWallet,
@@ -48,9 +62,53 @@ import type {
   SavedSearch,
   NotificationPreferences,
   MilestoneDispute,
+  MilestoneEndorsement,
+  RecentlyViewedEntry,
 } from '@/types';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+
+/**
+ * lib/*Store.ts modules holding wallet-keyed data that collectUserData
+ * exports and deleteUserData deletes or anonymizes.
+ */
+export const WALLET_DATA_STORES = [
+  'watchlistStore',
+  'savedSearchStore',
+  'notificationPreferencesStore',
+  'notificationReadStore',
+  'milestoneDisputeStore',
+  'chunkedUploadStore',
+  'recentlyViewedStore',
+  'sessionStore',
+  'milestoneEndorsementStore',
+  'uploadTrackingStore',
+  'adminAuditStore',
+] as const;
+
+/** lib/*Store.ts modules deliberately not covered, with the reason. */
+export const EXEMPT_STORES: Record<string, string> = {
+  onboardingSyncStore:
+    'Browser IndexedDB only (one pending registration per wallet); purged client-side by DataDeletionModal.',
+  uploadResumeStore:
+    'Browser localStorage only; holds upload session ids, not wallet data.',
+  bulkImportStore:
+    'Browser IndexedDB progress for academy bulk imports; not wallet-keyed.',
+  chunkedUploadChunkStore:
+    'Chunk bytes keyed by upload session id; removed with the chunkedUploadStore sessions.',
+  supersededMediaStore: 'CIDs pending unpin; not wallet-keyed.',
+  fraudFlagsStore: 'Aggregate fraud-evaluation runs; not wallet-keyed.',
+  fraudFlagDismissalStore:
+    'Admin anti-abuse decisions retained for platform integrity, like the admin audit log.',
+  fraudThrottleStore:
+    'Admin anti-abuse throttles retained for platform integrity, like the admin audit log.',
+  reconciliationHistoryStore:
+    'Admin audit-log reconciliation results; not wallet-keyed.',
+  referralStore:
+    'Referral codes are auto-pruned by the retention policy documented in lib/referralStore.ts.',
+};
+// Redis rate-limit keys (lib/rateLimit.ts) are ephemeral, TTL-bound counters
+// and are intentionally not exported or deleted.
 
 export interface ActiveUploadSummary {
   sessionId: string;
@@ -82,6 +140,10 @@ export interface CollectedUserData {
     notificationReadIds: number[];
     milestoneDisputes: MilestoneDispute[];
     activeUploadSessions: ActiveUploadSummary[];
+    recentlyViewed: RecentlyViewedEntry[];
+    sessions: SessionRow[];
+    milestoneEndorsements: MilestoneEndorsement[];
+    trackedUploads: TrackedUpload[];
   };
   /**
    * On-chain data is explicitly NOT part of this export (it is immutable and
@@ -116,6 +178,10 @@ export async function collectUserData(
     notificationReadIds: [],
     milestoneDisputes: [],
     activeUploadSessions: [],
+    recentlyViewed: [],
+    sessions: [],
+    milestoneEndorsements: [],
+    trackedUploads: [],
   };
 
   const errors: string[] = [];
@@ -165,8 +231,34 @@ export async function collectUserData(
       `activeUploadSessions: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
+  const syncSections: [keyof typeof sections, () => unknown][] = [
+    ['recentlyViewed', () => RecentlyViewedStore.getInstance().list(wallet)],
+    ['sessions', () => SessionStore.getInstance().listForWallet(wallet)],
+    [
+      'milestoneEndorsements',
+      () => MilestoneEndorsementStore.getInstance().listForWallet(wallet),
+    ],
+    [
+      'trackedUploads',
+      () => UploadTrackingStore.getInstance().listForWallet(wallet),
+    ],
+  ];
+  for (const [name, read] of syncSections) {
+    try {
+      (sections as Record<string, unknown>)[name] = read();
+    } catch (err) {
+      errors.push(
+        `${name}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   const excluded: ExcludedSection[] = [
+    {
+      name: 'onboardingSync',
+      reason:
+        'A pending offline onboarding submission lives only in your browser (IndexedDB) until it syncs on-chain — the server cannot read it. It is cleared from your browser when you request deletion.',
+    },
     {
       name: 'contactDetailsCache',
       reason:
@@ -226,6 +318,18 @@ export async function deleteUserData(wallet: string): Promise<{
   removed.milestoneDisputes =
     MilestoneDisputeStore.getInstance().deleteForWallet(wallet);
   removed.activeUploadSessions = await clearSessionsForWallet(wallet);
+  removed.recentlyViewed =
+    RecentlyViewedStore.getInstance().clearForWallet(wallet);
+  removed.milestoneEndorsements =
+    MilestoneEndorsementStore.getInstance().deleteForWallet(wallet);
+  // Revoke first so no live session survives if the delete below fails.
+  const sessions = SessionStore.getInstance();
+  sessions.revokeAllForWallet(wallet);
+  removed.sessions = sessions.deleteForWallet(wallet);
+
+  // Retained-not-deleted: see UploadTrackingStore.anonymizeWallet.
+  anonymized.trackedUploads =
+    UploadTrackingStore.getInstance().anonymizeWallet(wallet);
 
   // Retained-not-deleted: see AdminAuditStore.anonymizeWallet's doc comment.
   anonymized.adminAuditLog =

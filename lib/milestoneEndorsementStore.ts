@@ -106,6 +106,23 @@ export class MilestoneEndorsementStore {
     return rows.map(rowToEndorsement);
   }
 
+  /** Every endorsement made by `wallet`, oldest first (data export). */
+  listForWallet(wallet: string): MilestoneEndorsement[] {
+    const rows = this.db
+      .prepare(
+        'SELECT * FROM milestone_endorsements WHERE wallet = ? ORDER BY created_at ASC',
+      )
+      .all(wallet) as EndorsementRow[];
+    return rows.map(rowToEndorsement);
+  }
+
+  /** Deletes every endorsement made by `wallet` (data-deletion cascade). */
+  deleteForWallet(wallet: string): number {
+    return this.db
+      .prepare('DELETE FROM milestone_endorsements WHERE wallet = ?')
+      .run(wallet).changes;
+  }
+
   close(): void {
     this.db.close();
   }

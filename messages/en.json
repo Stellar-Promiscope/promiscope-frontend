@@ -312,7 +312,7 @@
     "page_title": "Privacy Policy",
     "page_description": "How ScoutOff collects, uses, and protects your personal data.",
     "eyebrow": "Legal",
-    "last_updated": "Last updated: July 29, 2026",
+    "last_updated": "Last updated: September 24, 2026",
     "section1_title": "1. Introduction",
     "section1_content": "ScoutOff is committed to protecting your privacy. This policy explains how we collect, use, and protect your information. By using ScoutOff, you agree to the collection and use of information in accordance with this policy.",
     "section2_title": "2. Data We Collect",
@@ -324,7 +324,7 @@
     "section5_title": "5. Data Sharing",
     "section5_content": "We do not sell your personal data. We share data only with other users as directed by your actions, with service providers (Vercel, Sentry, Pinata), and as required by law.",
     "section6_title": "6. Retention and Deletion",
-    "section6_content": "On-chain data is permanent and cannot be deleted. Off-chain data is retained for as long as necessary. You can request deletion of your off-chain data through account settings. Use the ‘Request Data Deletion’ action in Account Settings.",
+    "section6_content": "On-chain data is permanent and cannot be deleted. Off-chain data is retained for as long as necessary. You can request deletion of your off-chain data through account settings. Use the ‘Request Data Deletion’ action in Account Settings. Your data export and deletion request cover your watchlist, saved searches, notification settings and read state, milestone disputes and endorsements, recently viewed players, login sessions (including device/browser information), and upload records. Deletion also signs you out of all devices. Upload records are kept with your wallet removed so orphaned media can still be cleaned up, and admin audit log entries are anonymized rather than deleted.",
     "section7_title": "7. Your Rights and Contact",
     "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels."
   },

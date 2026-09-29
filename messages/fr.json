@@ -312,7 +312,7 @@
     "page_title": "Politique de confidentialité",
     "page_description": "Comment ScoutOff collecte, utilise et protège vos données personnelles.",
     "eyebrow": "Juridique",
-    "last_updated": "Dernière mise à jour : 29 juillet 2026",
+    "last_updated": "Dernière mise à jour : 24 septembre 2026",
     "section1_title": "1. Introduction",
     "section1_content": "ScoutOff s'engage à protéger votre vie privée. Cette politique explique comment nous collectons, utilisons et protégeons vos informations. En utilisant ScoutOff, vous acceptez la collecte et l'utilisation des informations conformément à cette politique.",
     "section2_title": "2. Données que nous collectons",
@@ -324,7 +324,7 @@
     "section5_title": "5. Partage des données",
     "section5_content": "Nous ne vendons pas vos données personnelles. Nous ne partageons des données qu'avec d'autres utilisateurs selon vos instructions, avec des prestataires de services (Vercel, Sentry, Pinata) et lorsque la loi l'exige.",
     "section6_title": "6. Conservation et suppression",
-    "section6_content": "Les données on-chain sont permanentes et ne peuvent pas être supprimées. Les données off-chain sont conservées aussi longtemps que nécessaire. Vous pouvez demander la suppression de vos données off-chain via les paramètres du compte. Utilisez l'action « Demander la suppression des données » dans les paramètres du compte.",
+    "section6_content": "Les données on-chain sont permanentes et ne peuvent pas être supprimées. Les données off-chain sont conservées aussi longtemps que nécessaire. Vous pouvez demander la suppression de vos données off-chain via les paramètres du compte. Utilisez l'action « Demander la suppression des données » dans les paramètres du compte. L'export et la suppression de vos données couvrent votre liste de suivi, vos recherches enregistrées, vos paramètres et l'état de lecture des notifications, vos contestations et approbations de jalons, les joueurs récemment consultés, vos sessions de connexion (y compris les informations sur l'appareil et le navigateur) et vos enregistrements de téléversement. La suppression vous déconnecte également de tous vos appareils. Les enregistrements de téléversement sont conservés sans votre portefeuille afin que les médias orphelins puissent encore être nettoyés, et les entrées du journal d'audit administrateur sont anonymisées plutôt que supprimées.",
     "section7_title": "7. Vos droits et contact",
     "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de ScoutOff."
   },

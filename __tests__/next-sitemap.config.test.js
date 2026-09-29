@@ -196,4 +196,64 @@ describe('next-sitemap.config.js', () => {
       });
     });
   });
+
+  describe('player profile URLs (#1350)', () => {
+    const { getPlayerSitemapPaths } = require('../lib/playerSitemapPaths');
+
+    const pages = {
+      player_registered: {
+        events: [
+          { playerId: 'P1', timestamp: 1_700_000_000, data: {} },
+          {
+            playerId: 'P2',
+            timestamp: 1_700_000_000,
+            data: { archived: true },
+          },
+          { playerId: 'P3', timestamp: 1_700_000_000, data: {} },
+        ],
+        nextCursor: null,
+      },
+      milestone_approved: {
+        events: [{ playerId: 'P1', timestamp: 1_710_000_000, data: {} }],
+        nextCursor: null,
+      },
+    };
+    const fetchImpl = jest.fn(async (url) => ({
+      ok: true,
+      json: async () => pages[new URL(url).searchParams.get('type')],
+    }));
+
+    it('emits real, locale-prefixed URLs and excludes archived/denylisted players', async () => {
+      const paths = await getPlayerSitemapPaths({
+        siteUrl: 'https://scoutoff.app',
+        indexerUrl: 'http://indexer',
+        denylist: ['P3'],
+        fetchImpl,
+      });
+
+      expect(paths.map((p) => p.loc)).toEqual([
+        '/en/player/P1',
+        '/fr/player/P1',
+        '/sw/player/P1',
+      ]);
+      expect(paths.some((p) => p.loc.includes('[id]'))).toBe(false);
+      expect(paths[0].lastmod).toBe(
+        new Date(1_710_000_000 * 1000).toISOString(),
+      );
+      expect(paths[0].alternateRefs).toContainEqual({
+        href: 'https://scoutoff.app/fr/player/P1',
+        hreflang: 'fr',
+        hrefIsAbsolute: true,
+      });
+    });
+
+    it('returns no player URLs (instead of failing the build) when the indexer is down', async () => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const paths = await getPlayerSitemapPaths({
+        siteUrl: 'https://scoutoff.app',
+        fetchImpl: async () => ({ ok: false, status: 503 }),
+      });
+      expect(paths).toEqual([]);
+    });
+  });
 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
+import { isValidCid } from '@/lib/cid';
 
 /**
  * GET /api/media/[cid]
@@ -42,6 +43,25 @@ const FALLBACK_GATEWAYS = [
 ];
 
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
+/** Error responses must never be cached by the CDN or browser. */
+function errorResponse(
+  error: string,
+  status: number,
+  headers: Record<string, string> = {},
+) {
+  return NextResponse.json(
+    { error },
+    {
+      status,
+      headers: {
+        'Cache-Control': 'no-store',
+        'CDN-Cache-Control': 'no-store',
+        ...headers,
+      },
+    },
+  );
+}
 
 // Best-effort in-process rate limit. This only protects a single server
 // instance/region — it bounds obvious bulk-scraping in the default
@@ -104,16 +124,18 @@ export async function GET(
   const log = createRequestLogger(req);
   const cid = params.cid;
   if (!cid) {
-    return NextResponse.json({ error: 'Missing cid' }, { status: 400 });
+    return errorResponse('Missing cid', 400);
+  }
+  // Validate before any upstream fetch so callers can't shape arbitrary
+  // gateway requests (path traversal, query injection) through our origin.
+  if (!isValidCid(cid)) {
+    return errorResponse('Invalid cid', 400);
   }
 
   const ip = getClientIp(req);
   if (isRateLimited(ip)) {
     log.warn('Rate limit exceeded', { ip, cid });
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': '60' } },
-    );
+    return errorResponse('Too many requests', 429, { 'Retry-After': '60' });
   }
 
   const { searchParams } = new URL(req.url);
@@ -124,17 +146,14 @@ export async function GET(
     // A signature was presented — it must be valid and unexpired regardless
     // of Referer.
     if (!verifyMediaUrlSignature(cid, exp, sig)) {
-      return NextResponse.json(
-        { error: 'Invalid or expired signature' },
-        { status: 403 },
-      );
+      return errorResponse('Invalid or expired signature', 403);
     }
   } else if (!isAllowedReferrer(req)) {
     // No signature — fall back to referrer gating. This rejects the
     // explicit-cross-site-Referer case (another site directly embedding our
     // proxy URL) while still allowing same-site and no-Referer requests,
     // which covers ordinary in-app <img>/<video> usage today.
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return errorResponse('Forbidden', 403);
   }
 
   const gateways = [PRIMARY_GATEWAY, ...FALLBACK_GATEWAYS];
@@ -149,10 +168,7 @@ export async function GET(
 
     if (!result) {
       log.error('All IPFS gateways exhausted', { cid });
-      return NextResponse.json(
-        { error: 'Media not available' },
-        { status: 502 },
-      );
+      return errorResponse('Media not available', 502);
     }
 
     const responseHeaders: Record<string, string> = {
@@ -185,6 +201,6 @@ export async function GET(
       cid,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json({ error: 'Media not available' }, { status: 502 });
+    return errorResponse('Media not available', 502);
   }
 }

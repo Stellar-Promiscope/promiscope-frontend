@@ -312,7 +312,7 @@
     "page_title": "Sera ya Faragha",
     "page_description": "Jinsi ScoutOff inavyokusanya, kutumia, na kulinda data yako binafsi.",
     "eyebrow": "Kisheria",
-    "last_updated": "Ilisasishwa mwisho: Julai 29, 2026",
+    "last_updated": "Ilisasishwa mwisho: Septemba 24, 2026",
     "section1_title": "1. Utangulizi",
     "section1_content": "ScoutOff imejitolea kulinda faragha yako. Sera hii inaeleza jinsi tunavyokusanya, kutumia, na kulinda taarifa zako. Kwa kutumia ScoutOff, unakubali ukusanyaji na matumizi ya taarifa kulingana na sera hii.",
     "section2_title": "2. Data Tunazokusanya",
@@ -324,7 +324,7 @@
     "section5_title": "5. Ushirikishaji wa Data",
     "section5_content": "Hatuuzi data yako binafsi. Tunashirikisha data pekee na watumiaji wengine kulingana na maelekezo yako, na watoa huduma (Vercel, Sentry, Pinata), na inapohitajika kisheria.",
     "section6_title": "6. Uhifadhi na Ufutaji",
-    "section6_content": "Data za on-chain ni za kudumu na haziwezi kufutwa. Data za off-chain zinahifadhiwa kwa muda unaohitajika. Unaweza kuomba ufutaji wa data zako za off-chain kupitia mipangilio ya akaunti. Tumia kitendo cha 'Omba Ufutaji wa Data' katika Mipangilio ya Akaunti.",
+    "section6_content": "Data za on-chain ni za kudumu na haziwezi kufutwa. Data za off-chain zinahifadhiwa kwa muda unaohitajika. Unaweza kuomba ufutaji wa data zako za off-chain kupitia mipangilio ya akaunti. Tumia kitendo cha 'Omba Ufutaji wa Data' katika Mipangilio ya Akaunti. Uhamishaji na ufutaji wa data zako unajumuisha orodha yako ya ufuatiliaji, utafutaji uliohifadhiwa, mipangilio na hali ya kusomwa ya arifa, mizozo na uidhinishaji wa hatua muhimu, wachezaji uliowatazama hivi karibuni, vipindi vya kuingia (ikiwa ni pamoja na taarifa za kifaa na kivinjari), na rekodi za upakiaji. Ufutaji pia unakuondoa kwenye vifaa vyote. Rekodi za upakiaji huhifadhiwa bila pochi yako ili midia iliyoachwa bado iweze kusafishwa, na maingizo ya kumbukumbu ya ukaguzi wa msimamizi hufanywa kuwa bila jina badala ya kufutwa.",
     "section7_title": "7. Haki Zako na Mawasiliano",
     "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff."
   },

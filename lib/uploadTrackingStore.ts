@@ -199,6 +199,27 @@ export class UploadTrackingStore {
     return rows.map(rowToRecord);
   }
 
+  /** Every tracked upload attributed to `wallet`, newest first (data export). */
+  listForWallet(wallet: string): TrackedUpload[] {
+    const rows = this.db
+      .prepare(
+        'SELECT * FROM tracked_uploads WHERE wallet = ? ORDER BY created_at DESC',
+      )
+      .all(wallet) as TrackedUploadRow[];
+    return rows.map(rowToRecord);
+  }
+
+  /**
+   * Detaches `wallet` from its tracked uploads (data-deletion cascade). The
+   * rows themselves are retained, not deleted: the orphan-cleanup job still
+   * needs the CID to unpin media that was never matched to a registration.
+   */
+  anonymizeWallet(wallet: string): number {
+    return this.db
+      .prepare('UPDATE tracked_uploads SET wallet = NULL WHERE wallet = ?')
+      .run(wallet).changes;
+  }
+
   close(): void {
     this.db.close();
   }

@@ -195,6 +195,15 @@ export class SessionStore {
     return rows.map(rowToSession);
   }
 
+  /**
+   * Deletes every session row for `wallet` (data-deletion cascade). Callers
+   * should revokeAllForWallet first so no live session outlives the request.
+   */
+  deleteForWallet(wallet: string): number {
+    return this.db.prepare('DELETE FROM sessions WHERE wallet = ?').run(wallet)
+      .changes;
+  }
+
   close(): void {
     this.db.close();
   }

@@ -172,7 +172,9 @@ export async function fetchMediaFromGateways(options: {
         headers.Range = rangeHeader;
       }
 
-      const upstream = await fetch(`${gateway}/${cid}`, { headers });
+      const upstream = await fetch(`${gateway}/${encodeURIComponent(cid)}`, {
+        headers,
+      });
       if (!upstream.ok || !upstream.body) {
         lastError = new Error(`Gateway ${gateway} returned ${upstream.status}`);
         continue;

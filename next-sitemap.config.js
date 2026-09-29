@@ -1,3 +1,5 @@
+const { getPlayerSitemapPaths } = require('./lib/playerSitemapPaths');
+
 /** @type {import('next-sitemap').IConfig} */
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://scoutoff.app';
 
@@ -62,8 +64,7 @@ module.exports = {
     '/*/recovery',
     '/*/academy/bulk-import',
   ],
-  additionalPaths: async (config) => [
-    await config.transform(config, '/player/[id]'),
-  ],
+  // Real, locale-prefixed player profile URLs from the indexer (#1350).
+  additionalPaths: () => getPlayerSitemapPaths({ siteUrl }),
   sitemapSize: 7000,
 };

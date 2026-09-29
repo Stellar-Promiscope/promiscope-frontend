@@ -138,7 +138,7 @@ jest.mock('@/lib/contract', () => ({
 
 // ── Import after mocks ────────────────────────────────────────────────────────
 
-import PlayerProfile from '@/app/[locale]/player/[id]/page';
+import PlayerProfile from '@/app/[locale]/player/[id]/PlayerProfileClient';
 import { usePlayer } from '@/hooks/usePlayer';
 import { useWallet } from '@/hooks/useWallet';
 import { usePayToContact } from '@/hooks/usePayToContact';
