@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
-import { SavedSearchStore } from '@/lib/savedSearchStore';
+import {
+  SavedSearchStore,
+  SavedSearchConflictError,
+} from '@/lib/savedSearchStore';
 import { createRequestLogger } from '@/lib/logger';
 import { sanitizeTextInput } from '@/lib/inputValidation';
 import type { PlayerFilter } from '@/types';
@@ -12,9 +15,21 @@ const SAVED_SEARCH_NAME_MAX = 100;
 export const runtime = 'nodejs';
 
 /**
+ * Parses an integer version from an ETag or If-Match header value,
+ * stripping optional weak validator prefix and surrounding quotes.
+ */
+function parseVersionHeader(header: string | null): number | undefined {
+  if (!header) return undefined;
+  const cleaned = header.replace(/^W\//i, '').replace(/^"(.*)"$/, '$1').trim();
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
  * GET /api/saved-searches
  *
- * Lists the authenticated scout's saved searches.
+ * Lists the authenticated scout's saved searches. Returns an ETag header
+ * reflecting the maximum version among the scout's saved searches.
  */
 export async function GET(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
@@ -25,7 +40,13 @@ export async function GET(req: NextRequest) {
   const log = createRequestLogger(req);
   try {
     const entries = SavedSearchStore.getInstance().list(scoutWallet);
-    return privateJson(entries);
+    const maxVersion = entries.reduce(
+      (max, e) => Math.max(max, e.version ?? 1),
+      0,
+    );
+    return privateJson(entries, {
+      headers: { ETag: `"${maxVersion}"` },
+    });
   } catch (err) {
     log.error('Failed to list saved searches', {
       reason: err instanceof Error ? err.message : String(err),
@@ -119,6 +140,24 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  const ifMatch = req.headers.get('if-match');
+  let expectedVersion = parseVersionHeader(ifMatch);
+  if (
+    expectedVersion === undefined &&
+    typeof (body as Record<string, unknown>).version === 'number'
+  ) {
+    expectedVersion = (body as Record<string, unknown>).version as number;
+  }
+
+  if (
+    ifMatch === null &&
+    (body as Record<string, unknown>).version === undefined
+  ) {
+    log.warn(
+      'PATCH /api/saved-searches missing If-Match header; update applied without optimistic concurrency check',
+    );
+  }
+
   try {
     const store = SavedSearchStore.getInstance();
     let updated = null;
@@ -139,7 +178,7 @@ export async function PATCH(req: NextRequest) {
           { status: 400 },
         );
       }
-      updated = store.rename(scoutWallet, id, sanitizedName);
+      updated = store.rename(scoutWallet, id, sanitizedName, expectedVersion);
       if (!updated) {
         return privateJson(
           { error: 'Saved search not found' },
@@ -149,7 +188,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (markViewed === true) {
-      updated = store.markViewed(scoutWallet, id);
+      updated = store.markViewed(scoutWallet, id, expectedVersion);
       if (!updated) {
         return privateJson(
           { error: 'Saved search not found' },
@@ -158,8 +197,26 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    return privateJson(updated);
+    return privateJson(updated, {
+      headers: {
+        ETag: `"${updated?.version ?? 1}"`,
+      },
+    });
   } catch (err) {
+    if (err instanceof SavedSearchConflictError) {
+      return privateJson(
+        {
+          error: 'conflict',
+          message: 'Saved search was modified elsewhere',
+          current: err.current,
+          currentVersion: err.currentVersion,
+        },
+        {
+          status: 409,
+          headers: { ETag: `"${err.currentVersion}"` },
+        },
+      );
+    }
     log.error('Failed to update saved search', {
       reason: err instanceof Error ? err.message : String(err),
     });
@@ -171,9 +228,20 @@ export async function PATCH(req: NextRequest) {
 }
 
 /**
+ * PUT /api/saved-searches
+ *
+ * Full update for a saved search. Accepts If-Match or version for concurrency
+ * protection and delegates to PATCH logic.
+ */
+export async function PUT(req: NextRequest) {
+  return PATCH(req);
+}
+
+/**
  * DELETE /api/saved-searches
  *
  * Removes a saved search for the authenticated scout. Body: { id }.
+ * Accepts If-Match or version for optimistic-concurrency protection.
  */
 export async function DELETE(req: NextRequest) {
   const scoutWallet = getSessionWallet(req);
@@ -192,13 +260,49 @@ export async function DELETE(req: NextRequest) {
     return privateJson({ error: 'id must be a number' }, { status: 400 });
   }
 
+  const ifMatch = req.headers.get('if-match');
+  let expectedVersion = parseVersionHeader(ifMatch);
+  if (
+    expectedVersion === undefined &&
+    typeof (body as Record<string, unknown>).version === 'number'
+  ) {
+    expectedVersion = (body as Record<string, unknown>).version as number;
+  }
+
+  if (
+    ifMatch === null &&
+    (body as Record<string, unknown>).version === undefined
+  ) {
+    log.warn(
+      'DELETE /api/saved-searches missing If-Match header; delete applied without optimistic concurrency check',
+    );
+  }
+
   try {
-    const removed = SavedSearchStore.getInstance().remove(scoutWallet, id);
+    const removed = SavedSearchStore.getInstance().remove(
+      scoutWallet,
+      id,
+      expectedVersion,
+    );
     if (!removed) {
       return privateJson({ error: 'Saved search not found' }, { status: 404 });
     }
     return privateJson({ success: true });
   } catch (err) {
+    if (err instanceof SavedSearchConflictError) {
+      return privateJson(
+        {
+          error: 'conflict',
+          message: 'Saved search was modified elsewhere',
+          current: err.current,
+          currentVersion: err.currentVersion,
+        },
+        {
+          status: 409,
+          headers: { ETag: `"${err.currentVersion}"` },
+        },
+      );
+    }
     log.error('Failed to remove saved search', {
       reason: err instanceof Error ? err.message : String(err),
     });

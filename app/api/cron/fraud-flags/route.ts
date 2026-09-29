@@ -33,13 +33,21 @@ export async function GET(req: NextRequest) {
     return privateJson({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { flags, warnings } = await runFraudFlagEvaluation();
-  const evaluatedAt = Date.now();
+  const result = await runFraudFlagEvaluation({
+    mode: 'incremental',
+    trigger: 'cron',
+    timeBudgetMs: 45_000,
+  });
+  const evaluatedAt = result.evaluatedAt ?? Date.now();
+  const eventsProcessed = result.eventsProcessed ?? 0;
+  const durationMs = result.durationMs ?? 0;
   const run = FraudFlagsStore.getInstance().recordRun(
     'cron',
-    flags,
-    warnings,
+    result.flags,
+    result.warnings,
     evaluatedAt,
+    eventsProcessed,
+    durationMs,
   );
 
   // At minimum-viable "proactive surfacing" absent any existing outbound
@@ -53,8 +61,11 @@ export async function GET(req: NextRequest) {
   // here; see docs/fraud-detection.md.
   return privateJson({
     evaluatedAt,
-    flagCount: flags.length,
+    flagCount: result.flags.length,
     highSeverityCount: run.highSeverityCount,
-    warnings,
+    eventsProcessed,
+    durationMs,
+    warnings: result.warnings,
   });
 }
+

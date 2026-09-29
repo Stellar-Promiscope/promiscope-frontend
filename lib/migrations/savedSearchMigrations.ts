@@ -41,4 +41,21 @@ export const savedSearchMigrations: Migration[] = [
       }
     },
   },
+  {
+    // Tracks row version for optimistic concurrency (ETag / If-Match).
+    // Incremented on every update so concurrent writes can be detected and
+    // rejected with 409 Conflict.
+    version: 3,
+    name: 'add_version',
+    up: (db) => {
+      const columns = db.prepare('PRAGMA table_info(saved_search)').all() as {
+        name: string;
+      }[];
+      if (!columns.some((c) => c.name === 'version')) {
+        db.exec(
+          'ALTER TABLE saved_search ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+      }
+    },
+  },
 ];

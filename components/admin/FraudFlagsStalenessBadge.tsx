@@ -26,6 +26,8 @@ export default function FraudFlagsStalenessBadge() {
   const [status, setStatus] = useState<{
     evaluatedAt: number | null;
     highSeverityCount: number;
+    eventsProcessed?: number;
+    durationMs?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -55,6 +57,11 @@ export default function FraudFlagsStalenessBadge() {
       ? 'border-red-600 bg-red-950/30 text-red-400'
       : 'border-gray-700 bg-gray-900 text-gray-400';
 
+  const durationSec =
+    status.durationMs !== undefined && status.durationMs > 0
+      ? `${(status.durationMs / 1000).toFixed(1)}s`
+      : null;
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${style}`}
@@ -62,6 +69,10 @@ export default function FraudFlagsStalenessBadge() {
     >
       Fraud flags: {formatAge(age)}
       {hasHighSeverity && ` · ${status.highSeverityCount} high`}
+      {status.eventsProcessed !== undefined &&
+        status.eventsProcessed > 0 &&
+        ` · ${status.eventsProcessed} events`}
+      {durationSec && ` (${durationSec})`}
       {stale && ' · stale'}
     </span>
   );

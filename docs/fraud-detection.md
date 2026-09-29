@@ -79,6 +79,24 @@ resulting design:
   (`components/admin/FraudFlagsStalenessBadge.tsx`) that's visible without
   opening the panel at all, and flips to a "stale" style once the last run
   is older than 6 hours.
+- **Incremental Evaluation & Checkpointing**: full-window scans over the entire
+  event history grew with total history, threatening serverless function timeouts.
+  Evaluation is now incremental: `fraudFlagsStore` maintains a `fraud_checkpoint`
+  table (recording the last processed ledger sequence) and `fraud_wallet_aggregates`
+  (rolling windows and state per wallet). Each run fetches only events after the
+  checkpoint, updates aggregates, and evaluates heuristics ONLY for wallets that
+  changed.
+- **Time Budget & Chunking**: Serverless cron jobs enforce a time budget (default
+  45s with a 3s safety margin). The runner processes events in chunks; if the
+  budget is nearly exhausted, it saves the current checkpoint and wallet aggregates
+  so the next scheduled cron invocation resumes smoothly from the exact ledger.
+- **Run Stats & UI**: Every run persists `eventsProcessed` and `durationMs` in
+  `fraud_flag_runs`. These stats are surfaced via `GET /api/admin/fraud-flags/status`
+  and displayed in `FraudFlagsStalenessBadge.tsx` and `FraudFlagsPanel.tsx`.
+- **Equivalence & Backtesting**: Incremental evaluation is provably equivalent to
+  full evaluation across the entire backtest fixture (`lib/fraudBacktest.ts`), with
+  automated equivalence testing and runtime benchmarks confirming execution cost
+  scales with new events rather than total historical volume.
 - **Alerting**: no outbound-notification mechanism (email, Slack, push)
   exists anywhere in this codebase today (verified — searched for
   webhook/notification-provider integrations before assuming one needed to

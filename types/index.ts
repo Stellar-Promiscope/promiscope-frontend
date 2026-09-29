@@ -317,6 +317,7 @@ export interface WatchlistEntry {
   scoutWallet: string;
   playerId: string;
   createdAt: number; // Unix ms
+  version?: number;
 }
 
 export interface SavedSearch {
@@ -326,6 +327,7 @@ export interface SavedSearch {
   filter: PlayerFilter;
   createdAt: number; // Unix ms
   lastViewedAt: number; // Unix ms — when the scout last opened this search's results
+  version?: number;
 }
 
 // ── Notifications ────────────────────────────────────────────────────────────
@@ -356,6 +358,7 @@ export interface Notification {
 export interface NotificationPreferences {
   milestoneApprovals: boolean;
   contactUnlocks: boolean;
+  version?: number;
 }
 
 // ── Milestone Disputes ────────────────────────────────────────────────────────

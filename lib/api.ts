@@ -288,6 +288,8 @@ export const fetchFraudFlags = async (): Promise<{
   flags: FraudFlag[];
   warnings: string[];
   evaluatedAt: number;
+  eventsProcessed?: number;
+  durationMs?: number;
 }> => {
   const res = await fetchWithRetry('/api/admin/fraud-flags');
   if (!res.ok) throw new Error('Failed to fetch fraud flags');
@@ -304,6 +306,9 @@ export const fetchFraudFlagsStatus = async (): Promise<{
   evaluatedAt: number | null;
   highSeverityCount: number;
   trigger: 'manual' | 'cron' | null;
+  eventsProcessed?: number;
+  durationMs?: number;
+  lastLedger?: number;
 }> => {
   const res = await fetchWithRetry('/api/admin/fraud-flags/status');
   if (!res.ok) throw new Error('Failed to fetch fraud flags status');

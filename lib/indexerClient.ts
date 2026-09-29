@@ -58,6 +58,7 @@ export interface EventQueryParams {
   type?: IndexedEventType;
   limit?: number;
   before?: number;
+  after?: number;
 }
 
 /** Generic event query against GET /events — same filter shape as the player/validator-scoped variants. */
