@@ -1,6 +1,7 @@
 'use client';
 
 import Modal from '@/components/ui/Modal';
+import Spinner from '@/components/ui/Spinner';
 import { usePayToContact } from '@/hooks/usePayToContact';
 
 interface ContactModalProps {
@@ -25,7 +26,7 @@ export default function ContactModal({
   onClose,
   playerId,
 }: ContactModalProps) {
-  const { contactDetails, clear } = usePayToContact(playerId);
+  const { contactDetails, loading, clear } = usePayToContact(playerId);
 
   function handleClose() {
     clear();
@@ -41,7 +42,14 @@ export default function ContactModal({
       <div className="p-6 space-y-4">
         <h2 className="text-lg font-semibold">Player Contact Details</h2>
 
-        {!contactDetails && (
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <Spinner size="sm" />
+            Confirming pay-to-contact transaction…
+          </div>
+        )}
+
+        {!loading && !contactDetails && (
           <p className="text-sm text-gray-400">
             No contact details unlocked for this player yet.
           </p>
@@ -55,8 +63,9 @@ export default function ContactModal({
                   Email: {contactDetails.email}
                 </span>
                 <button
+                  disabled={loading}
                   onClick={() => handleCopy(contactDetails.email!)}
-                  className="text-xs text-blue-500 hover:underline ml-2"
+                  className="text-xs text-blue-500 hover:underline ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Copy
                 </button>
@@ -68,8 +77,9 @@ export default function ContactModal({
                   Phone: {contactDetails.phone}
                 </span>
                 <button
+                  disabled={loading}
                   onClick={() => handleCopy(contactDetails.phone!)}
-                  className="text-xs text-blue-500 hover:underline ml-2"
+                  className="text-xs text-blue-500 hover:underline ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Copy
                 </button>
@@ -81,8 +91,9 @@ export default function ContactModal({
                   Telegram: {contactDetails.telegram}
                 </span>
                 <button
+                  disabled={loading}
                   onClick={() => handleCopy(contactDetails.telegram!)}
-                  className="text-xs text-blue-500 hover:underline ml-2"
+                  className="text-xs text-blue-500 hover:underline ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Copy
                 </button>

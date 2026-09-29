@@ -48,7 +48,25 @@
     "player_not_found": "Player not found",
     "no_players": "No players found",
     "players_found": "{count, plural, one {# player found} other {# players found}}",
-    "results_behind": "Results may be up to {count, plural, one {# ledger} other {# ledgers}} behind"
+    "results_behind": "Results may be up to {count, plural, one {# ledger} other {# ledgers}} behind",
+    "all_regions": "All regions",
+    "any_position": "Any position",
+    "save_search_placeholder": "e.g. Lagos strikers"
+  },
+  "trial_offer": {
+    "form_label": "Log trial offer",
+    "club_name": "Club Name",
+    "club_name_placeholder": "e.g. FC Barcelona",
+    "club_name_required": "Club name is required",
+    "offer_type": "Offer Type",
+    "offer_type_trial": "Trial",
+    "offer_type_loan": "Loan",
+    "offer_type_transfer": "Transfer",
+    "message": "Message",
+    "optional": "optional",
+    "message_hint": "Additional details about the offer…",
+    "submit": "Submit Trial Offer",
+    "submitting": "Submitting…"
   },
   "player_profile": {
     "back_to_scout_dashboard": "← Back to Scout Dashboard",

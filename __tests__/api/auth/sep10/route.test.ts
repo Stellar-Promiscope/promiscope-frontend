@@ -29,7 +29,11 @@ jest.mock('@stellar/stellar-sdk', () => ({
 }));
 
 import { WebAuth } from '@stellar/stellar-sdk';
-import { verifySessionToken } from '@/lib/session';
+import {
+  ACCESS_TOKEN_TTL_SEC,
+  DEFAULT_REFRESH_TTL_SEC,
+  verifySessionToken,
+} from '@/lib/session';
 const mockVerify = WebAuth.verifyChallengeTxSigners as jest.Mock;
 
 const ALLOWED_ORIGIN = 'https://app.scoutoff.com';
@@ -466,5 +470,61 @@ describe('DELETE /api/auth/sep10 — logout', () => {
     );
     expect(afterRes.status).toBe(401);
     expect(await afterRes.json()).toEqual({ authenticated: false });
+  });
+});
+
+// See #660: the session must carry a bounded lifetime that the server
+// enforces, and be revocable server-side independently of the cookie.
+describe('POST /api/auth/sep10 — session expiry and revocation', () => {
+  function sessionRequest(accessToken: string): NextRequest {
+    return new NextRequest('http://localhost:3000/api/auth/session', {
+      headers: { cookie: `session=${accessToken}` },
+    });
+  }
+
+  async function login() {
+    mockVerify.mockReturnValueOnce(undefined);
+    const res = await POST(makeRequest(ALLOWED_ORIGIN));
+    expect(res.status).toBe(200);
+    return res;
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('sets a bounded maxAge on both session cookies', async () => {
+    const res = await login();
+    expect(res.cookies.get('session')?.maxAge).toBe(ACCESS_TOKEN_TTL_SEC);
+    expect(res.cookies.get('session_refresh')?.maxAge).toBe(
+      DEFAULT_REFRESH_TTL_SEC,
+    );
+  });
+
+  test('rejects the access cookie once its lifetime has elapsed, even if the client still sends it', async () => {
+    const start = Date.now();
+    const res = await login();
+    const accessToken = res.cookies.get('session')!.value;
+
+    expect((await SESSION_GET(sessionRequest(accessToken))).status).toBe(200);
+
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(start + (ACCESS_TOKEN_TTL_SEC + 1) * 1000);
+    const expiredRes = await SESSION_GET(sessionRequest(accessToken));
+    expect(expiredRes.status).toBe(401);
+    expect(await expiredRes.json()).toEqual({ authenticated: false });
+  });
+
+  test('rejects a still-unexpired cookie once its session is revoked server-side', async () => {
+    const res = await login();
+    const accessToken = res.cookies.get('session')!.value;
+    const sid = verifySessionToken(accessToken, 'access')!.sid;
+
+    expect(SessionStore.getInstance().revoke(sid)).toBe(true);
+
+    const revokedRes = await SESSION_GET(sessionRequest(accessToken));
+    expect(revokedRes.status).toBe(401);
+    expect(await revokedRes.json()).toEqual({ authenticated: false });
   });
 });

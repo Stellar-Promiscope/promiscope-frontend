@@ -1,5 +1,6 @@
 'use client';
 import { useState, FormEvent, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useTrialOffer } from '@/hooks/useTrialOffer';
 import TransactionStatus, {
   type TxStatus,
@@ -7,11 +8,7 @@ import TransactionStatus, {
 import Button from '@/components/ui/Button';
 import type { TrialOfferType } from '@/types';
 
-const OFFER_TYPES: { value: TrialOfferType; label: string }[] = [
-  { value: 'trial', label: 'Trial' },
-  { value: 'loan', label: 'Loan' },
-  { value: 'transfer', label: 'Transfer' },
-];
+const OFFER_TYPES: TrialOfferType[] = ['trial', 'loan', 'transfer'];
 
 interface TrialOfferFormProps {
   playerId: string;
@@ -22,6 +19,7 @@ export default function TrialOfferForm({
   playerId,
   onSuccess,
 }: TrialOfferFormProps) {
+  const t = useTranslations('trial_offer');
   const { logTrialOffer, loading, error, txHash } = useTrialOffer();
 
   const [clubName, setClubName] = useState('');
@@ -32,7 +30,7 @@ export default function TrialOfferForm({
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (!clubName.trim()) errs.clubName = 'Club name is required';
+    if (!clubName.trim()) errs.clubName = t('club_name_required');
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -66,12 +64,12 @@ export default function TrialOfferForm({
     <form
       onSubmit={handleSubmit}
       className="flex flex-col gap-4"
-      aria-label="Log trial offer"
+      aria-label={t('form_label')}
     >
       {/* Club name */}
       <div className="flex flex-col gap-1">
         <label htmlFor="tof-club" className="text-sm font-medium text-gray-300">
-          Club Name *
+          {t('club_name')} *
         </label>
         <input
           id="tof-club"
@@ -84,7 +82,7 @@ export default function TrialOfferForm({
           }}
           disabled={loading}
           className={`input${fieldErrors.clubName ? ' border-red-500' : ''}`}
-          placeholder="e.g. FC Barcelona"
+          placeholder={t('club_name_placeholder')}
         />
         {fieldErrors.clubName && (
           <p role="alert" className="text-sm text-red-500">
@@ -96,7 +94,7 @@ export default function TrialOfferForm({
       {/* Offer type */}
       <div className="flex flex-col gap-1">
         <label htmlFor="tof-type" className="text-sm font-medium text-gray-300">
-          Offer Type *
+          {t('offer_type')} *
         </label>
         <select
           id="tof-type"
@@ -105,9 +103,9 @@ export default function TrialOfferForm({
           disabled={loading}
           className="input"
         >
-          {OFFER_TYPES.map(({ value, label }) => (
+          {OFFER_TYPES.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {t(`offer_type_${value}`)}
             </option>
           ))}
         </select>
@@ -119,7 +117,8 @@ export default function TrialOfferForm({
           htmlFor="tof-message"
           className="text-sm font-medium text-gray-300"
         >
-          Message <span className="text-gray-400 font-normal">(optional)</span>
+          {t('message')}{' '}
+          <span className="text-gray-400 font-normal">({t('optional')})</span>
         </label>
         <textarea
           id="tof-message"
@@ -128,7 +127,7 @@ export default function TrialOfferForm({
           disabled={loading}
           className="input resize-none"
           rows={3}
-          placeholder="Additional details about the offer…"
+          placeholder={t('message_hint')}
         />
       </div>
 
@@ -145,7 +144,7 @@ export default function TrialOfferForm({
         disabled={loading}
         className="w-full"
       >
-        {loading ? 'Submitting…' : 'Submit Trial Offer'}
+        {loading ? t('submitting') : t('submit')}
       </Button>
     </form>
   );

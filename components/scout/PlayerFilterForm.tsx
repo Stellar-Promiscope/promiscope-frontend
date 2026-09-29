@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AFRICAN_REGIONS_GROUPED } from '@/lib/regions';
 import { FOOTBALL_POSITIONS } from '@/lib/positions';
 import Select from '@/components/ui/Select';
@@ -50,6 +51,7 @@ export default function PlayerFilterForm({
   onSaveSearch,
   disabled = false,
 }: PlayerFilterFormProps) {
+  const t = useTranslations('scout_dashboard');
   const router = useRouter();
   const searchParams = useSearchParams();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -147,7 +149,7 @@ export default function PlayerFilterForm({
         onChange={(e) => handleChange('region', e.target.value)}
         disabled={disabled}
       >
-        <option value="">All regions</option>
+        <option value="">{t('all_regions')}</option>
         {Object.entries(AFRICAN_REGIONS_GROUPED).map(([group, regions]) => (
           <optgroup key={group} label={group}>
             {regions.map(({ label, value }) => (
@@ -168,7 +170,7 @@ export default function PlayerFilterForm({
         onChange={(e) => handleChange('position', e.target.value)}
         disabled={disabled}
       >
-        <option value="">Any position</option>
+        <option value="">{t('any_position')}</option>
         {FOOTBALL_POSITIONS.map(({ label, value }) => (
           <option key={value} value={value}>
             {label}
@@ -224,7 +226,7 @@ export default function PlayerFilterForm({
                     handleSaveSearch();
                   }
                 }}
-                placeholder="e.g. Lagos strikers"
+                placeholder={t('save_search_placeholder')}
                 autoFocus
               />
             </div>
