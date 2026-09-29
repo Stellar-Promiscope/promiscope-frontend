@@ -1,6 +1,7 @@
 /** @jest-environment node */
 import { GET } from '../../../../app/api/auth/session/route';
 import { NextRequest } from 'next/server';
+import { _resetRateLimitStoreForTests } from '@/lib/rateLimit';
 import { createSessionToken } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
 
@@ -35,6 +36,7 @@ function accessCookie(publicKey: string, ttlSec = 20 * 60): string {
 
 beforeEach(() => {
   SessionStore.resetInstance();
+  _resetRateLimitStoreForTests();
 });
 
 afterEach(() => {

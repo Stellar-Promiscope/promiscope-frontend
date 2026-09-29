@@ -120,7 +120,6 @@ Open `.env.local` and fill in the required values. At minimum you need these for
 | `NEXT_PUBLIC_ADMIN_ADDRESS` | Your testnet wallet public key              |
 | `PINATA_API_KEY`            | _Optional for local dev (IPFS uploads)_     |
 | `PINATA_SECRET`             | _Optional for local dev (IPFS uploads)_     |
-| `STELLAR_SECRET_KEY`        | Your testnet wallet secret key              |
 | `NEXT_PUBLIC_APP_URL`       | `http://localhost:3000`                     |
 
 Validate that all expected variables are declared:

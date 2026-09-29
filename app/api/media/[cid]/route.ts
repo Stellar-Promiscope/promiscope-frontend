@@ -3,9 +3,9 @@ import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
 import { isValidCid } from '@/lib/cid';
-import { getClientIp } from '@/lib/clientIp';
 import { withRouteTelemetry } from '@/lib/telemetry';
 import { IPFS_FALLBACK_GATEWAYS } from '@/lib/ipfsGateways';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 /**
  * GET /api/media/[cid]
@@ -63,26 +63,10 @@ function errorResponse(
   );
 }
 
-// Best-effort in-process rate limit. This only protects a single server
-// instance/region — it bounds obvious bulk-scraping in the default
-// single-instance deployment, but a production deployment fronted by a real
-// CDN should prefer that CDN's (or Cloudflare's/Upstash's) distributed rate
-// limiting instead of relying on this alone.
+// Shared, Redis-backed (when configured) limiter from lib/rateLimit.ts so
+// the limit holds across serverless instances (#1330).
 const RATE_LIMIT_PER_WINDOW = 120;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-type RateEntry = { count: number; firstSeen: number };
-const rateMap = new Map<string, RateEntry>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateMap.get(ip);
-  if (!entry || now - entry.firstSeen > RATE_LIMIT_WINDOW_MS) {
-    rateMap.set(ip, { count: 1, firstSeen: now });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > RATE_LIMIT_PER_WINDOW;
-}
 
 function isAllowedReferrer(req: NextRequest): boolean {
   const referer = req.headers.get('referer');
@@ -127,9 +111,16 @@ async function getMedia(
   }
 
   const ip = getClientIp(req);
-  if (isRateLimited(ip)) {
+  const rl = await checkRateLimit(`media:${ip}`, {
+    limit: RATE_LIMIT_PER_WINDOW,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rl.limited) {
     log.warn('Rate limit exceeded', { ip, cid });
-    return errorResponse('Too many requests', 429, { 'Retry-After': '60' });
+    const retryAfter = rl.retryAfterSec ?? RATE_LIMIT_WINDOW_MS / 1000;
+    return errorResponse('Too many requests', 429, {
+      'Retry-After': String(retryAfter),
+    });
   }
 
   const { searchParams } = new URL(req.url);

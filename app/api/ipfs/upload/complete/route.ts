@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiError, ApiErrorCode } from '@/lib/apiErrors';
+import { privateJson } from '@/lib/httpResponses';
 import {
   prepareStreamedAssembly,
   cleanupSession,
   getSessionStatus,
+  isSessionOwner,
 } from '@/lib/chunkedUploadStore';
 import {
   buildStreamingMultipartBody,
   streamFileBytes,
 } from '@/lib/streamingMultipart';
-import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
-import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import {
+  detectFileType,
+  isDeclaredTypeCompatible,
+  bufToHex,
+} from '@/lib/fileSignature';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { getSessionWallet } from '@/lib/session';
 import { createRequestLogger } from '@/lib/logger';
 import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
@@ -47,7 +53,7 @@ export const runtime = 'nodejs';
  * on 400-class validation failures); Pinata/verification failures preserve
  * it so a retry skips re-uploading chunks.
  */
-const checkRateLimit = createRateLimiter(20, 60 * 1000);
+const RATE_LIMIT = { limit: 20, windowMs: 60 * 1000 };
 
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
@@ -66,10 +72,10 @@ async function postCompleteUpload(req: NextRequest) {
   const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
   const key = wallet ? `wallet:${wallet}` : ip;
-  const rl = checkRateLimit(key);
+  const rl = await checkRateLimit(`ipfs-upload-complete:${key}`, RATE_LIMIT);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
-    return NextResponse.json(
+    return privateJson(
       { error: 'Too many requests' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
@@ -79,14 +85,19 @@ async function postCompleteUpload(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return privateJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { sessionId } = (body ?? {}) as Record<string, unknown>;
   if (typeof sessionId !== 'string' || !sessionId) {
-    return NextResponse.json(
-      { error: 'sessionId is required' },
-      { status: 400 },
+    return privateJson({ error: 'sessionId is required' }, { status: 400 });
+  }
+
+  if (!(await isSessionOwner(sessionId, getSessionWallet(req)))) {
+    // 404 rather than 403 so a foreign caller can't probe session existence.
+    return privateJson(
+      { error: 'Upload session not found or expired' },
+      { status: 404 },
     );
   }
 
@@ -123,7 +134,7 @@ async function postCompleteUpload(req: NextRequest) {
   );
   if (!mimeAllowed) {
     await cleanupSession(sessionId);
-    return NextResponse.json(
+    return privateJson(
       {
         error: `File type "${fileType}" is not allowed. Only image/* and video/* files are accepted.`,
       },
@@ -133,14 +144,17 @@ async function postCompleteUpload(req: NextRequest) {
 
   // Magic-byte gate on the streamed header — before any byte is pinned.
   const header = new Uint8Array(assembly.header);
-  if (!hasValidMagicBytes(header)) {
+  // Detected family must match the declared prefix (issue #1329).
+  const detected = detectFileType(header);
+  if (!detected || !isDeclaredTypeCompatible(fileType, detected)) {
     await cleanupSession(sessionId);
     log.warn('Rejected spoofed MIME type', {
       type: fileType,
+      detected: detected?.mime ?? null,
       ip,
       header: bufToHex(header),
     });
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           'File content does not match its declared type. Upload rejected.',
@@ -164,7 +178,7 @@ async function postCompleteUpload(req: NextRequest) {
       ip,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       { error: 'Failed to upload file to IPFS' },
       { status: 502 },
     );
@@ -194,7 +208,7 @@ async function postCompleteUpload(req: NextRequest) {
       cid,
       reason: err instanceof Error ? err.message : String(err),
     });
-    return NextResponse.json(
+    return privateJson(
       {
         error:
           err instanceof UploadVerificationError
@@ -206,7 +220,7 @@ async function postCompleteUpload(req: NextRequest) {
   }
 
   await cleanupSession(sessionId);
-  return NextResponse.json({ cid });
+  return privateJson({ cid });
 }
 
 /**

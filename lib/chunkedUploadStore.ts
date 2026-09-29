@@ -379,6 +379,19 @@ export async function initSession(
   return { sessionId };
 }
 
+/**
+ * True when the session exists and was initialized by `wallet` (issue #1328).
+ * Anonymous sessions (ownerWallet null) only match anonymous callers.
+ */
+export async function isSessionOwner(
+  sessionId: string,
+  wallet: string | null,
+): Promise<boolean> {
+  const session = await getMetadataStore().get(sessionId);
+  if (!session) return false;
+  return (session.ownerWallet ?? null) === (wallet ?? null);
+}
+
 /** Returns the current status of a session, or null if unknown/expired. */
 export async function getSessionStatus(
   sessionId: string,

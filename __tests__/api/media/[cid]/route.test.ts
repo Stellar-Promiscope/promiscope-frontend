@@ -5,6 +5,7 @@ jest.mock('@/lib/mediaUrlSigning', () => ({
 
 import { GET } from '../../../../app/api/media/[cid]/route';
 import { NextRequest } from 'next/server';
+import { _resetRateLimitStoreForTests } from '@/lib/rateLimit';
 import { verifyMediaUrlSignature } from '@/lib/mediaUrlSigning';
 
 const mockVerify = verifyMediaUrlSignature as jest.Mock;
@@ -32,6 +33,7 @@ function mockFetchOnce(response: Partial<Response> & { ok: boolean }) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  _resetRateLimitStoreForTests();
   global.fetch = jest.fn();
   process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
   delete process.env.MEDIA_URL_SIGNING_SECRET;

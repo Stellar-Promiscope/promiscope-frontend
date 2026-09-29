@@ -1,0 +1,706 @@
+{
+  "ignore": ["BASE_REF", "CI", "NODE_ENV", "VERCEL", "E2E_ALT_WALLET_SECRET"],
+  "vars": [
+    {
+      "name": "CRON_SECRET",
+      "requiredIn": ["production"],
+      "secret": true,
+      "usedBy": ["app/api/cron/fraud-flags/route.ts"],
+      "description": "Secret token used by Vercel Cron or scheduled runners to authorize cron API endpoints (e.g. app/api/cron/fraud-flags). Matches Authorization: Bearer <CRON_SECRET> header."
+    },
+    {
+      "name": "MEDIA_URL_SIGNING_SECRET",
+      "requiredIn": ["production"],
+      "secret": true,
+      "usedBy": ["lib/mediaUrlSigning.ts"],
+      "description": "Optional secret used by /api/media/[cid] to issue signed, time-limited URLs (lib/mediaUrlSigning.ts). When set, every media URL is HMAC-signed and expires after a configurable window. Leave blank locally — the proxy falls back to referrer-only gating when this is unset. Generate with: openssl rand -hex 32 Server-side only — never expose to the client or commit to version control."
+    },
+    {
+      "name": "NEXT_PUBLIC_ADMIN_ADDRESS",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": [
+        "app/[locale]/admin/health/page.tsx",
+        "app/[locale]/admin/page.tsx",
+        "lib/academyAuth.ts",
+        "lib/adminAuth.ts",
+        "scripts/validate-env.js"
+      ],
+      "description": "Stellar public key of the platform admin wallet. Any connected wallet matching this address gets access to the /admin panel. Leave blank during development. WARNING: if unset in production, any connected wallet is treated as admin."
+    },
+    {
+      "name": "NEXT_PUBLIC_API_URL",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": [
+        "app/api/admin/health/route.ts",
+        "app/api/players/search/route.ts",
+        "lib/api.ts",
+        "lib/messaging/chatApi.ts"
+      ],
+      "description": "Base URL of the off-chain Node.js backend API (server/). Default for local development: http://localhost:4000"
+    },
+    {
+      "name": "NEXT_PUBLIC_CONTRACT_ID",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": [
+        "app/[locale]/admin/page.tsx",
+        "hooks/useContractEvents.ts",
+        "jest.setup.ts",
+        "lib/config.ts",
+        "lib/contract.ts"
+      ],
+      "showInAppBanner": true,
+      "description": "NEXT_PUBLIC_CONTRACT_ID is not set. The Soroban contract ID must be configured before any on-chain operations will work. Set it in your hosting environment or .env.local file."
+    },
+    {
+      "name": "NEXT_PUBLIC_DOMAIN",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": ["app/api/auth/sep10/route.ts"],
+      "description": "Public domain of this deployment (without protocol), used in SEP-10 challenges. Example: scoutoff.app (production) or localhost:3000 (local dev)"
+    },
+    {
+      "name": "NEXT_PUBLIC_HORIZON_URL",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": [
+        "hooks/useContractEvents.ts",
+        "lib/confirmApprovalSubmission.ts",
+        "lib/stellar.ts",
+        "next.config.js"
+      ],
+      "description": "Stellar Horizon REST API endpoint. Used for account queries and transaction submission. Testnet default: https://horizon-testnet.stellar.org Mainnet:        https://horizon.stellar.org"
+    },
+    {
+      "name": "NEXT_PUBLIC_IPFS_GATEWAY",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": [
+        "app/api/media/[cid]/route.ts",
+        "components/player/UpdateProfileForm.tsx",
+        "jest.setup.ts",
+        "lib/dataExport.ts",
+        "lib/ipfs.ts",
+        "lib/uploadVerification.ts",
+        "next.config.js"
+      ],
+      "description": "Public IPFS gateway used to serve stored media (player photos, highlight reels). Default: https://gateway.pinata.cloud/ipfs Any IPFS-compatible gateway works (e.g. https://ipfs.io/ipfs or a custom one)."
+    },
+    {
+      "name": "NEXT_PUBLIC_NETWORK",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": [
+        "app/[locale]/player/[id]/layout.tsx",
+        "app/api/auth/sep10/route.ts",
+        "components/academy/BulkPlayerImport.tsx",
+        "components/ui/TransactionStatus.tsx",
+        "components/validator/PendingMilestoneQueue.tsx",
+        "components/validator/RevokeForm.tsx",
+        "context/WalletContext.tsx",
+        "jest.setup.ts",
+        "lib/offChainDataCollection.ts",
+        "lib/sep10Validation.ts",
+        "lib/stellar.ts"
+      ],
+      "description": "Stellar network to target. Use 'testnet' for development, 'mainnet' for production."
+    },
+    {
+      "name": "NEXT_PUBLIC_SOROBAN_RPC",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": [
+        "e2e/fixtures/mock-contract.ts",
+        "jest.setup.ts",
+        "lib/sorobanRpc.ts",
+        "lib/stellar.ts",
+        "next.config.js"
+      ],
+      "description": "Soroban RPC endpoint for smart-contract reads and simulations. Testnet default: https://soroban-testnet.stellar.org Mainnet:        https://soroban-rpc.stellar.org"
+    },
+    {
+      "name": "SESSION_SECRET",
+      "requiredIn": ["production"],
+      "secret": true,
+      "usedBy": ["jest.setup.ts", "lib/session.ts"],
+      "description": "Secret used to HMAC-sign the `session`/`session_refresh` cookies issued after a successful SEP-10 verification (see lib/session.ts). REQUIRED — routes that read the session cookie throw if this is unset. Use a long, random value (e.g. `openssl rand -base64 48`) and never commit the real value. Rotating it immediately invalidates every outstanding session."
+    },
+    {
+      "name": "TURNSTILE_SECRET_KEY",
+      "requiredIn": ["production"],
+      "secret": true,
+      "usedBy": ["server/src/middleware/turnstile.js"],
+      "envFile": "server/.env.example",
+      "description": "Cloudflare Turnstile secret key, used to verify the challenge token submitted with POST /referrals/generate. Leave blank to skip verification (local dev / tests)."
+    },
+    {
+      "name": "UPSTASH_REDIS_REST_TOKEN",
+      "requiredIn": ["production"],
+      "secret": true,
+      "usedBy": ["lib/chunkedUploadStore.ts", "lib/rateLimit.ts"],
+      "description": "Bearer token for the Upstash Redis REST API. Server-side only — never expose to the client or commit to version control."
+    },
+    {
+      "name": "UPSTASH_REDIS_REST_URL",
+      "requiredIn": ["production"],
+      "secret": false,
+      "usedBy": ["lib/chunkedUploadStore.ts", "lib/rateLimit.ts"],
+      "description": "Full REST URL of your Upstash Redis database (e.g. https://<db>.upstash.io)."
+    },
+    {
+      "name": "ADMIN_AUDIT_DB_PATH",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/adminAuditStore.ts"],
+      "description": "Filesystem path to the admin audit log's SQLite database (lib/adminAuditStore.ts). Leave blank to use the built-in default location."
+    },
+    {
+      "name": "ANALYZE",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["next.config.js"],
+      "description": "Optional Next.js bundle analysis switch. Set to 'true' when running the configured bundle analyzer."
+    },
+    {
+      "name": "API_URL_INTERNAL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/api/admin/health/route.ts", "lib/api.ts"],
+      "description": "Server-only override for SSR / Server Component fetches (e.g. Docker Compose container-internal hostname: http://mock-api:4000). Leave blank outside of docker-compose — lib/api.ts falls back to NEXT_PUBLIC_API_URL when unset."
+    },
+    {
+      "name": "CHUNKED_UPLOAD_DB_PATH",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/chunkedUploadChunkStore.ts"],
+      "description": "Filesystem path to the chunked-upload chunk-bytes SQLite database (lib/chunkedUploadChunkStore.ts, issue #1175). Must point at a shared volume reachable from every instance in a multi-instance deployment — a path on per-instance ephemeral disk reintroduces the same \"chunk landed on one instance, invisible to another\" bug this store exists to fix. Leave blank to use the built-in default location (fine for local dev)."
+    },
+    {
+      "name": "CONTRACT_ID",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/eventPoller.ts"],
+      "description": "Deployed ScoutOff Soroban contract address the indexer watches. Required."
+    },
+    {
+      "name": "CORS_ORIGIN",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "Legacy single allowed origin; prefer CORS_ORIGINS."
+    },
+    {
+      "name": "CORS_ORIGINS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "Comma-separated origins allowed to make cross-origin requests. CORS_ORIGIN (a single origin) is still honored for backward compatibility."
+    },
+    {
+      "name": "CORS_ORIGIN_PATTERN",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "Optional regex for extra allowed origins, e.g. Vercel preview deployments: ^https://scout-off-[a-z0-9-]+\\.vercel\\.app$"
+    },
+    {
+      "name": "DB_PATH",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/db.js"],
+      "envFile": "server/.env.example",
+      "description": "Path to the SQLite database file. Defaults to ./data/scout-off.db (relative to server/) when unset."
+    },
+    {
+      "name": "E2E_ADMIN_SECRET",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["e2e/admin-fee-withdrawal.spec.ts"],
+      "description": "Stellar secret key for the admin wallet used by admin-flow e2e specs (e.g. fee withdrawal). Testnet only."
+    },
+    {
+      "name": "E2E_CONTRACT_ID",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["e2e/wallet-connect-registration.spec.ts"],
+      "description": "Soroban contract ID the e2e suite targets. Specs that need a live contract (e.g. wallet-connect-registration) skip themselves when this is unset."
+    },
+    {
+      "name": "E2E_PORT",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["playwright.config.ts"],
+      "description": "Port the local dev server binds to for e2e runs. Default: 3100"
+    },
+    {
+      "name": "E2E_WALLET_SECRET",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["e2e/fixtures/index.ts"],
+      "description": "Stellar secret key for the wallet fixture e2e specs sign transactions with. Testnet only — never use a mainnet key here."
+    },
+    {
+      "name": "FRAUD_FLAGS_MIN_INTERVAL_MS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/api/admin/fraud-flags/route.ts"],
+      "description": "Minimum spacing between on-demand fraud-flag evaluations triggered from FraudFlagsPanel.tsx (app/api/admin/fraud-flags). Defaults to 30000 (30s) when unset. The NEXT_PUBLIC_ variant is read as a fallback so a preview deployment can tune it without a server-only var; the server-only value wins when both are set."
+    },
+    {
+      "name": "HEALTH_MAX_LEDGER_LAG",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/server.ts"],
+      "description": "Ledgers the indexer may trail the network by before /health reports `degraded`. Default: 100."
+    },
+    {
+      "name": "INDEXER_API_URL_INTERNAL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": [
+        "app/api/admin/health/route.ts",
+        "app/api/indexer/[...path]/route.ts",
+        "lib/indexerClient.ts"
+      ],
+      "description": "Server-only base URL of the off-chain event indexer API. The browser never calls the indexer directly: it goes through the same-origin, rate-limited proxy at /api/indexer/*, which forwards to this URL, so the indexer can stay on a private network. Default for local development: http://localhost:3001"
+    },
+    {
+      "name": "INDEXER_DB_PATH",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/db/eventStore.ts"],
+      "description": "Filesystem path to the indexer's SQLite database file. Leave blank to use the built-in default location."
+    },
+    {
+      "name": "JSON_BODY_LIMIT",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/app.js"],
+      "envFile": "server/.env.example",
+      "description": "Max JSON request body size; larger bodies get a 413."
+    },
+    {
+      "name": "NETWORK_PASSPHRASE",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": [
+        "docker/mock-rpc/server.js",
+        "packages/indexer/src/eventPoller.ts"
+      ],
+      "description": "Network passphrase for the target Stellar network. Testnet default: 'Test SDF Network ; September 2015' Mainnet:        'Public Global Stellar Network ; September 2015'"
+    },
+    {
+      "name": "NEXT_PUBLIC_APP_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": [
+        "app/api/media/[cid]/route.ts",
+        "app/layout.tsx",
+        "lib/seo.ts",
+        "next-sitemap.config.js"
+      ],
+      "description": "Canonical public URL of the app. Used for PWA manifest start_url, Open Graph tags, and sitemap generation. Update to your production domain before deploying."
+    },
+    {
+      "name": "NEXT_PUBLIC_BASE_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/api/auth/sep10/route.ts"],
+      "description": "Canonical base URL of the frontend (e.g. https://scoutoff.app). Used as a convenience single-origin entry folded into SEP10_ALLOWED_ORIGINS and for absolute URL generation. Leave blank to derive from NEXT_PUBLIC_DOMAIN."
+    },
+    {
+      "name": "NEXT_PUBLIC_FEATURE_DARK_MODE_TOGGLE",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/featureFlags.ts"],
+      "description": "Enables dark mode toggle in the navigation bar. When disabled, the app always renders in dark mode (the default theme)."
+    },
+    {
+      "name": "NEXT_PUBLIC_FEATURE_DATA_EXPORT",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/featureFlags.ts"],
+      "description": "Enables the \"Download my data\" self-service export in the player dashboard. Exports profile vitals, progress level, milestone history, and IPFS media references as a JSON file."
+    },
+    {
+      "name": "NEXT_PUBLIC_FEATURE_FRAUD_AUTO_THROTTLE",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/featureFlags.ts"],
+      "description": "Enables admin-gated auto-throttling for the two highest-confidence fraud heuristics (cross_scout_redeemer_ring, self_redemption). A matching wallet is automatically blocked from further redemptions/pay-to-contact until an admin explicitly lifts it in FraudFlagsPanel.tsx — never auto-expires. Leave disabled until thresholds in lib/fraudDetection.ts have been tuned against real traffic; see docs/fraud-detection.md."
+    },
+    {
+      "name": "NEXT_PUBLIC_FEATURE_IN_APP_NOTIFICATIONS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/featureFlags.ts"],
+      "description": "Enables in-app notification system for milestone approvals and scout messages. Disabled by default until the feature is complete."
+    },
+    {
+      "name": "NEXT_PUBLIC_FRAUD_FLAGS_MIN_INTERVAL_MS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/api/admin/fraud-flags/route.ts"],
+      "description": "Client-visible minimum interval between fraud-flag refreshes; mirrors FRAUD_FLAGS_MIN_INTERVAL_MS."
+    },
+    {
+      "name": "NEXT_PUBLIC_INDEXER_API_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": [
+        "app/api/admin/health/route.ts",
+        "app/api/indexer/[...path]/route.ts",
+        "lib/indexerClient.ts"
+      ],
+      "description": "Deprecated: used only as a fallback when INDEXER_API_URL_INTERNAL is unset."
+    },
+    {
+      "name": "NEXT_PUBLIC_SENTRY_DSN",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": [
+        "app/error.tsx",
+        "sentry.client.config.ts",
+        "sentry.edge.config.ts",
+        "sentry.server.config.ts"
+      ],
+      "description": "Sentry DSN (Data Source Name) for client-side error reporting. Leave blank to disable Sentry entirely. Obtain from: https://sentry.io — project → Settings → DSN."
+    },
+    {
+      "name": "NEXT_PUBLIC_SEP10_HOME_DOMAIN",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["jest.setup.ts", "lib/sep10Validation.ts"],
+      "description": "Same value as SEP10_HOME_DOMAIN, exposed to the browser for client-side challenge validation (manageData name \"<domain> auth\" / web_auth_domain). Keep in sync with SEP10_HOME_DOMAIN."
+    },
+    {
+      "name": "NEXT_PUBLIC_SEP10_SERVER_ACCOUNT",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["jest.setup.ts", "lib/sep10Validation.ts"],
+      "description": "Public key (G…) corresponding to SEP10_SERVER_KEY. Exposed to the browser so the wallet connect flow can independently verify that a challenge XDR is sourced from this account before asking any wallet to sign (SEP-10 client validation). Must match Keypair.fromSecret(SEP10_SERVER_KEY).publicKey()."
+    },
+    {
+      "name": "NEXT_PUBLIC_STATUS_PAGE_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/[locale]/status/page.tsx"],
+      "description": "URL of the public status page (e.g. Instatus, Better Stack, UptimeRobot) that monitors the frontend, backend API, and Stellar endpoints. Leave blank to hide the live-status link on the /status page."
+    },
+    {
+      "name": "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["components/scout/ReferralPanel.tsx"],
+      "description": "Public site key for the Cloudflare Turnstile bot-protection widget shown on unauthenticated public forms (e.g. referral code generation). Leave blank to disable the challenge locally — the server-side check is skipped when its corresponding secret is unset (see server/.env.example). Obtain from: https://dash.cloudflare.com — Turnstile → Add widget."
+    },
+    {
+      "name": "PINATA_API_KEY",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": [
+        "app/api/admin/ipfs-cleanup/route.ts",
+        "app/api/ipfs/upload/complete/route.ts",
+        "app/api/ipfs/upload/route.ts",
+        "lib/pinJson.ts",
+        "lib/pinataUnpin.ts"
+      ],
+      "description": "Pinata API key for IPFS uploads via the server-side proxy (app/api/ipfs/upload). Obtain from: https://app.pinata.cloud/keys — create a key with pinFileToIPFS scope. Server-side only — never expose to the client or commit to version control."
+    },
+    {
+      "name": "PINATA_SECRET",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": [
+        "app/api/admin/ipfs-cleanup/route.ts",
+        "app/api/ipfs/upload/complete/route.ts",
+        "app/api/ipfs/upload/route.ts",
+        "lib/pinJson.ts",
+        "lib/pinataUnpin.ts"
+      ],
+      "description": "Pinata API secret paired with PINATA_API_KEY. Server-side only — never expose to the client or commit to version control."
+    },
+    {
+      "name": "PINJSON_CACHE_TTL_MS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/pinJson.ts"],
+      "description": "In-memory TTL (milliseconds) for cached pinned-JSON reads in lib/pinJson.ts. Leave blank to use the built-in default. Must be a positive integer if set."
+    },
+    {
+      "name": "PLATFORM_CONTACT_FEE_XLM",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": [],
+      "description": "XLM fee charged to scouts for pay-to-contact unlocks. Default: 1 (1 XLM)."
+    },
+    {
+      "name": "POLL_INTERVAL_MS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/eventPoller.ts"],
+      "description": "How often (milliseconds) the indexer polls for new events. Leave blank to use the built-in default."
+    },
+    {
+      "name": "PORT",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": [
+        "docker/mock-api/server.js",
+        "docker/mock-rpc/server.js",
+        "packages/indexer/src/server.ts",
+        "server/src/index.js"
+      ],
+      "description": "TCP port the server listens on. Set by your host platform in production. Leave blank locally — Next.js defaults to 3000."
+    },
+    {
+      "name": "RATE_LIMIT_MAX",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "Max requests per IP per window for all API routes."
+    },
+    {
+      "name": "RATE_LIMIT_TURNSTILE_MAX",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "Max Turnstile-protected requests per IP per window."
+    },
+    {
+      "name": "RATE_LIMIT_WINDOW_MS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "Per-IP rate limits: all requests, write methods, and Turnstile routes."
+    },
+    {
+      "name": "RATE_LIMIT_WRITE_MAX",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "Max write requests per IP per window."
+    },
+    {
+      "name": "RECONCILIATION_WEBHOOK_URL",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/reconciliationNotify.ts"],
+      "description": "Optional server-side webhook URL used to notify the backend about reconciliation events."
+    },
+    {
+      "name": "REDIS_URL",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["server/src/middleware/security.js"],
+      "envFile": "server/.env.example",
+      "description": "When set, rate-limit counters are shared through Redis."
+    },
+    {
+      "name": "REQUEST_TIMEOUT_MS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/index.js"],
+      "envFile": "server/.env.example",
+      "description": "How long (ms) a client may take to send a complete request."
+    },
+    {
+      "name": "SENTRY_AUTH_TOKEN",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["next.config.js"],
+      "description": "Sentry auth token for source-map uploads (build-time only). Server-side only — never expose to the client or commit to version control."
+    },
+    {
+      "name": "SENTRY_ORG",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["next.config.js"],
+      "description": "Sentry organisation slug (build-time only — set as a CI/host secret). Leave blank locally to skip the source-map upload step during `next build`."
+    },
+    {
+      "name": "SENTRY_PROJECT",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["next.config.js"],
+      "description": "Sentry project slug (build-time only — set as a CI/host secret)."
+    },
+    {
+      "name": "SENTRY_RELEASE",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["next.config.js"],
+      "description": "Sentry release identifier injected at build time (e.g. a git SHA or semver tag). Automatically set in CI; leave blank locally."
+    },
+    {
+      "name": "SEP10_ALLOWED_ORIGINS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/api/auth/sep10/route.ts"],
+      "description": "Comma-separated list of allowed Origin headers for the SEP-10 POST endpoint (app/api/auth/sep10/route.ts). REQUIRED before deploying to any non-local environment. If unset in production the route fails closed (403). Example: Leave blank locally — dev falls back to http://<NEXT_PUBLIC_DOMAIN>."
+    },
+    {
+      "name": "SEP10_HOME_DOMAIN",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["app/api/auth/sep10/route.ts", "playwright.config.ts"],
+      "description": "Home domain asserted in SEP-10 challenge transactions. Must match the deployed origin (e.g. scoutoff.app). For local development use: localhost:3000"
+    },
+    {
+      "name": "SEP10_SERVER_KEY",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["app/api/auth/sep10/route.ts", "playwright.config.ts"],
+      "description": "Stellar secret key for the SEP-10 server that issues and verifies challenges. Server-side only — never expose to the client or commit to version control."
+    },
+    {
+      "name": "SOROBAN_RPC_URL",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/eventPoller.ts"],
+      "description": "Soroban RPC endpoint the indexer polls for contract events. Required."
+    },
+    {
+      "name": "START_LEDGER",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["packages/indexer/src/eventPoller.ts"],
+      "description": "Ledger sequence to start polling from on first run. Leave blank to start from the most recent ledger."
+    },
+    {
+      "name": "TRUST_PROXY_HOPS",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["server/src/app.js"],
+      "envFile": "server/.env.example",
+      "description": "Number of reverse proxies in front of the server (so req.ip is the client)."
+    },
+    {
+      "name": "ACCESS_TOKEN_TTL_SEC",
+      "requiredIn": [],
+      "usedBy": ["playwright.config.ts"],
+      "description": "Optional. See .env.example and playwright.config.ts."
+    },
+    {
+      "name": "COINGECKO_API_KEY",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/xlmRate.ts"],
+      "description": "Optional. See .env.example and lib/xlmRate.ts."
+    },
+    {
+      "name": "COINGECKO_API_PLAN",
+      "requiredIn": [],
+      "usedBy": ["lib/xlmRate.ts"],
+      "description": "Optional. See .env.example and lib/xlmRate.ts."
+    },
+    {
+      "name": "CONTACT_VAULT_DB_PATH",
+      "requiredIn": [],
+      "usedBy": [],
+      "description": "Optional. See .env.example and the code."
+    },
+    {
+      "name": "CONTACT_VAULT_KEY",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/contactVaultCrypto.ts"],
+      "description": "Optional. See .env.example and lib/contactVaultCrypto.ts."
+    },
+    {
+      "name": "CONTRACT_VERSION",
+      "requiredIn": [],
+      "usedBy": ["packages/indexer/src/eventPoller.ts"],
+      "description": "Optional. See .env.example and packages/indexer/src/eventPoller.ts."
+    },
+    {
+      "name": "CV_SIGNING_PUBLIC_KEY",
+      "requiredIn": [],
+      "usedBy": ["lib/cvSigning.ts"],
+      "description": "Optional. See .env.example and lib/cvSigning.ts."
+    },
+    {
+      "name": "CV_SIGNING_SECRET",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/cvSigning.ts"],
+      "description": "Optional. See .env.example and lib/cvSigning.ts."
+    },
+    {
+      "name": "DEFAULT_REFRESH_TTL_SEC",
+      "requiredIn": [],
+      "usedBy": [],
+      "description": "Optional. See .env.example and the code."
+    },
+    {
+      "name": "DISPUTE_RESPONSE_WINDOW_MS",
+      "requiredIn": [],
+      "usedBy": ["lib/milestoneDisputeStore.ts"],
+      "description": "Optional. See .env.example and lib/milestoneDisputeStore.ts."
+    },
+    {
+      "name": "LOG_LEVEL",
+      "requiredIn": [],
+      "usedBy": ["packages/indexer/src/logger.ts"],
+      "description": "Optional. See .env.example and packages/indexer/src/logger.ts."
+    },
+    {
+      "name": "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+      "requiredIn": [],
+      "usedBy": ["hooks/usePushNotifications.ts"],
+      "description": "Optional. See .env.example and hooks/usePushNotifications.ts."
+    },
+    {
+      "name": "REMEMBER_ME_REFRESH_TTL_SEC",
+      "requiredIn": [],
+      "usedBy": [],
+      "description": "Optional. See .env.example and the code."
+    },
+    {
+      "name": "SENTRY_DSN",
+      "requiredIn": [],
+      "secret": true,
+      "usedBy": ["lib/csp.ts"],
+      "description": "Optional. See .env.example and lib/csp.ts."
+    },
+    {
+      "name": "SESSIONS_DB_PATH",
+      "requiredIn": [],
+      "usedBy": ["playwright.config.ts"],
+      "description": "Optional. See .env.example and playwright.config.ts."
+    },
+    {
+      "name": "SITEMAP_PLAYER_DENYLIST",
+      "requiredIn": [],
+      "usedBy": ["lib/playerSitemapPaths.js"],
+      "description": "Optional. See .env.example and lib/playerSitemapPaths.js."
+    },
+    {
+      "name": "STELLAR_PRICE_HORIZON_URL",
+      "requiredIn": [],
+      "usedBy": ["lib/xlmRate.ts"],
+      "description": "Optional. See .env.example and lib/xlmRate.ts."
+    },
+    {
+      "name": "STELLAR_USDC_ISSUER",
+      "requiredIn": [],
+      "usedBy": ["lib/xlmRate.ts"],
+      "description": "Optional. See .env.example and lib/xlmRate.ts."
+    },
+    {
+      "name": "TRUSTED_PROXY_COUNT",
+      "requiredIn": [],
+      "usedBy": ["lib/clientIp.ts"],
+      "description": "Optional. See .env.example and lib/clientIp.ts."
+    }
+  ]
+}

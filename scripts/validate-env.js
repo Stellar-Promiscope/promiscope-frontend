@@ -1,12 +1,29 @@
 #!/usr/bin/env node
-// Checks every NEXT_PUBLIC_ and server-side env var used in source
-// is declared in .env.example. Fails CI if any are missing.
+// Checks that lib/envManifest.json (the single source of truth, issue #1327)
+// covers every `process.env` variable read in source, and that .env.example (and
+// server/.env.example) declare exactly the manifest's variables. Fails CI on
+// drift.
 const fs = require('fs');
 const path = require('path');
 
-const SYSTEM_VARS = new Set(['NODE_ENV']);
+const root = path.join(__dirname, '..');
+const manifest = require('../lib/envManifest.json');
+
 const ENV_VAR_PATTERN = /process\.env\.([A-Z0-9_]+)/g;
-const SKIP_DIRS = new Set(['node_modules', '.next', 'coverage', '.git']);
+const SOURCE_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|mts)$/;
+const TEST_FILE = /\.(test|spec|stories)\.[a-z]+$/;
+const SKIP_DIRS = new Set([
+  'node_modules',
+  '.next',
+  'coverage',
+  '.git',
+  'out',
+  'public',
+  '__tests__',
+  'test',
+  'storybook-static',
+  'playwright-report',
+]);
 
 function walkDir(dir, results = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -14,33 +31,44 @@ function walkDir(dir, results = []) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       walkDir(fullPath, results);
-    } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+    } else if (SOURCE_EXT.test(entry.name) && !TEST_FILE.test(entry.name)) {
       results.push(fullPath);
     }
   }
   return results;
 }
 
+/** Map of env var name → source files (repo-relative) that read it. */
+function findEnvUsages(dir = root) {
+  const used = new Map();
+  for (const file of walkDir(dir)) {
+    const content = fs.readFileSync(file, 'utf8');
+    for (const match of content.matchAll(ENV_VAR_PATTERN)) {
+      const files = used.get(match[1]) ?? new Set();
+      files.add(path.relative(dir, file));
+      used.set(match[1], files);
+    }
+  }
+  return used;
+}
+
+function declaredIn(envFile) {
+  const content = fs.readFileSync(path.join(root, envFile), 'utf8');
+  return new Set(content.match(/^[A-Z0-9_]+(?==)/gm) ?? []);
+}
+
+// Directory-scoped helpers (kept for programmatic use and unit tests).
+const SYSTEM_VARS = new Set(['NODE_ENV']);
+
 function parseEnvExample(exampleContent) {
   return new Set(exampleContent.match(/^[A-Z0-9_]+(?==)/gm) ?? []);
 }
 
-function extractUsedEnvVars(sourceDir, skipDirs = SKIP_DIRS) {
-  const sourceFiles = walkDir(sourceDir);
+function extractUsedEnvVars(sourceDir) {
   const used = new Set();
-
-  for (const file of sourceFiles) {
-    const content = fs.readFileSync(file, 'utf8');
-    let match;
-    while ((match = ENV_VAR_PATTERN.exec(content)) !== null) {
-      const varName = match[1];
-      if (!SYSTEM_VARS.has(varName)) {
-        used.add(varName);
-      }
-    }
-    ENV_VAR_PATTERN.lastIndex = 0;
+  for (const name of findEnvUsages(sourceDir).keys()) {
+    if (!SYSTEM_VARS.has(name)) used.add(name);
   }
-
   return used;
 }
 
@@ -53,66 +81,76 @@ function validateEnvVars(sourceDir, envExamplePath) {
   return { missing, used, declared };
 }
 
-// CLI execution when run as a script
-if (require.main === module) {
-  const root = path.join(__dirname, '..');
-  const { missing, used } = validateEnvVars(
-    root,
-    path.join(root, '.env.example'),
-  );
+function main() {
+  const ignore = new Set(manifest.ignore);
+  const byName = new Map(manifest.vars.map((v) => [v.name, v]));
+  const errors = [];
 
-  if (missing.length) {
-    console.error('Missing from .env.example:', missing.join(', '));
+  const used = findEnvUsages();
+  const unlisted = [...used.keys()].filter(
+    (v) => !byName.has(v) && !ignore.has(v),
+  );
+  if (unlisted.length) {
+    errors.push(`Missing from lib/envManifest.json: ${unlisted.join(', ')}`);
+  }
+
+  const envFiles = new Set(['.env.example', 'server/.env.example']);
+  for (const envFile of envFiles) {
+    const declared = declaredIn(envFile);
+    const expected = manifest.vars
+      .filter((v) => (v.envFile ?? '.env.example') === envFile)
+      .map((v) => v.name);
+    const missing = expected.filter((v) => !declared.has(v));
+    if (missing.length) {
+      errors.push(`Missing from ${envFile}: ${missing.join(', ')}`);
+    }
+    const extra = [...declared].filter((v) => !byName.has(v) && !ignore.has(v));
+    if (extra.length) {
+      errors.push(
+        `Declared in ${envFile} but not in lib/envManifest.json: ${extra.join(', ')}`,
+      );
+    }
+  }
+
+  if (errors.length) {
+    errors.forEach((e) => console.error(e));
     process.exit(1);
   }
-  console.log(`✓ All ${used.size} env vars declared in .env.example`);
+  console.log(
+    `✓ All ${manifest.vars.length} manifest env vars match source and .env.example`,
+  );
 
-  // ── Production-only sanity warnings (Issue #17) ─────────────────────────────
-  //
-  // NEXT_PUBLIC_ADMIN_ADDRESS gates access to /admin in the running app; if
-  // it's empty, anyone with a connected wallet gets the admin dashboard.
-  // In CI (NODE_ENV === 'test' from Jest, or any non-production environment)
-  // this is fine — the test/admin-skip paths skip the admin gate. Only warn
-  // (don't fail) when NODE_ENV is unset so local dev still passes.
-  if (
-    process.env.NODE_ENV === 'production' &&
-    !process.env.NEXT_PUBLIC_ADMIN_ADDRESS
-  ) {
-    console.error(
-      '\n⚠ NEXT_PUBLIC_ADMIN_ADDRESS is unset in a production env. ' +
-        'Any connected wallet will be treated as admin. Set it in your hosting ' +
-        'platform before deploying.\n',
+  // ── Production sanity warnings ─────────────────────────────────────────────
+  // Don't process.exit — this is a deploy-time misconfig, not an env-shape
+  // mismatch; ops should see it without a roll-back.
+  if (process.env.NODE_ENV === 'production') {
+    const missingInProd = manifest.vars.filter(
+      (v) => v.requiredIn.includes('production') && !process.env[v.name],
     );
-    // Don't process.exit — this is a deploy-time misconfig, not an env-shape
-    // mismatch; ops should see this with their full env also printed so they
-    // can fix it without a roll-back.
+    for (const v of missingInProd) {
+      console.error(`\n⚠ ${v.name} is unset in production. ${v.description}`);
+    }
   }
 
-  // Print all declared variables in dev so contributors can spot empty values
-  // at a glance during `npm run dev`.
+  // Print empty declared variables in dev so contributors can spot them.
   if (
     process.env.NODE_ENV !== 'production' &&
     process.env.NODE_ENV !== 'test'
   ) {
-    require('fs')
-      .readFileSync(
-        require('path').join(__dirname, '..', '.env.example'),
-        'utf8',
-      )
-      .split('\n')
-      .filter((line) => /^[A-Z0-9_]+=.*$/.test(line))
-      .forEach((line) => {
-        const key = line.split('=')[0];
-        if (!process.env[key]) {
-          // Silence vars known to be empty in local dev (CI placeholders).
-          if (['PORT', 'NODE_ENV'].includes(key)) return;
-          console.log(`  dev hint: ${key} is currently empty`);
-        }
-      });
+    for (const v of manifest.vars) {
+      if (!process.env[v.name] && v.name !== 'PORT') {
+        console.log(`  dev hint: ${v.name} is currently empty`);
+      }
+    }
   }
 }
 
+if (require.main === module) {
+  main();
+}
+
 module.exports = {
+  findEnvUsages,
   validateEnvVars,
   parseEnvExample,
   extractUsedEnvVars,

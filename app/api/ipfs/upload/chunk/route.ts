@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiError, ApiErrorCode } from '@/lib/apiErrors';
+import { privateJson } from '@/lib/httpResponses';
 import {
   writeChunk,
   CHUNK_SIZE_BYTES,
@@ -7,10 +8,11 @@ import {
   TotalSizeExceededError,
   UploadSessionNotFoundError,
   ChunkIndexOutOfRangeError,
+  isSessionOwner,
 } from '@/lib/chunkedUploadStore';
 import { createRequestLogger } from '@/lib/logger';
-import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { getSessionWallet } from '@/lib/session';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -35,7 +37,7 @@ export const runtime = 'nodejs';
  *    small multipart tolerance; smaller allowed for the final chunk) via
  *    writeChunk's own per-chunk + running-total checks.
  */
-const checkRateLimit = createRateLimiter(600, 60 * 1000);
+const RATE_LIMIT = { limit: 600, windowMs: 60 * 1000 };
 
 /**
  * Multipart framing overhead allowance when pre-checking Content-Length
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
   const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
   const key = wallet ? `wallet:${wallet}` : ip;
-  const rl = checkRateLimit(key);
+  const rl = await checkRateLimit(`ipfs-upload-chunk:${key}`, RATE_LIMIT);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
     return apiError(
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
       Number.isFinite(contentLength) &&
       contentLength > CHUNK_SIZE_BYTES + MULTIPART_OVERHEAD_TOLERANCE_BYTES
     ) {
-      return NextResponse.json(
+      return privateJson(
         { error: `Chunk exceeds the ${CHUNK_SIZE_BYTES}-byte limit` },
         { status: 413 },
       );
@@ -106,10 +108,19 @@ export async function POST(req: NextRequest) {
     return apiError(ApiErrorCode.INVALID_REQUEST, 400, 'chunk is required');
   }
 
+  if (!(await isSessionOwner(sessionId, getSessionWallet(req)))) {
+    // 404 rather than 403 so a foreign caller can't probe session existence.
+    return apiError(
+      ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
+      404,
+      'Upload session not found or expired',
+    );
+  }
+
   const chunkIndex = Number(chunkIndexRaw);
   // Cheap pre-check from the Blob's declared size before copying bytes.
   if (chunk.size > CHUNK_SIZE_BYTES + MULTIPART_OVERHEAD_TOLERANCE_BYTES) {
-    return NextResponse.json(
+    return privateJson(
       { error: `Chunk exceeds the ${CHUNK_SIZE_BYTES}-byte limit` },
       { status: 413 },
     );
@@ -118,13 +129,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const status = await writeChunk(sessionId, chunkIndex, buffer);
-    return NextResponse.json(status);
+    return privateJson(status);
   } catch (err) {
     if (err instanceof ChunkTooLargeError) {
-      return NextResponse.json({ error: err.message }, { status: 413 });
+      return privateJson({ error: err.message }, { status: 413 });
     }
     if (err instanceof TotalSizeExceededError) {
-      return NextResponse.json({ error: err.message }, { status: 413 });
+      return privateJson({ error: err.message }, { status: 413 });
     }
     // An out-of-range index is a validation error, not a missing session.
     if (err instanceof ChunkIndexOutOfRangeError) {

@@ -104,9 +104,9 @@ describe('POST /api/ipfs/upload/complete', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 for an unknown session', async () => {
+  it('returns 404 for an unknown session', async () => {
     const res = await POST(makeRequest({ sessionId: 'nope' }, 'ip-unknown'));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 
   it('returns 400 for an incomplete upload (missing chunks)', async () => {
