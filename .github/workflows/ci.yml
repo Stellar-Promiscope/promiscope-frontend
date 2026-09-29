@@ -112,6 +112,19 @@ jobs:
           fi
           echo "No tracked files under .data/ or data/."
 
+      - name: Guard against orphaned gitlinks
+        run: |
+          # Fail if any gitlink (mode 160000) exists without a .gitmodules entry.
+          # This prevents orphaned submodule references from accumulating in the index.
+          if git ls-files -s | awk '$1==160000' | grep -q .; then
+            if [ ! -f .gitmodules ]; then
+              echo "Error: gitlink(s) found without .gitmodules file"
+              git ls-files -s | awk '$1==160000'
+              exit 1
+            fi
+          fi
+          echo "No orphaned gitlinks found."
+
       # Contract guard for `docs/pr-bodies/`. Pinned in CI so adding a body
       # file with the wrong shape fails loudly on PR. The contract is
       # documented in `docs/pr-bodies/README.md` and reproduced in the
