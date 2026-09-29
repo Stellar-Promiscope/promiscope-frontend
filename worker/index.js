@@ -38,6 +38,7 @@ import { submitSignedTransaction, isNetworkError } from '../lib/sorobanRpc';
 self.importScripts('/sw-offline-queue.js');
 
 var ONBOARDING_SYNC_TAG = 'onboarding-sync';
+var APPROVAL_SYNC_TAG = 'validator-approval-sync';
 
 /** Tells every open tab about an onboarding-sync outcome. */
 async function notifyClients(message) {
@@ -154,6 +155,11 @@ async function processOnboardingSync() {
 self.addEventListener('sync', function (event) {
   if (event.tag === ONBOARDING_SYNC_TAG) {
     event.waitUntil(processOnboardingSync());
+  }
+  if (event.tag === APPROVAL_SYNC_TAG) {
+    // Wallet extensions are only available in a page. Wake open validator
+    // tabs so the explicit batch-sign action can present one confirmation.
+    event.waitUntil(notifyClients({ type: 'APPROVAL_SYNC_READY' }));
   }
 });
 

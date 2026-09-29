@@ -8,6 +8,7 @@ import {
   REMEMBER_ME_REFRESH_TTL_SEC,
 } from '@/lib/session';
 import { SessionStore } from '@/lib/sessionStore';
+import { withRouteTelemetry } from '@/lib/telemetry';
 
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.
@@ -29,7 +30,7 @@ export const runtime = 'nodejs';
  * server itself issued (HMAC-verified, see lib/session.ts), so it cannot be
  * used to mint a session for an address that never completed SEP-10.
  */
-export async function POST(req: NextRequest) {
+async function postRefresh(req: NextRequest) {
   const log = createRequestLogger(req);
   const refreshCookie = req.cookies.get('session_refresh');
 
@@ -99,3 +100,5 @@ export async function POST(req: NextRequest) {
   });
   return withRequestId(response, log.requestId);
 }
+
+export const POST = withRouteTelemetry(postRefresh, '/api/auth/refresh');

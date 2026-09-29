@@ -10,6 +10,8 @@
  * the client player can retry — there is no silent truncation.
  */
 
+import { withOutboundSpan } from '@/lib/telemetry';
+
 export const READ_AHEAD_BYTES = 65536;
 export const READ_AHEAD_TIMEOUT_MS = 10000;
 /** Minimum bytes to read during probe when data is available (proves stream health). */
@@ -172,9 +174,14 @@ export async function fetchMediaFromGateways(options: {
         headers.Range = rangeHeader;
       }
 
-      const upstream = await fetch(`${gateway}/${encodeURIComponent(cid)}`, {
-        headers,
-      });
+      const upstream = await withOutboundSpan(
+        'ipfs.gateway.fetch',
+        {
+          dependency: 'ipfs-gateway',
+          gateway_index: gateways.indexOf(gateway),
+        },
+        () => fetch(`${gateway}/${encodeURIComponent(cid)}`, { headers }),
+      );
       if (!upstream.ok || !upstream.body) {
         lastError = new Error(`Gateway ${gateway} returned ${upstream.status}`);
         continue;
@@ -183,10 +190,25 @@ export async function fetchMediaFromGateways(options: {
       const contentType =
         upstream.headers.get('content-type') ?? 'application/octet-stream';
 
-      const readAhead = await readAheadWithTimeout(
-        upstream.body,
-        READ_AHEAD_BYTES,
-        READ_AHEAD_TIMEOUT_MS,
+      const readAhead = await withOutboundSpan(
+        'ipfs.gateway.read-ahead',
+        {
+          dependency: 'ipfs-gateway',
+          operation: 'read-ahead',
+        },
+        async (span) => {
+          const startedAt = performance.now();
+          const result = await readAheadWithTimeout(
+            upstream.body!,
+            READ_AHEAD_BYTES,
+            READ_AHEAD_TIMEOUT_MS,
+          );
+          span.setAttribute(
+            'http.ttfb_ms',
+            Math.round(performance.now() - startedAt),
+          );
+          return result;
+        },
       );
 
       if (readAhead === 'error') {

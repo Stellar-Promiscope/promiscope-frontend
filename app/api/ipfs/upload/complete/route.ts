@@ -11,6 +11,7 @@ import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { getSessionWallet } from '@/lib/session';
 import { createRequestLogger } from '@/lib/logger';
+import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
 import {
   verifyUploadedDigest,
   UploadVerificationError,
@@ -43,7 +44,7 @@ const checkRateLimit = createRateLimiter(20, 60 * 1000);
 
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
-export async function POST(req: NextRequest) {
+async function postCompleteUpload(req: NextRequest) {
   const log = createRequestLogger(req);
   const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
@@ -119,7 +120,11 @@ export async function POST(req: NextRequest) {
 
   let cid: string;
   try {
-    cid = await pinStreamedFileToIPFS(assembly);
+    cid = await withOutboundSpan(
+      'pinata.pinFileToIPFS',
+      { dependency: 'pinata', operation: 'pinFileToIPFS' },
+      () => pinStreamedFileToIPFS(assembly),
+    );
   } catch (err) {
     // Deliberately don't clean up the session here: the assembled chunks are
     // still valid, so a client retrying /complete after a transient Pinata
@@ -144,7 +149,11 @@ export async function POST(req: NextRequest) {
       .__gatewayStreamForTests as
       | (() => AsyncIterable<Uint8Array | Buffer>)
       | undefined;
-    await verifyUploadedDigest(cid, assembly.sha256, gatewayOverride);
+    await withOutboundSpan(
+      'ipfs.upload.verify',
+      { dependency: 'ipfs-gateway', operation: 'verify-upload' },
+      () => verifyUploadedDigest(cid, assembly.sha256, gatewayOverride),
+    );
   } catch (err) {
     // Same reasoning as a Pinata failure above: the assembled chunks are
     // still valid (the content is unchanged), so preserve the session
@@ -235,3 +244,7 @@ export async function collectStreamedFileBytes(
   }
   return Buffer.concat(pieces);
 }
+export const POST = withRouteTelemetry(
+  postCompleteUpload,
+  '/api/ipfs/upload/complete',
+);

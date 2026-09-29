@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { createRequestLogger } from '@/lib/logger';
 import { getClientIp, checkRateLimit } from '@/lib/rateLimit';
+import { withOutboundSpan, withRouteTelemetry } from '@/lib/telemetry';
 
 // Search names longer than this are likely abuse or mistake; never forward them.
 const PLAYER_SEARCH_NAME_MAX = 100;
@@ -32,7 +33,7 @@ const backend = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-export async function GET(req: NextRequest) {
+async function getPlayerSearch(req: NextRequest) {
   const log = createRequestLogger(req);
   const ip = getClientIp(req);
 
@@ -59,7 +60,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await backend.get('/players/search', { params: { name } });
+    const res = await withOutboundSpan(
+      'backend.players.search',
+      { dependency: 'backend', operation: 'players.search' },
+      () => backend.get('/players/search', { params: { name } }),
+    );
     return NextResponse.json(res.data);
   } catch (e: any) {
     const status = e?.response?.status ?? 502;
@@ -70,3 +75,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to search players' }, { status });
   }
 }
+
+export const GET = withRouteTelemetry(getPlayerSearch, '/api/players/search');

@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useValidatorPendingQueue } from '@/hooks/useValidatorPendingQueue';
+import { useApprovalQueue } from '@/hooks/useApprovalQueue';
 import { useApprovedPlayers } from '@/hooks/useApprovedPlayers';
 import { useValidator } from '@/hooks/useValidator';
 import { useWallet } from '@/hooks/useWallet';
@@ -75,6 +76,7 @@ export default function PendingMilestoneQueue({
   const { players: approvedPlayers } = useApprovedPlayers(validatorAddress);
   const { approveMilestone } = useValidator(validatorAddress);
   const { signAndSubmit } = useWallet();
+  const approvalQueue = useApprovalQueue(validatorAddress);
   const isPaused = useIsPaused();
   const tContractStatus = useTranslations('contract_status');
 
@@ -92,6 +94,20 @@ export default function PendingMilestoneQueue({
     skipped: number;
   } | null>(null);
   const cancelBulkRef = useRef(false);
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator === 'undefined' || navigator.onLine,
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const previouslyApprovedIds = useMemo(
     () => new Set(approvedPlayers.map((p) => p.id)),
@@ -154,6 +170,28 @@ export default function PendingMilestoneQueue({
     if (!validatorAddress || isPaused || bulkRunning) return;
     const ids = visibleIds.filter((id) => selectedIds.has(id));
     if (ids.length === 0) return;
+
+    if (!isOnline) {
+      await approvalQueue.enqueueMany(
+        ids.flatMap((id) => {
+          const submission = submissions.find((item) => item.id === id);
+          return submission
+            ? [
+                {
+                  playerId: submission.playerId,
+                  milestone: submission.description,
+                },
+              ]
+            : [];
+        }),
+      );
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      return;
+    }
 
     cancelBulkRef.current = false;
     setStopRequested(false);
@@ -311,6 +349,90 @@ export default function PendingMilestoneQueue({
         </Select>
       </div>
 
+      {(approvalQueue.pending.length > 0 ||
+        approvalQueue.terminal.length > 0) && (
+        <section
+          aria-label="Offline approval queue"
+          className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-medium text-amber-200">
+                {approvalQueue.pending.length} approval
+                {approvalQueue.pending.length === 1 ? '' : 's'} ready to sign
+              </h3>
+              <p className="mt-1 text-xs text-amber-300/80">
+                Unsigned approvals are stored on this device. Review the batch
+                before opening your wallet.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={approvalQueue.flush}
+              disabled={
+                approvalQueue.pending.length === 0 ||
+                approvalQueue.flushing ||
+                !isOnline ||
+                isPaused
+              }
+            >
+              {approvalQueue.flushing
+                ? 'Signing queued approvals…'
+                : `Sign ${approvalQueue.pending.length} queued approval${approvalQueue.pending.length === 1 ? '' : 's'}`}
+            </Button>
+          </div>
+          {approvalQueue.flushError && (
+            <p role="alert" className="mt-3 text-sm text-red-300">
+              {approvalQueue.flushError}
+            </p>
+          )}
+          <ul className="mt-3 space-y-2">
+            {[...approvalQueue.pending, ...approvalQueue.terminal].map(
+              (intent) => (
+                <li
+                  key={intent.idempotencyKey}
+                  className="flex items-start justify-between gap-3 rounded-md border border-gray-700/80 px-3 py-2 text-xs"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-gray-200">
+                      {intent.playerId}: {intent.milestone}
+                    </span>
+                    <span
+                      className={`block mt-1 ${
+                        intent.status === 'confirmed'
+                          ? 'text-brand-green'
+                          : intent.status === 'invalid'
+                            ? 'text-red-300'
+                            : 'text-amber-300'
+                      }`}
+                    >
+                      {intent.errorReason ??
+                        (intent.status === 'confirmed'
+                          ? 'Confirmed on-chain'
+                          : intent.status === 'invalid'
+                            ? 'Approval is no longer valid'
+                            : 'Waiting for batch signing')}
+                    </span>
+                  </span>
+                  {(intent.status === 'confirmed' ||
+                    intent.status === 'invalid') && (
+                    <button
+                      type="button"
+                      className="shrink-0 text-gray-400 underline hover:text-white"
+                      onClick={() =>
+                        approvalQueue.dismiss(intent.idempotencyKey)
+                      }
+                    >
+                      Dismiss
+                    </button>
+                  )}
+                </li>
+              ),
+            )}
+          </ul>
+        </section>
+      )}
+
       {loading && (
         <div className="flex flex-col gap-3">
           {[1, 2, 3].map((n) => (
@@ -371,15 +493,17 @@ export default function PendingMilestoneQueue({
                 onClick={handleBulkApprove}
                 isLoading={bulkRunning}
                 disabled={
-                  selectedCount === 0 ||
-                  bulkRunning ||
-                  !validatorAddress
+                  selectedCount === 0 || bulkRunning || !validatorAddress
                 }
-                disabledReason={isPaused ? tContractStatus('paused_hint') : undefined}
+                disabledReason={
+                  isPaused ? tContractStatus('paused_hint') : undefined
+                }
               >
-                {bulkRunning
-                  ? `Approving ${selectedCount}…`
-                  : `Bulk Approve${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
+                {!isOnline
+                  ? `Queue offline${selectedCount > 0 ? ` (${selectedCount})` : ''}`
+                  : bulkRunning
+                    ? `Approving ${selectedCount}…`
+                    : `Bulk Approve${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
               </Button>
             </div>
           </div>

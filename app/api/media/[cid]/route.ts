@@ -4,6 +4,7 @@ import { createRequestLogger } from '@/lib/logger';
 import { fetchMediaFromGateways } from '@/lib/mediaProxyGateway';
 import { isValidCid } from '@/lib/cid';
 import { getClientIp } from '@/lib/clientIp';
+import { withRouteTelemetry } from '@/lib/telemetry';
 
 /**
  * GET /api/media/[cid]
@@ -112,7 +113,7 @@ function isAllowedReferrer(req: NextRequest): boolean {
   }
 }
 
-export async function GET(
+async function getMedia(
   req: NextRequest,
   { params }: { params: { cid: string } },
 ) {
@@ -199,3 +200,5 @@ export async function GET(
     return errorResponse('Media not available', 502);
   }
 }
+
+export const GET = withRouteTelemetry(getMedia, '/api/media/[cid]');
