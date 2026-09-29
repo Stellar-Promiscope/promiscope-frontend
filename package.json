@@ -11,6 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest --passWithNoTests --maxWorkers=2 --workerIdleMemoryLimit=512MB",
+    "test:integration": "jest --config=jest.integration.config.js --runInBand",
+    "test:integration:local": "docker compose -f docker-compose.test.yml up -d && ./scripts/deploy-test-contract.sh && npm run test:integration",
     "test:watch": "jest --watch",
     "test:coverage": "jest --passWithNoTests --maxWorkers=2 --workerIdleMemoryLimit=512MB --coverage",
     "typecheck": "tsc --noEmit",

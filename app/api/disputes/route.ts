@@ -169,6 +169,8 @@ export async function POST(req: NextRequest) {
     const dispute = MilestoneDisputeStore.getInstance().create({
       playerId: trimmedPlayerId,
       playerWallet: wallet,
+      validatorWallet:
+        typeof milestone.validator === 'string' ? milestone.validator : '',
       milestoneId: trimmedMilestoneId,
       milestoneDescription: milestone.description,
       reason: reason.trim(),

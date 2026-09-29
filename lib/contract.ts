@@ -461,10 +461,11 @@ export async function buildApproveMilestone(
  *
  * @throws {Error} If the RPC simulation request fails or returns an unexpected result.
  */
-export async function checkIsValidator(address: string) {
-  return simulateTx('is_validator', [
+export async function checkIsValidator(address: string): Promise<boolean> {
+  const result = await simulateTx('is_validator', [
     nativeToScVal(address, { type: 'address' }),
   ]);
+  return result === true;
 }
 
 /**

@@ -361,29 +361,82 @@ export interface NotificationPreferences {
 // ── Milestone Disputes ────────────────────────────────────────────────────────
 /**
  * Off-chain moderation record for a player-raised dispute over a milestone
- * decision (issue #562). `status` starts at 'pending' and is set by an
- * admin: 'upheld' closes the dispute with no on-chain effect; 'reversed'
- * closes it after the milestone was actually revoked on-chain via the
- * existing validator `revoke_milestone` flow (lib/contract.ts,
- * useValidator().revokeMilestone) — this record never triggers a contract
+ * decision (issue #562, extended in the evidence-exchange PR).
+ *
+ * Status lifecycle:
+ *   opened → pending  (dispute filed, validator notified)
+ *   pending → under_review  (validator responded)
+ *   pending → escalated   (response window elapsed, no response)
+ *   under_review / escalated → upheld | reversed  (admin decides)
+ *
+ * 'reversed' means the admin also submitted an on-chain revoke_milestone
+ * call (lib/contract.ts submitAndConfirmRevokeMilestone); the resulting
+ * tx hash is stored in `revokeTxHash`. This record never triggers a contract
  * call by itself, it only tracks the outcome.
  */
-export type MilestoneDisputeStatus = 'pending' | 'upheld' | 'reversed';
+export type MilestoneDisputeStatus =
+  | 'pending'
+  | 'under_review'
+  | 'escalated'
+  | 'upheld'
+  | 'reversed';
 
 export interface MilestoneDispute {
   id: number;
   playerId: string;
   playerWallet: string;
+  /** Stellar public key of the validator who approved the disputed milestone. */
+  validatorWallet: string;
   milestoneId: string;
   milestoneDescription: string;
   reason: string;
   status: MilestoneDisputeStatus;
-  createdAt: number; // Unix ms
-  decidedAt: number | null; // Unix ms
-  decidedBy: string | null; // admin wallet
+  createdAt: number;     // Unix ms
+  /** UTC deadline by which the validator must respond (Unix ms). */
+  responseDeadline: number;
+  decidedAt: number | null;  // Unix ms
+  decidedBy: string | null;  // admin wallet
   resolutionNote: string | null;
   /** Set only when status is 'reversed' — the on-chain revoke_milestone tx hash. */
   revokeTxHash: string | null;
+}
+
+/**
+ * Possible event types in a dispute's audit timeline.
+ *
+ * - opened          — the player filed the dispute
+ * - evidence_added  — player or validator attached an IPFS evidence item
+ * - validator_response — the validator submitted their textual response
+ * - admin_note      — the admin recorded an internal note mid-review
+ * - decided         — the admin made a final decision (upheld / reversed)
+ * - escalated       — the response window elapsed without a validator response
+ */
+export type DisputeEventType =
+  | 'opened'
+  | 'evidence_added'
+  | 'validator_response'
+  | 'admin_note'
+  | 'decided'
+  | 'escalated';
+
+export interface DisputeEvent {
+  id: number;
+  disputeId: number;
+  type: DisputeEventType;
+  /** Wallet address of the actor (player, validator, admin, or 'system'). */
+  actorWallet: string;
+  /** Optional free-text (reason, note, validator response body). */
+  body: string | null;
+  /** IPFS CID of an attached evidence file, if any. */
+  ipfsHash: string | null;
+  /** MIME type of the evidence (e.g. 'image/jpeg', 'video/mp4'). */
+  ipfsMimeType: string | null;
+  createdAt: number; // Unix ms
+}
+
+/** A dispute with its full ordered event timeline for the admin timeline view. */
+export interface DisputeWithEvents extends MilestoneDispute {
+  events: DisputeEvent[];
 }
 
 // â”€â”€ Recently Viewed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

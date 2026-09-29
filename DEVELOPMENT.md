@@ -528,3 +528,88 @@ curl -s http://localhost:3001/metrics | head -40
 - [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment notes (Vercel, analytics)
 - [e2e/README.md](e2e/README.md) — Playwright E2E suite and wallet-mocking harness
 - [docs/fraud-detection.md](docs/fraud-detection.md) — referral/pay-to-contact abuse heuristics and admin flag review
+
+---
+
+## Contract Integration Tests
+
+The unit tests under `__tests__/lib/contract.test.ts` mock the RPC layer and only verify that the frontend passes the correct arguments — they cannot catch **ABI drift** (wrong argument order, mismatched ScVal types such as `u32` vs `i128`, or renamed struct fields in `nativeToScVal(vitals)`).
+
+The **contract integration test suite** (`__tests__/integration/contract.int.test.ts`) runs the real `lib/contract.ts` build-helpers and simulate-helpers against a live Soroban quickstart node with the actual contract WASM deployed. ABI mismatches surface immediately as on-chain failures rather than at testnet runtime.
+
+### One-command local run
+
+```bash
+# Prerequisites: Docker, stellar CLI ≥ 22.0, Node 24
+npm run test:integration:local
+```
+
+This single command:
+1. Starts `docker-compose.test.yml` (stellar/quickstart local network on port 8000)
+2. Runs `scripts/deploy-test-contract.sh` — fetches the pinned WASM, verifies its SHA-256, deploys it, initializes it with a generated admin keypair, writes `.env.integration`
+3. Runs `npm run test:integration` (Jest with `jest.integration.config.js`)
+
+### Step-by-step (for debugging)
+
+```bash
+# Step 1: Start the local Soroban node
+docker compose -f docker-compose.test.yml up -d
+
+# Step 2: Deploy the contract (writes .env.integration)
+./scripts/deploy-test-contract.sh
+
+# Step 3: Run just the integration suite
+npm run test:integration
+```
+
+### What is tested
+
+| Suite | What it catches |
+|---|---|
+| `get_contract_version` | Pinned WASM version matches `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts` |
+| `register_player → getPlayer` | Full `PlayerVitals` struct encoding/decoding (field names, types, order) |
+| `add_validator → approve_milestone → getMilestoneHistory` | Validator lifecycle and `Milestone` struct shape |
+| `subscribe → payToContact` | Fee flow; subscription record shape |
+| `pause_contract → write fails with error 9` | `parseContractError` correctly maps error code 9 → "Contract is paused" |
+| ABI mismatch (deliberate) | Swapped argument order is rejected on-chain (shows the harness catches real drift) |
+
+### File layout
+
+| Path | Purpose |
+|---|---|
+| `docker-compose.test.yml` | stellar/quickstart local network (Soroban RPC on `:8000`) |
+| `scripts/deploy-test-contract.sh` | Fetch + verify WASM, deploy, init, write `.env.integration` |
+| `__tests__/integration/contract.int.test.ts` | Integration test suite |
+| `__tests__/integration/helpers.ts` | Keypair generation, funding, signing, polling utilities |
+| `__tests__/integration/globalSetup.ts` | Loads `.env.integration` before tests run |
+| `jest.integration.config.js` | Separate Jest project (excluded from `npm test`) |
+| `.env.integration` | **Generated, gitignored** — contains ephemeral contract ID + admin secret |
+| `.wasm-cache/` | **Gitignored** — cached WASM download, keyed by SHA-256 in CI |
+
+### Updating the pinned WASM
+
+When a new contract release ships:
+
+1. Update `WASM_URL` and `WASM_SHA256` in `scripts/deploy-test-contract.sh` **and** the matching `env:` block in `.github/workflows/contract-integration.yml`.
+2. If the contract's ABI changed, update the affected `build*` / `simulateTx` call shapes in `lib/contract.ts`.
+3. If `get_contract_version` returns a new value, bump `EXPECTED_CONTRACT_VERSION` in `lib/contract.ts` to match.
+4. Run `npm run test:integration:local` locally — the suite must be green before you open the PR.
+5. The CI job (`contract-integration`) re-runs on the PR and provides the final gate.
+
+> **Never commit `.env.integration`** — it contains an ephemeral Ed25519 secret key. It is gitignored and regenerated on every deploy.
+
+### CI job
+
+The `contract-integration` workflow (`.github/workflows/contract-integration.yml`) runs automatically on PRs that touch:
+
+- `lib/contract.ts`
+- `lib/stellar.ts`
+- `types/**`
+- `scripts/deploy-test-contract.sh`
+- `__tests__/integration/**`
+- `docker-compose.test.yml`
+- `jest.integration.config.js`
+
+It also runs on direct pushes to `main` that touch the same paths, and can be triggered manually from the GitHub Actions UI.
+
+The WASM download is cached by its SHA-256 so subsequent CI runs skip the download as long as the pin hasn't changed.

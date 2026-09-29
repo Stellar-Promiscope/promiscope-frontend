@@ -26,6 +26,10 @@ const customJestConfig = {
     // helpers in the same dir (e.g. setup-providers-helpers.tsx).
     // Update this regex if you add another non-test helper at __tests__/.
     '<rootDir>/__tests__/setup-providers[^/]*\\.tsx',
+    // Integration tests require a live Soroban node and a deployed contract.
+    // They are run via jest.integration.config.js (`npm run test:integration`),
+    // not as part of the default `npm test` unit suite.
+    '<rootDir>/__tests__/integration/',
   ],
   // Issue #108: enforce minimum coverage thresholds
   coverageThreshold: {

@@ -120,3 +120,11 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Contract integration test artifacts
+# .env.integration contains ephemeral admin secret keys — never commit it.
+.env.integration
+# WASM cache: cached by CI using the SHA-256 key; not source files.
+.wasm-cache/
+# Integration test output reports
+integration-test-results/

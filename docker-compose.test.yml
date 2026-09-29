@@ -1,0 +1,52 @@
+version: '3.9'
+
+# Contract integration test stack.
+#
+# Starts a real Soroban quickstart node (local network) instead of the
+# mock-rpc in docker-compose.yml.  The deploy-test-contract.sh script
+# deploys the pinned contract WASM into this node, exports
+# NEXT_PUBLIC_CONTRACT_ID, and the integration test suite runs against it.
+#
+# Usage (one command):
+#   docker compose -f docker-compose.test.yml up -d
+#   ./scripts/deploy-test-contract.sh
+#   npm run test:integration
+#
+# Or via the convenience target in package.json:
+#   npm run test:integration:local
+#
+# See DEVELOPMENT.md §"Contract Integration Tests" for full details.
+
+services:
+  stellar-quickstart:
+    # Pinned to a specific digest so the local ledger environment is
+    # reproducible across machines and CI runs.
+    # To update: pull stellar/quickstart, copy the new sha256 here, and
+    # re-run the integration suite to confirm nothing broke.
+    image: stellar/quickstart@sha256:4b0e1e3e6dcb0e2c9a0fb4bb4d5a1b86fcdc9e872fac54f1c1e6c0e73f452c27
+    ports:
+      - '8000:8000'
+    command: ['--local', '--enable-soroban-rpc']
+    environment:
+      # Expose the Soroban RPC and Horizon on the same port (quickstart
+      # multiplexes via path prefix: /soroban/rpc vs /horizon)
+      ENABLE_SOROBAN_RPC: 'true'
+    healthcheck:
+      # Wait for Soroban RPC to respond before considering the container healthy
+      test:
+        [
+          'CMD',
+          'curl',
+          '-sf',
+          'http://localhost:8000/soroban/rpc',
+          '-X',
+          'POST',
+          '-H',
+          'Content-Type: application/json',
+          '-d',
+          '{"jsonrpc":"2.0","id":1,"method":"getHealth","params":{}}',
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 30s

@@ -1,0 +1,169 @@
+name: Contract Integration
+
+# Runs on PRs that touch contract-facing files and on direct pushes to main.
+# Starts a real Soroban quickstart node, deploys the pinned contract WASM,
+# and runs the end-to-end integration test suite.
+#
+# Relationship to ci.yml:
+#   ci.yml  → unit tests (mocked RPC, fast, runs on every commit)
+#   this    → integration tests (real RPC, slower, path-filtered on PRs)
+
+on:
+  push:
+    branches: [main]
+    # Also run on main when any of the relevant files change (belt-and-
+    # suspenders — path filters only apply to pull_request, not push).
+    paths:
+      - 'lib/contract.ts'
+      - 'lib/stellar.ts'
+      - 'types/**'
+      - 'scripts/deploy-test-contract.sh'
+      - '__tests__/integration/**'
+      - 'docker-compose.test.yml'
+      - 'jest.integration.config.js'
+
+  pull_request:
+    branches: [main]
+    # Only run this (expensive) job when the PR touches something that
+    # could cause an ABI drift between the frontend and the contract.
+    paths:
+      - 'lib/contract.ts'
+      - 'lib/stellar.ts'
+      - 'types/**'
+      - 'scripts/deploy-test-contract.sh'
+      - '__tests__/integration/**'
+      - 'docker-compose.test.yml'
+      - 'jest.integration.config.js'
+
+  # Allow manual triggers from the Actions UI (useful for debugging)
+  workflow_dispatch:
+
+jobs:
+  contract-integration:
+    name: Contract integration tests
+    runs-on: ubuntu-latest
+
+    # Pin the WASM digest and version here so the CI environment is fully
+    # reproducible even if the script defaults change.
+    env:
+      # Must match WASM_URL + WASM_SHA256 in scripts/deploy-test-contract.sh
+      WASM_URL: 'https://github.com/scout-off/scout-off-contracts/releases/download/v1.0.0/scout_off_contracts.wasm'
+      WASM_SHA256: 'a3f8c2d1e4b5a6f7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1'
+      # Local quickstart uses its own passphrase (different from testnet)
+      NETWORK_PASSPHRASE: 'Standalone Network ; February 2017'
+      SOROBAN_RPC_URL: 'http://localhost:8000/soroban/rpc'
+      HORIZON_URL: 'http://localhost:8000'
+      # These are needed so lib/contract.ts compiles without errors;
+      # the actual values are overwritten after deploy-test-contract.sh runs.
+      NEXT_PUBLIC_CONTRACT_ID: 'placeholder-until-deploy'
+      NEXT_PUBLIC_SOROBAN_RPC: 'http://localhost:8000/soroban/rpc'
+      NEXT_PUBLIC_HORIZON_URL: 'http://localhost:8000'
+      NEXT_PUBLIC_NETWORK: 'local'
+      # Unused by the integration suite but needed by Next.js imports
+      NEXT_PUBLIC_IPFS_GATEWAY: 'https://gateway.pinata.cloud/ipfs'
+      NEXT_PUBLIC_API_URL: 'http://localhost:4000'
+      NEXT_PUBLIC_APP_URL: 'https://scoutoff.app'
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # ── 2. Node.js ──────────────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      # ── 3. Stellar CLI ───────────────────────────────────────────────────────
+      # Pin to a specific version so CLI flag changes don't silently break us.
+      - name: Install Stellar CLI
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+          source "$HOME/.cargo/env"
+          cargo install stellar-cli --version 22.0.1 --locked
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      # ── 4. Cache the contract WASM by its pinned SHA-256 ───────────────────
+      - name: Cache contract WASM
+        id: wasm-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .wasm-cache
+          # Key is the SHA-256 of the WASM so it only invalidates when the
+          # pinned release changes (not on every push).
+          key: contract-wasm-${{ env.WASM_SHA256 }}
+
+      # ── 5. Start Soroban quickstart ─────────────────────────────────────────
+      - name: Start Soroban quickstart (local network)
+        run: |
+          docker compose -f docker-compose.test.yml up -d
+          echo "Quickstart container started."
+
+      # ── 6. Deploy contract ───────────────────────────────────────────────────
+      - name: Deploy contract to quickstart
+        run: |
+          chmod +x scripts/deploy-test-contract.sh
+          ./scripts/deploy-test-contract.sh
+        # The script writes .env.integration with NEXT_PUBLIC_CONTRACT_ID
+        # and INT_ADMIN_SECRET.
+
+      # ── 7. Verify .env.integration was written ──────────────────────────────
+      - name: Show deployed contract ID
+        run: |
+          if [ ! -f .env.integration ]; then
+            echo "ERROR: .env.integration was not created by deploy-test-contract.sh"
+            exit 1
+          fi
+          echo "=== .env.integration ==="
+          # Mask secrets before printing
+          grep -v 'SECRET' .env.integration || true
+          echo "========================"
+          CONTRACT_ID=$(grep NEXT_PUBLIC_CONTRACT_ID .env.integration | cut -d= -f2)
+          echo "Contract ID: ${CONTRACT_ID}"
+
+      # ── 8. Source .env.integration into GITHUB_ENV ──────────────────────────
+      #
+      # Jest's globalSetup already reads .env.integration directly, but we also
+      # inject into GITHUB_ENV so subsequent steps (e.g. a future step that
+      # invokes stellar CLI for debugging) pick it up.
+      - name: Export integration env vars to GITHUB_ENV
+        run: |
+          while IFS= read -r line; do
+            # Skip comments and blank lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            # Mask any secret values (lines containing SECRET or SECRET_KEY)
+            if echo "$line" | grep -qi 'SECRET'; then
+              key=$(echo "$line" | cut -d= -f1)
+              val=$(echo "$line" | cut -d= -f2-)
+              echo "::add-mask::${val}"
+            fi
+            echo "$line" >> "$GITHUB_ENV"
+          done < .env.integration
+
+      # ── 9. Run the integration test suite ────────────────────────────────────
+      - name: Run contract integration tests
+        run: npm run test:integration
+        # Tests use TX_TIMEOUT_MS * 5 per suite; allow up to 10 min for the
+        # whole job before GitHub cancels it.
+        timeout-minutes: 10
+
+      # ── 10. Upload test results on failure ───────────────────────────────────
+      - name: Upload integration test report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: integration-test-report
+          path: |
+            integration-test-results/
+            .env.integration
+          retention-days: 7
+
+      # ── 11. Stop quickstart ──────────────────────────────────────────────────
+      - name: Stop quickstart
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v

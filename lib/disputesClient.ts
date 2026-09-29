@@ -1,5 +1,10 @@
 /** Client for app/api/disputes — same-origin, cookie-authenticated. */
-import type { MilestoneDispute, MilestoneDisputeStatus } from '@/types';
+import type {
+  MilestoneDispute,
+  MilestoneDisputeStatus,
+  DisputeWithEvents,
+  DisputeEvent,
+} from '@/types';
 import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 export interface CreateDisputeParams {
@@ -7,6 +12,12 @@ export interface CreateDisputeParams {
   milestoneId: string;
   milestoneDescription: string;
   reason: string;
+}
+
+export interface AddEvidenceParams {
+  ipfsHash: string;
+  ipfsMimeType: string;
+  body?: string;
 }
 
 export async function fetchMyDisputes(): Promise<MilestoneDispute[]> {
@@ -24,10 +35,19 @@ export async function fetchDisputeQueue(
   return res.json();
 }
 
-// createDispute/decideDispute deliberately use a bare `fetch`, not
-// `fetchWithRetry`: both are mutations with no idempotency key, so an
-// automatic retry after a lost response risks creating a duplicate dispute
-// or double-applying a decision.
+/** Fetch a single dispute with its full event timeline. */
+export async function fetchDispute(id: number): Promise<DisputeWithEvents> {
+  const res = await fetchWithRetry(`/api/disputes/${id}`);
+  if (res.status === 403) throw new Error('Forbidden');
+  if (res.status === 404) throw new Error('Dispute not found');
+  if (!res.ok) throw new Error('Failed to fetch dispute');
+  return res.json();
+}
+
+// Mutations deliberately use a bare `fetch`, not `fetchWithRetry`:
+// they are non-idempotent operations where automatic retries risk
+// duplicates or double-effects.
+
 export async function createDispute(
   params: CreateDisputeParams,
 ): Promise<MilestoneDispute> {
@@ -59,6 +79,23 @@ export async function decideDispute(
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(body?.error ?? 'Failed to decide dispute');
+  }
+  return res.json();
+}
+
+/** Attach evidence (IPFS CID + optional note) to a dispute. */
+export async function addEvidence(
+  id: number,
+  params: AddEvidenceParams,
+): Promise<DisputeEvent> {
+  const res = await fetch(`/api/disputes/${id}/evidence`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? 'Failed to add evidence');
   }
   return res.json();
 }
