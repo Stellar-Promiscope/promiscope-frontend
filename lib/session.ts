@@ -17,14 +17,47 @@ import { SessionStore } from './sessionStore';
 // that store, not just the token's signature, so revoking a `sid` rejects
 // its cookie on the very next request.
 
+/**
+ * Resolves a token lifetime, letting an environment variable override the
+ * built-in default — the same "env var wins" convention lib/sqliteDb.ts uses
+ * for `SESSIONS_DB_PATH` (see #1299).
+ *
+ * The override exists so a test harness can shrink a lifetime to seconds
+ * without waiting 20 real minutes for an access token to lapse
+ * (e2e/session-lifecycle.spec.ts drives the silent-refresh path with
+ * `ACCESS_TOKEN_TTL_SEC=10`). It is deliberately ignored in production:
+ * deployments must not be able to accidentally mint five-second or
+ * ten-year sessions from a stray env var, so `NODE_ENV=production` always
+ * gets the compiled-in default. Unset, non-numeric, zero and negative
+ * values likewise fall back to the default rather than failing closed at
+ * import time (a bad env var must not take the whole auth surface down).
+ */
+function resolveTtlSec(envVar: string, defaultSec: number): number {
+  if (process.env.NODE_ENV === 'production') return defaultSec;
+  const raw = process.env[envVar];
+  if (!raw) return defaultSec;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return defaultSec;
+  return Math.floor(parsed);
+}
+
 /** How long an access token (the `session` cookie) is valid for. */
-export const ACCESS_TOKEN_TTL_SEC = 20 * 60; // 20 minutes
+export const ACCESS_TOKEN_TTL_SEC = resolveTtlSec(
+  'ACCESS_TOKEN_TTL_SEC',
+  20 * 60, // 20 minutes
+);
 
 /** Refresh token lifetime for a normal (non "remember me") sign-in. */
-export const DEFAULT_REFRESH_TTL_SEC = 60 * 60 * 24; // 1 day
+export const DEFAULT_REFRESH_TTL_SEC = resolveTtlSec(
+  'DEFAULT_REFRESH_TTL_SEC',
+  60 * 60 * 24, // 1 day
+);
 
 /** Refresh token lifetime when the caller opted into "remember me". */
-export const REMEMBER_ME_REFRESH_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
+export const REMEMBER_ME_REFRESH_TTL_SEC = resolveTtlSec(
+  'REMEMBER_ME_REFRESH_TTL_SEC',
+  60 * 60 * 24 * 30, // 30 days
+);
 
 type SessionTokenType = 'access' | 'refresh';
 

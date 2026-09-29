@@ -30,6 +30,8 @@
     "analyze": "cross-env ANALYZE=true npm run build",
     "size": "size-limit",
     "size:ci": "size-limit --json",
+    "test:e2e": "playwright test",
+    "test:e2e:sessions": "cross-env ACCESS_TOKEN_TTL_SEC=10 playwright test e2e/session-lifecycle.spec.ts --workers=1",
     "test:visual": "playwright test --config=playwright.visual.config.ts",
     "test:visual:update": "playwright test --config=playwright.visual.config.ts --update-snapshots"
   },

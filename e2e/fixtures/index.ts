@@ -12,6 +12,19 @@ export const E2E_TEST_WALLET_SECRET =
   process.env.E2E_WALLET_SECRET ??
   'SBNYKPD5APY4SOASUVEICEPBSPWG6MJK5PMJKNOLES2PVZDLZ2ITUZWZ';
 
+/**
+ * Second deterministic, testnet-only keypair — same safety as
+ * `E2E_TEST_WALLET_SECRET` (holds no value, safe to commit). Specs that need
+ * two distinct wallet identities use it, most importantly as a *dedicated*
+ * account for the revocation scenarios in e2e/session-lifecycle.spec.ts:
+ * `SessionStore.revokeAllForWallet` is wallet-scoped, so revoking the test
+ * account's sessions in one spec must not knock out a session another spec
+ * is midway through (the suite otherwise shares one wallet).
+ */
+export const E2E_ALT_WALLET_SECRET =
+  process.env.E2E_ALT_WALLET_SECRET ??
+  'SCWOMSHI7P4S2RX2LBKPRAUW7CS55JNWGQBZBRJPGXON7XBANX7OI5SP';
+
 type Fixtures = {
   wallet: MockWallet;
 };

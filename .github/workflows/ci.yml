@@ -250,6 +250,55 @@ jobs:
       # block (see top of file) — no step-level env needed here either.
       - run: npm run build
 
+  e2e:
+    # Playwright suite (e2e/). Boots the Next.js dev server itself through
+    # playwright.config.ts's `webServer` block, so it needs no external
+    # services. Issue #1299: nothing ran this suite in CI, so every spec
+    # under e2e/ — including the SEP-10 session lifecycle ones — could rot
+    # without a single red check.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # CI's workflow-level `env:` block declares SEP10_SERVER_KEY,
+      # SEP10_HOME_DOMAIN and the NEXT_PUBLIC_* vars as empty placeholders
+      # for `npm run build`. playwright.config.ts's `envOr` helper treats a
+      # set-but-empty value as unset and boots the dev server with its own,
+      # so no step-level env is needed here.
+      - name: Playwright suite
+        run: npm run test:e2e
+
+      # The session-lifecycle spec is deterministic (localhost only — no
+      # testnet, no third-party calls), so it also runs with a 10-second
+      # access-token TTL to exercise a token that genuinely lapses, and with
+      # retries turned off: a spec that only passes on a second attempt is a
+      # broken spec rather than a flaky one, and this suite is where the
+      # session guarantees (rotate, revoke, no silent sign-out) are pinned.
+      - name: Session lifecycle specs (10s token TTL, no retries)
+        run: npm run test:e2e:sessions -- --retries=0
+
+      # Traces/screenshots of failures are the only way to debug a red E2E
+      # run after the fact — they're uploaded whether the specs passed or not.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: playwright-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
   build-storybook:
     runs-on: ubuntu-latest
     steps:

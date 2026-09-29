@@ -207,3 +207,107 @@ describe('getSessionWallet', () => {
     expect(getSessionWallet(req)).toBeNull();
   });
 });
+
+/**
+ * See #1299: the access/refresh lifetimes are env-overridable outside
+ * production so a test harness can shrink them (e2e/session-lifecycle.spec.ts
+ * runs the dev server with `ACCESS_TOKEN_TTL_SEC=10` to watch a token
+ * actually lapse), while a production deployment always gets the
+ * compiled-in defaults no matter what is in its environment.
+ *
+ * The constants are resolved once at import time, so each case re-imports
+ * lib/session after changing the environment rather than mutating a module
+ * it has already evaluated.
+ */
+describe('token TTL environment overrides', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const TTL_VARS = [
+    'ACCESS_TOKEN_TTL_SEC',
+    'DEFAULT_REFRESH_TTL_SEC',
+    'REMEMBER_ME_REFRESH_TTL_SEC',
+  ] as const;
+
+  /** Re-imports lib/session so its module-level TTL constants are recomputed. */
+  function loadSession(): typeof import('@/lib/session') {
+    let session!: typeof import('@/lib/session');
+    jest.isolateModules(() => {
+      session = require('@/lib/session');
+    });
+    return session;
+  }
+
+  beforeEach(() => {
+    jest.resetModules();
+    for (const name of TTL_VARS) delete process.env[name];
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    for (const name of TTL_VARS) delete process.env[name];
+    jest.resetModules();
+  });
+
+  it('defaults to the production lifetimes when nothing is overridden', () => {
+    const session = loadSession();
+    expect(session.ACCESS_TOKEN_TTL_SEC).toBe(20 * 60);
+    expect(session.DEFAULT_REFRESH_TTL_SEC).toBe(60 * 60 * 24);
+    expect(session.REMEMBER_ME_REFRESH_TTL_SEC).toBe(60 * 60 * 24 * 30);
+  });
+
+  it('honours ACCESS_TOKEN_TTL_SEC outside production (what the E2E suite relies on)', () => {
+    process.env.ACCESS_TOKEN_TTL_SEC = '10';
+    expect(loadSession().ACCESS_TOKEN_TTL_SEC).toBe(10);
+  });
+
+  it('honours the refresh-token lifetimes outside production', () => {
+    process.env.DEFAULT_REFRESH_TTL_SEC = '90';
+    process.env.REMEMBER_ME_REFRESH_TTL_SEC = '120';
+    const session = loadSession();
+    expect(session.DEFAULT_REFRESH_TTL_SEC).toBe(90);
+    expect(session.REMEMBER_ME_REFRESH_TTL_SEC).toBe(120);
+  });
+
+  it('floors a fractional override', () => {
+    process.env.ACCESS_TOKEN_TTL_SEC = '10.9';
+    expect(loadSession().ACCESS_TOKEN_TTL_SEC).toBe(10);
+  });
+
+  it.each([
+    ['an empty value', ''],
+    ['a non-numeric value', 'soon'],
+    ['zero', '0'],
+    ['a negative value', '-60'],
+    ['NaN', 'NaN'],
+    ['Infinity', 'Infinity'],
+  ])(
+    'falls back to the default for %s instead of breaking the auth surface',
+    (_label, value) => {
+      process.env.ACCESS_TOKEN_TTL_SEC = value;
+      expect(loadSession().ACCESS_TOKEN_TTL_SEC).toBe(20 * 60);
+    },
+  );
+
+  it('ignores overrides entirely in production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.ACCESS_TOKEN_TTL_SEC = '10';
+    process.env.DEFAULT_REFRESH_TTL_SEC = '90';
+    process.env.REMEMBER_ME_REFRESH_TTL_SEC = '120';
+
+    const session = loadSession();
+    expect(session.ACCESS_TOKEN_TTL_SEC).toBe(20 * 60);
+    expect(session.DEFAULT_REFRESH_TTL_SEC).toBe(60 * 60 * 24);
+    expect(session.REMEMBER_ME_REFRESH_TTL_SEC).toBe(60 * 60 * 24 * 30);
+  });
+
+  it('reports the override through a token it actually mints', () => {
+    process.env.ACCESS_TOKEN_TTL_SEC = '10';
+    const { createSessionToken, verifySessionToken } = loadSession();
+
+    const payload = verifySessionToken(
+      createSessionToken(PUBLIC_KEY, 'access', 10),
+      'access',
+    );
+    expect(payload).not.toBeNull();
+    expect(payload!.exp - payload!.iat).toBe(10);
+  });
+});
