@@ -28,6 +28,18 @@ INDEXER_API_URL_INTERNAL=http://indexer.internal:3001
 
 `INDEXER_API_URL_INTERNAL` is a server-only URL for the event indexer (`packages/indexer`). Browsers never call the indexer directly. They go through the same-origin proxy at `/api/indexer/*`, which forwards only the allow-listed query routes, rate-limits per IP and adds a short `Cache-Control` to public GETs. The indexer can therefore stay on a private network with no CORS configuration. `NEXT_PUBLIC_INDEXER_API_URL` is still read as a fallback but is deprecated.
 
+### Rate Limiting & Proxy Configuration
+
+```env
+TRUSTED_PROXY_COUNT=1
+```
+
+To extract client IP addresses accurately for rate limiting without allowing IP spoofing via `X-Forwarded-For`:
+
+- **Vercel**: `VERCEL` is automatically set in Vercel environments, preferring platform-provided IP sources (`req.ip` / `x-real-ip`).
+- **Docker / Self-Hosted behind Reverse Proxies**: Set `TRUSTED_PROXY_COUNT=N` to specify the number of trusted proxy hops (e.g. Nginx, ALB). `getClientIp()` extracts the right-most untrusted hop (`xff[xff.length - N]`), so leftmost client-supplied `X-Forwarded-For` header values cannot bypass rate limits.
+- **Direct Exposure**: Uses socket address if available, falling back to `'unknown'` with a single production warning if unresolvable.
+
 ## Notes
 
 - Do not include wallet addresses in any custom analytics events.

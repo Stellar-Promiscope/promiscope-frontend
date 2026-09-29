@@ -1,13 +1,4 @@
-import { NextRequest } from 'next/server';
-
-/** Real client IP from x-forwarded-for (preferred) or x-real-ip. */
-export function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  const realIp = req.headers.get('x-real-ip');
-  if (realIp) return realIp;
-  return 'unknown';
-}
+export { getClientIp } from './clientIp';
 
 interface RateEntry {
   count: number;

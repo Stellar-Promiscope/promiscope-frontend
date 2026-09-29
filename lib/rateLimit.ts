@@ -188,15 +188,4 @@ export async function checkRateLimit(
   return { limited: false };
 }
 
-/**
- * Extract the client's real IP from proxy headers. Shared by every route
- * that rate-limits per IP, so the extraction logic (and its precedence:
- * x-forwarded-for before x-real-ip) only lives in one place.
- */
-export function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  const realIp = req.headers.get('x-real-ip');
-  if (realIp) return realIp;
-  return 'unknown';
-}
+export { getClientIp } from './clientIp';

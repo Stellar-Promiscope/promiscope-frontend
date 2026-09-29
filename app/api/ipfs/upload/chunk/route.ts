@@ -6,6 +6,7 @@ import {
   TotalSizeExceededError,
 } from '@/lib/chunkedUploadStore';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { getSessionWallet } from '@/lib/session';
 
 export const runtime = 'nodejs';
 
@@ -41,8 +42,10 @@ const checkRateLimit = createRateLimiter(600, 60 * 1000);
 const MULTIPART_OVERHEAD_TOLERANCE_BYTES = 64 * 1024;
 
 export async function POST(req: NextRequest) {
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const key = wallet ? `wallet:${wallet}` : ip;
+  const rl = checkRateLimit(key);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
     return NextResponse.json(
@@ -118,7 +121,8 @@ export async function POST(req: NextRequest) {
     if (err instanceof TotalSizeExceededError) {
       return NextResponse.json({ error: err.message }, { status: 413 });
     }
-    const message = err instanceof Error ? err.message : 'Failed to write chunk';
+    const message =
+      err instanceof Error ? err.message : 'Failed to write chunk';
     const notFound = /not found or expired/i.test(message);
     return NextResponse.json(
       { error: message },

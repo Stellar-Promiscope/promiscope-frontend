@@ -9,6 +9,7 @@ import {
 } from '@/lib/streamingMultipart';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
+import { getSessionWallet } from '@/lib/session';
 import { createRequestLogger } from '@/lib/logger';
 import {
   verifyUploadedDigest,
@@ -44,8 +45,10 @@ const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
 export async function POST(req: NextRequest) {
   const log = createRequestLogger(req);
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const key = wallet ? `wallet:${wallet}` : ip;
+  const rl = checkRateLimit(key);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
     return NextResponse.json(

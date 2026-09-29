@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getSessionWallet } from '@/lib/session';
+import { getClientIp } from '@/lib/clientIp';
 import { privateJson } from '@/lib/httpResponses';
 
 // better-sqlite3 (via lib/session.ts's SessionStore lookup) is a native
@@ -25,9 +26,7 @@ export const runtime = 'nodejs';
  * bottleneck on legitimate session checks. When exceeded, responds with
  * 429 Too Many Requests and a Retry-After header.
  *
- * Real client IP is extracted from the x-forwarded-for header, same
- * convention as app/api/players/search/route.ts and
- * app/api/ipfs/upload/route.ts.
+ * Real client IP is extracted from the x-forwarded-for header using trusted proxy settings.
  */
 const RATE_LIMIT = 30;
 const WINDOW_MS = 10 * 1000;
@@ -35,32 +34,24 @@ const WINDOW_MS = 10 * 1000;
 type RateEntry = { count: number; firstSeen: number };
 const ipRateMap = new Map<string, RateEntry>();
 
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  const realIp = req.headers.get('x-real-ip');
-  if (realIp) return realIp;
-  return 'unknown';
-}
-
-function checkRateLimit(ip: string): {
+function checkRateLimit(key: string): {
   limited: boolean;
   retryAfterSec?: number;
 } {
   const now = Date.now();
-  const entry = ipRateMap.get(ip);
+  const entry = ipRateMap.get(key);
   if (!entry) {
-    ipRateMap.set(ip, { count: 1, firstSeen: now });
+    ipRateMap.set(key, { count: 1, firstSeen: now });
     return { limited: false };
   }
 
   if (now - entry.firstSeen > WINDOW_MS) {
-    ipRateMap.set(ip, { count: 1, firstSeen: now });
+    ipRateMap.set(key, { count: 1, firstSeen: now });
     return { limited: false };
   }
 
   entry.count += 1;
-  ipRateMap.set(ip, entry);
+  ipRateMap.set(key, entry);
 
   if (entry.count > RATE_LIMIT) {
     const retryAfterSec = Math.ceil(
@@ -73,19 +64,19 @@ function checkRateLimit(ip: string): {
 }
 
 export async function GET(req: NextRequest) {
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
+  const key = wallet ? `wallet:${wallet}` : ip;
 
-  const rl = checkRateLimit(ip);
+  const rl = checkRateLimit(key);
   if (rl.limited) {
-    console.warn(`[session rate limit] Too many requests from IP: ${ip}`);
+    console.warn(`[session rate limit] Too many requests from: ${key}`);
     const retryAfter = rl.retryAfterSec ?? Math.ceil(WINDOW_MS / 1000);
     return privateJson(
       { error: 'Too many requests. Please slow down.' },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } },
     );
   }
-
-  const wallet = getSessionWallet(req);
 
   if (!wallet) {
     return privateJson({ authenticated: false }, { status: 401 });

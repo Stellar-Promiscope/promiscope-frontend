@@ -26,8 +26,10 @@ const MIN_CHUNK_SIZE_BYTES = 64 * 1024;
 const MAX_CHUNKS = 5000;
 
 export async function POST(req: NextRequest) {
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
+  const key = wallet ? `wallet:${wallet}` : ip;
+  const rl = checkRateLimit(key);
   if (rl.limited) {
     const retryAfter = rl.retryAfterSec ?? 60;
     return privateJson(
@@ -116,7 +118,7 @@ export async function POST(req: NextRequest) {
     fileType,
     fileSize,
     totalChunks,
-    ownerWallet: getSessionWallet(req),
+    ownerWallet: wallet,
   });
   return privateJson({ sessionId }, { status: 201 });
 }

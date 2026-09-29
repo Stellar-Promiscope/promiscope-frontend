@@ -3,6 +3,7 @@ import axios from 'axios';
 import { sanitize } from '@/lib/sanitize';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { getSessionWallet } from '@/lib/session';
 import { createRequestLogger } from '@/lib/logger';
 import {
   verifyUploadedContent,
@@ -36,10 +37,12 @@ const ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
 
 export async function POST(req: NextRequest) {
   const log = createRequestLogger(req);
+  const wallet = getSessionWallet(req);
   const ip = getClientIp(req);
+  const key = wallet ? `ipfs-upload:wallet:${wallet}` : `ipfs-upload:${ip}`;
 
   // Rate limiting check
-  const rl = await checkRateLimit(`ipfs-upload:${ip}`, {
+  const rl = await checkRateLimit(key, {
     limit: RATE_LIMIT,
     windowMs: WINDOW_MS,
   });
