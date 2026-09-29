@@ -58,7 +58,7 @@ if (require.main === module) {
   const root = path.join(__dirname, '..');
   const { missing, used } = validateEnvVars(
     root,
-    path.join(root, '.env.example')
+    path.join(root, '.env.example'),
   );
 
   if (missing.length) {
@@ -66,7 +66,6 @@ if (require.main === module) {
     process.exit(1);
   }
   console.log(`✓ All ${used.size} env vars declared in .env.example`);
-}
 
   // ── Production-only sanity warnings (Issue #17) ─────────────────────────────
   //
@@ -91,9 +90,15 @@ if (require.main === module) {
 
   // Print all declared variables in dev so contributors can spot empty values
   // at a glance during `npm run dev`.
-  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'test'
+  ) {
     require('fs')
-      .readFileSync(require('path').join(__dirname, '..', '.env.example'), 'utf8')
+      .readFileSync(
+        require('path').join(__dirname, '..', '.env.example'),
+        'utf8',
+      )
       .split('\n')
       .filter((line) => /^[A-Z0-9_]+=.*$/.test(line))
       .forEach((line) => {

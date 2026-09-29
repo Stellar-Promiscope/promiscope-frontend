@@ -82,8 +82,6 @@ export async function PATCH(
   }
   const decidableStatuses = ['pending', 'under_review', 'escalated'];
   if (!decidableStatuses.includes(existing.status)) {
-    return NextResponse.json(
-  if (existing.status !== 'pending') {
     return privateJson(
       { error: 'Dispute has already been decided' },
       { status: 409 },
