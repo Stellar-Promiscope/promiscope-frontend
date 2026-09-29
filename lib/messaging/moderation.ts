@@ -1,5 +1,6 @@
 import chatApi from './chatApi';
 import { BLOCKED_USERS_KEY } from '@/lib/storageKeys';
+import { walletScopedKey } from '@/lib/activeWallet';
 
 /**
  * Report/block actions for direct messaging threads. Reports route to a
@@ -11,6 +12,12 @@ export interface BlockedUser {
   blockedAt: string;
 }
 
+/**
+ * Base key for the local block-list cache. Entries are stored per wallet as
+ * `scoutoff_blocked_users:<wallet>` so switching accounts never exposes (or
+ * appends to) another wallet's block list — see #1343.
+ */
+export { BLOCKED_USERS_KEY };
 export async function reportUser(
   threadId: string,
   counterpartId: string,
@@ -57,9 +64,10 @@ export async function fetchBlockedUsers(): Promise<BlockedUser[]> {
 }
 
 export function getBlockedUsers(): BlockedUser[] {
-  if (typeof window === 'undefined') return [];
+  const key = walletScopedKey(BLOCKED_USERS_KEY);
+  if (typeof window === 'undefined' || !key) return [];
   try {
-    return JSON.parse(window.localStorage.getItem(BLOCKED_USERS_KEY) ?? '[]');
+    return JSON.parse(window.localStorage.getItem(key) ?? '[]');
   } catch {
     return [];
   }
@@ -88,6 +96,7 @@ export async function isBlockedByCounterpart(
 }
 
 function persistBlockedUsers(blocked: BlockedUser[]): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));
+  const key = walletScopedKey(BLOCKED_USERS_KEY);
+  if (typeof window === 'undefined' || !key) return;
+  window.localStorage.setItem(key, JSON.stringify(blocked));
 }

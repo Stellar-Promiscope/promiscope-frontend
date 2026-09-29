@@ -50,26 +50,57 @@ process.env.NEXT_PUBLIC_SEP10_HOME_DOMAIN =
 // read.
 process.env.SESSION_SECRET = 'test-session-secret-do-not-use-in-production';
 
+const mockTranslatedNamespaces = [
+  'common',
+  'account',
+  'notifications',
+  'scout',
+  'stats',
+];
+
+// Namespaces translated after the flat stub below was written (#1340-#1342)
+// resolve against the real English messages, ICU plurals and rich text
+// included; anything else falls back to the stub / the raw key.
+function mockEnglishTranslator(namespace?: string) {
+  const root = namespace?.split('.')[0];
+  if (!root || !mockTranslatedNamespaces.includes(root)) return null;
+  const { createTranslator } = jest.requireActual('use-intl');
+  return createTranslator({
+    locale: 'en',
+    messages: jest.requireActual('./messages/en.json'),
+    namespace,
+    onError: () => {},
+    getMessageFallback: ({ key }: { key: string }) => key,
+  });
+}
+
 jest.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => {
-    const t: Record<string, string> = {
-      app_title: 'ScoutOff',
-      'nav.scout_dashboard': 'Scout Dashboard',
-      'nav.player_dashboard': 'Player Dashboard',
-      'common.loading': 'Loading...',
-      // wallet namespace
-      connect: 'Connect Wallet',
-      connecting: 'Connecting…',
-      disconnect: 'Disconnect Wallet',
-      selectProvider: 'Select Wallet',
-      selectProviderHint: 'Choose a Stellar wallet to connect with ScoutOff.',
-      install: 'Browser extension',
-      installMobile: 'Browser extension / mobile',
-      cancel: 'Cancel',
-      noWalletDetected:
-        'No wallet detected. Please install a Stellar wallet extension.',
+  useTranslations: (namespace?: string) => {
+    const english = mockEnglishTranslator(namespace);
+    const t = (key: string, values?: Record<string, unknown>) => {
+      const stub: Record<string, string> = {
+        app_title: 'ScoutOff',
+        'nav.scout_dashboard': 'Scout Dashboard',
+        'nav.player_dashboard': 'Player Dashboard',
+        'common.loading': 'Loading...',
+        // wallet namespace
+        connect: 'Connect Wallet',
+        connecting: 'Connecting…',
+        disconnect: 'Disconnect Wallet',
+        selectProvider: 'Select Wallet',
+        selectProviderHint: 'Choose a Stellar wallet to connect with ScoutOff.',
+        install: 'Browser extension',
+        installMobile: 'Browser extension / mobile',
+        cancel: 'Cancel',
+        noWalletDetected:
+          'No wallet detected. Please install a Stellar wallet extension.',
+      };
+      if (stub[key]) return stub[key];
+      return english ? english(key, values) : key;
     };
-    return t[key] ?? key;
+    t.rich = (key: string, values?: Record<string, unknown>) =>
+      english ? english.rich(key, values) : key;
+    return t;
   },
   useLocale: () => 'en',
   useMessages: () => ({}),

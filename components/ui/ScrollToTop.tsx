@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 export default function ScrollToTop() {
+  const t = useTranslations('common');
   const [isVisible, setIsVisible] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -45,7 +47,7 @@ export default function ScrollToTop() {
   return (
     <button
       onClick={scrollToTop}
-      aria-label="Scroll to top"
+      aria-label={t('scroll_to_top')}
       className="fixed bottom-6 right-6 bg-brand-green text-black p-3 rounded-full shadow-lg hover:opacity-90 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green z-50"
       style={{ scrollBehavior: prefersReducedMotion ? 'auto' : 'smooth' }}
     >

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
@@ -20,38 +21,26 @@ import { formatXlm } from '@/lib/formatXlm';
 import XlmFiatDisplay from '@/components/ui/XlmFiatDisplay';
 import { TIER_FEES_XLM } from '@/lib/feeSchedule';
 import type { SubscriptionTier } from '@/types';
+import { formatDate } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
 
+// Copy lives in messages/*.json under scout.subscribe.tiers.<tier>
+// (title, description, features.<featureKey>).
 const TIERS: Array<{
   tier: SubscriptionTier;
-  title: string;
   priceXlm: number;
-  description: string;
-  features: string[];
+  featureKeys: string[];
   recommended?: boolean;
 }> = [
   {
     tier: 'basic',
-    title: 'Basic',
     priceXlm: TIER_FEES_XLM.basic,
-    description:
-      'Get started with essential scout access and basic player contact capabilities.',
-    features: [
-      'Browse player profiles',
-      'Connect with verified prospects',
-      'Pay-to-contact for player details',
-    ],
+    featureKeys: ['browse', 'connect', 'pay_to_contact'],
   },
   {
     tier: 'pro',
-    title: 'Pro',
     priceXlm: TIER_FEES_XLM.pro,
-    description:
-      'Recommended for active scouts who want priority access and advanced scouting tools.',
-    features: [
-      'All Basic features',
-      'Priority player discovery',
-      'Faster access to contact details',
-    ],
+    featureKeys: ['all_basic', 'priority_discovery', 'faster_contact'],
     recommended: true,
   },
 ];
@@ -62,12 +51,8 @@ const TIER_ORDER: Record<SubscriptionTier, number> = {
   elite: 2,
 };
 
-function formatExpiry(timestamp: number) {
-  return new Date(timestamp * 1000).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+function formatExpiry(timestamp: number, locale: Locale) {
+  return formatDate(timestamp * 1000, locale);
 }
 
 function remainingDays(expiresAt: number): number {
@@ -89,6 +74,11 @@ function SubscribeContent() {
     error,
   } = useSubscription();
   const { show: showToast } = useToast();
+  const t = useTranslations('scout.subscribe');
+  const tCommon = useTranslations('common');
+  const locale = useLocale() as Locale;
+  const tierName = (tier: SubscriptionTier) => t(`tiers.${tier}.title`);
+  const expiry = (timestamp: number) => formatExpiry(timestamp, locale);
   const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [feePaid, setFeePaid] = useState<string | undefined>(undefined);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -111,43 +101,51 @@ function SubscribeContent() {
 
   const statusMessage = useMemo(() => {
     if (loading && !subscription) {
-      return 'Loading your current subscription...';
+      return t('status_loading');
     }
 
     if (!subscription) {
-      return 'No active subscription found.';
+      return t('status_none');
     }
 
     if (isExpired) {
-      return `Your ${subscription.tier.toUpperCase()} subscription expired on ${formatExpiry(subscription.expiresAt)}.`;
+      return t('status_expired', {
+        tier: tierName(subscription.tier).toUpperCase(),
+        date: expiry(subscription.expiresAt),
+      });
     }
 
-    return `Current subscription: ${subscription.tier.toUpperCase()} — active until ${formatExpiry(subscription.expiresAt)}.`;
-  }, [subscription, isExpired, loading]);
+    return t('status_active', {
+      tier: tierName(subscription.tier).toUpperCase(),
+      date: expiry(subscription.expiresAt),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t/locale drive tierName/expiry
+  }, [subscription, isExpired, loading, t, locale]);
 
   function getCtaLabel(
     planTier: SubscriptionTier,
     isProcessing: boolean,
   ): string {
     if (isProcessing) {
-      if (subscribeStatus === 'confirming') return 'Confirming on-chain…';
-      return 'Processing…';
+      if (subscribeStatus === 'confirming') return t('cta_confirming');
+      return t('cta_processing');
     }
 
     if (!subscription || isExpired) {
       // Expired: same tier = Renew, higher tier = Upgrade, no sub = Subscribe
       if (subscription && isExpired) {
-        if (planTier === subscription.tier) return 'Renew';
+        if (planTier === subscription.tier) return t('cta_renew');
         if (TIER_ORDER[planTier] > TIER_ORDER[subscription.tier])
-          return 'Upgrade';
+          return t('cta_upgrade');
       }
-      return 'Subscribe';
+      return t('cta_subscribe');
     }
 
     // Active subscription
-    if (planTier === subscription.tier) return 'Renew';
-    if (TIER_ORDER[planTier] > TIER_ORDER[subscription.tier]) return 'Upgrade';
-    return 'Subscribe';
+    if (planTier === subscription.tier) return t('cta_renew');
+    if (TIER_ORDER[planTier] > TIER_ORDER[subscription.tier])
+      return t('cta_upgrade');
+    return t('cta_subscribe');
   }
 
   async function handleSubscribe(tier: SubscriptionTier) {
@@ -187,7 +185,7 @@ function SubscribeContent() {
       }
       const plan = TIERS.find((p) => p.tier === tier);
       setFeePaid(plan ? formatXlm(plan.priceXlm) : undefined);
-      setSuccessMessage(`Subscribed to ${tier} successfully`);
+      setSuccessMessage(t('success', { tier: tierName(tier) }));
       setTxStatus('success');
       redirectTimer.current = window.setTimeout(() => {
         router.push('/scout');
@@ -210,30 +208,33 @@ function SubscribeContent() {
       {hasActiveSub && (
         <div
           role="status"
-          aria-label="Active subscription"
+          aria-label={t('active_banner_label')}
           className="rounded-xl border border-brand-green/40 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.10),_transparent)] px-5 py-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold uppercase text-black">
-              {subscription.tier}
+              {tierName(subscription.tier)}
             </span>
             <span className="text-sm text-gray-200">
-              Active until{' '}
-              <strong className="text-white">
-                {formatExpiry(subscription.expiresAt)}
-              </strong>
+              {t.rich('active_until', {
+                date: expiry(subscription.expiresAt),
+                strong: (chunks) => (
+                  <strong className="text-white">{chunks}</strong>
+                ),
+              })}
             </span>
           </div>
           <span className="text-sm text-emerald-400 font-medium">
-            {remainingDays(subscription.expiresAt)} days remaining
+            {t('days_remaining', {
+              count: remainingDays(subscription.expiresAt),
+            })}
           </span>
         </div>
       )}
 
       {referralCode && (
         <div className="rounded-xl border border-brand-green/40 bg-brand-green/10 px-5 py-3 text-sm text-brand-green">
-          You were referred by a colleague! Your referral will be credited
-          automatically when you subscribe.
+          {t('referral_notice')}
         </div>
       )}
 
@@ -241,12 +242,8 @@ function SubscribeContent() {
         <div className="bg-brand-card border border-gray-800 rounded-xl p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">
-                Scout Subscription
-              </h1>
-              <p className="text-sm text-gray-400 mt-1">
-                Upgrade your access and unlock better scouting capabilities.
-              </p>
+              <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
+              <p className="text-sm text-gray-400 mt-1">{t('subtitle')}</p>
             </div>
             <div className="rounded-2xl bg-gray-900 border border-gray-700 px-4 py-3 text-sm text-gray-200">
               {statusMessage}
@@ -289,23 +286,24 @@ function SubscribeContent() {
         >
           <div>
             <span className="text-xs uppercase tracking-widest text-brand-green font-semibold">
-              Active Subscription
+              {t('active_subscription')}
             </span>
             <p className="text-white font-semibold mt-0.5">
-              {subscription.tier.charAt(0).toUpperCase() +
-                subscription.tier.slice(1)}{' '}
-              Plan
+              {t('plan_name', { tier: tierName(subscription.tier) })}
             </p>
           </div>
           <div className="text-sm text-gray-300">
-            Expires{' '}
-            <span className="text-white font-medium">
-              {formatExpiry(subscription.expiresAt)}
-            </span>{' '}
+            {t.rich('expires', {
+              date: expiry(subscription.expiresAt),
+              strong: (chunks) => (
+                <span className="text-white font-medium">{chunks}</span>
+              ),
+            })}{' '}
             &middot;{' '}
             <span className="text-brand-green font-medium">
-              {remainingDays(subscription.expiresAt)} day
-              {remainingDays(subscription.expiresAt) !== 1 ? 's' : ''} remaining
+              {t('days_remaining', {
+                count: remainingDays(subscription.expiresAt),
+              })}
             </span>
           </div>
         </div>
@@ -317,18 +315,16 @@ function SubscribeContent() {
           <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-brand-card p-6 shadow-xl">
             <div className="mb-6">
               <h3 className="text-xl font-bold text-white">
-                Change Subscription Tier
+                {t('change_title')}
               </h3>
               <p className="mt-2 text-sm text-gray-300">
-                You are about to change your subscription from{' '}
-                <span className="font-semibold text-white">
-                  {subscription.tier.toUpperCase()}
-                </span>{' '}
-                to{' '}
-                <span className="font-semibold text-white">
-                  {warningTier.toUpperCase()}
-                </span>
-                .
+                {t.rich('change_description', {
+                  from: tierName(subscription.tier).toUpperCase(),
+                  to: tierName(warningTier).toUpperCase(),
+                  strong: (chunks) => (
+                    <span className="font-semibold text-white">{chunks}</span>
+                  ),
+                })}
               </p>
             </div>
 
@@ -350,20 +346,20 @@ function SubscribeContent() {
                 </svg>
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-amber-200">
-                    Important notice about your remaining time
+                    {t('notice_title')}
                   </p>
                   <p className="text-sm text-amber-100/80">
-                    Changing your subscription tier will start a new{' '}
-                    {warningTier.toUpperCase()} subscription period immediately.
-                    Your remaining {remainingDays(subscription.expiresAt)} day
-                    {remainingDays(subscription.expiresAt) !== 1 ? 's' : ''} on
-                    the current {subscription.tier.toUpperCase()} plan will not
-                    be carried over or prorated.
+                    {t('notice_body', {
+                      to: tierName(warningTier).toUpperCase(),
+                      from: tierName(subscription.tier).toUpperCase(),
+                      count: remainingDays(subscription.expiresAt),
+                    })}
                   </p>
                   <p className="text-sm text-amber-100/60 mt-2">
-                    The new {warningTier.toUpperCase()} subscription will be
-                    active immediately and will replace your current{' '}
-                    {subscription.tier.toUpperCase()} subscription.
+                    {t('notice_replace', {
+                      to: tierName(warningTier).toUpperCase(),
+                      from: tierName(subscription.tier).toUpperCase(),
+                    })}
                   </p>
                 </div>
               </div>
@@ -378,7 +374,7 @@ function SubscribeContent() {
                 }}
                 className="sm:w-auto"
               >
-                Cancel
+                {tCommon('cancel')}
               </Button>
               <Button
                 onClick={() => {
@@ -389,7 +385,7 @@ function SubscribeContent() {
                 className="sm:w-auto"
                 isLoading={loading && selectedTier === warningTier}
               >
-                Confirm Change
+                {t('confirm_change')}
               </Button>
             </div>
           </div>
@@ -417,7 +413,7 @@ function SubscribeContent() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm uppercase tracking-[0.2em] text-gray-400">
-                    {plan.title}
+                    {tierName(plan.tier)}
                   </p>
                   <div className="mt-3">
                     <XlmFiatDisplay xlmAmount={plan.priceXlm} />
@@ -426,27 +422,29 @@ function SubscribeContent() {
                 <div className="flex flex-col items-end gap-2">
                   {isActiveTier && (
                     <span className="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold uppercase text-black">
-                      Current Plan
+                      {t('current_plan')}
                     </span>
                   )}
                   {!isActiveTier && isRecommended && (
                     <span className="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold uppercase text-black">
-                      Recommended
+                      {t('recommended')}
                     </span>
                   )}
                 </div>
               </div>
 
-              <p className="mt-4 text-sm text-gray-300">{plan.description}</p>
+              <p className="mt-4 text-sm text-gray-300">
+                {t(`tiers.${plan.tier}.description`)}
+              </p>
 
               <ul className="mt-6 space-y-3">
-                {plan.features.map((feature) => (
+                {plan.featureKeys.map((featureKey) => (
                   <li
-                    key={feature}
+                    key={featureKey}
                     className="flex gap-3 text-sm text-gray-300"
                   >
                     <span className="mt-1 h-2.5 w-2.5 rounded-full bg-brand-green" />
-                    {feature}
+                    {t(`tiers.${plan.tier}.features.${featureKey}`)}
                   </li>
                 ))}
               </ul>
@@ -456,7 +454,7 @@ function SubscribeContent() {
                 isLoading={loading && isSelected}
                 onClick={() => handleSubscribe(plan.tier)}
                 disabled={loading || isConfirming || isPaused}
-                title={isPaused ? 'Contract is currently paused' : undefined}
+                title={isPaused ? t('paused') : undefined}
               >
                 {ctaLabel}
               </Button>

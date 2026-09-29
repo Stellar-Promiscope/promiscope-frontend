@@ -28,7 +28,23 @@
     "filter": "Filter",
     "sort": "Sort",
     "clear": "Clear",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "close_modal": "Close modal",
+    "close_notification": "Close notification",
+    "notification_label": "{variant} notification: {message}",
+    "dismiss": "Dismiss",
+    "loading_status": "Loading",
+    "copy_address": "Click to copy address",
+    "address_copied": "Address copied",
+    "share_via_qr": "Share via QR",
+    "view_on_stellar_expert": "View transaction on Stellar Expert",
+    "close_tour": "Close tour",
+    "previous_step": "Previous step",
+    "next_step": "Next step",
+    "scroll_to_top": "Scroll to top",
+    "cookie_consent": "Cookie consent",
+    "close_consent_banner": "Close consent banner",
+    "confirm": "Confirm"
   },
   "language": {
     "select_language": "Select Language",
@@ -632,6 +648,140 @@
     "rosterPage": {
       "title": "Academy Roster",
       "subtitle": "Manage signer wallets for the academy you own."
+    }
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Connect your wallet to view active sessions.",
+      "loading": "Loading sessions…",
+      "load_error": "Failed to load active sessions.",
+      "empty": "No active sessions found.",
+      "this_device": "This device",
+      "signed_in": "Signed in {time}",
+      "last_active": "Last active {time}",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "confirm_revoke_current": "This is your current session. Revoking it will log you out immediately. Continue?",
+      "revoked_logged_out": "Session revoked — you have been logged out",
+      "revoked": "Session revoked",
+      "revoke_error": "Failed to revoke session",
+      "device_label": "{browser} on {os}",
+      "unknown_device": "Unknown device",
+      "unknown_browser": "Unknown browser",
+      "unknown_os": "Unknown OS"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell_label": "{count, plural, =0 {Notifications} one {Notifications, # unread notification} other {Notifications, # unread notifications}}",
+    "mark_all_read": "Mark all as read",
+    "loading": "Loading…",
+    "empty": "No notifications yet.",
+    "preferences": {
+      "connect_prompt": "Connect your wallet to manage notification preferences.",
+      "loading": "Loading preferences…",
+      "saving": "Saving…",
+      "milestone_approvals_label": "Milestone approvals",
+      "milestone_approvals_description": "Notify me when a validator approves one of my milestones.",
+      "contact_unlocks_label": "Contact unlocks",
+      "contact_unlocks_description": "Notify me when I unlock a player’s contact details."
+    }
+  },
+  "stats": {
+    "title": "Player Stats",
+    "loading": "Loading player stats",
+    "goals": "Goals",
+    "assists": "Assists",
+    "appearances": "Appearances",
+    "clean_sheets": "Clean sheets"
+  },
+  "scout": {
+    "back_to_dashboard": "Back to Dashboard",
+    "watchlist": {
+      "title": "My Watchlist",
+      "empty_title": "Your watchlist is empty",
+      "empty_description": "Star players from search results or their profile to add them here."
+    },
+    "compare": {
+      "title": "Compare Players",
+      "select_prompt": "Select 2 to {max} players to compare.",
+      "load_error": "Failed to load players: {error}",
+      "no_players": "No players found.",
+      "partial_failure": "{count, plural, one {# player could not be loaded.} other {# players could not be loaded.}}",
+      "vitals": "Vitals",
+      "vitals_label": "{name} – Player vitals",
+      "age": "Age",
+      "position": "Position",
+      "region": "Region",
+      "nationality": "Nationality",
+      "stats": "Stats",
+      "stats_label": "{name} – Player stats",
+      "progress": "Progress",
+      "progress_label": "{name} – Progress level",
+      "milestones": "Milestones",
+      "milestones_label": "{name} – Milestones",
+      "milestone_count": "{count, plural, one {# milestone} other {# milestones}}"
+    },
+    "profile": {
+      "title": "Scout Profile",
+      "description": "Browse this scout's subscription details and recent activity.",
+      "not_found_title": "Scout not found",
+      "not_found_description": "The scout profile you are looking for does not exist.",
+      "meta_title": "Scout Profile | ScoutOff",
+      "meta_description": "Browse this scout's subscription details and recent activity on ScoutOff."
+    },
+    "subscribe": {
+      "title": "Scout Subscription",
+      "subtitle": "Upgrade your access and unlock better scouting capabilities.",
+      "status_loading": "Loading your current subscription...",
+      "status_none": "No active subscription found.",
+      "status_expired": "Your {tier} subscription expired on {date}.",
+      "status_active": "Current subscription: {tier} — active until {date}.",
+      "cta_confirming": "Confirming on-chain…",
+      "cta_processing": "Processing…",
+      "cta_renew": "Renew",
+      "cta_upgrade": "Upgrade",
+      "cta_subscribe": "Subscribe",
+      "success": "Subscribed to {tier} successfully",
+      "active_banner_label": "Active subscription",
+      "active_until": "Active until <strong>{date}</strong>",
+      "days_remaining": "{count, plural, one {# day remaining} other {# days remaining}}",
+      "referral_notice": "You were referred by a colleague! Your referral will be credited automatically when you subscribe.",
+      "active_subscription": "Active Subscription",
+      "plan_name": "{tier} Plan",
+      "expires": "Expires <strong>{date}</strong>",
+      "change_title": "Change Subscription Tier",
+      "change_description": "You are about to change your subscription from <strong>{from}</strong> to <strong>{to}</strong>.",
+      "notice_title": "Important notice about your remaining time",
+      "notice_body": "Changing your subscription tier will start a new {to} subscription period immediately. Your remaining {count, plural, one {# day} other {# days}} on the current {from} plan will not be carried over or prorated.",
+      "notice_replace": "The new {to} subscription will be active immediately and will replace your current {from} subscription.",
+      "confirm_change": "Confirm Change",
+      "current_plan": "Current Plan",
+      "recommended": "Recommended",
+      "paused": "Contract is currently paused",
+      "tiers": {
+        "basic": {
+          "title": "Basic",
+          "description": "Get started with essential scout access and basic player contact capabilities.",
+          "features": {
+            "browse": "Browse player profiles",
+            "connect": "Connect with verified prospects",
+            "pay_to_contact": "Pay-to-contact for player details"
+          }
+        },
+        "pro": {
+          "title": "Pro",
+          "description": "Recommended for active scouts who want priority access and advanced scouting tools.",
+          "features": {
+            "all_basic": "All Basic features",
+            "priority_discovery": "Priority player discovery",
+            "faster_contact": "Faster access to contact details"
+          }
+        },
+        "elite": {
+          "title": "Elite"
+        }
+      }
     }
   }
 }

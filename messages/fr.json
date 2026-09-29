@@ -28,7 +28,23 @@
     "filter": "Filtrer",
     "sort": "Trier",
     "clear": "Effacer",
-    "skipToContent": "Aller au contenu principal"
+    "skipToContent": "Aller au contenu principal",
+    "close_modal": "Fermer la fenêtre",
+    "close_notification": "Fermer la notification",
+    "notification_label": "Notification {variant} : {message}",
+    "dismiss": "Ignorer",
+    "loading_status": "Chargement",
+    "copy_address": "Cliquer pour copier l'adresse",
+    "address_copied": "Adresse copiée",
+    "share_via_qr": "Partager via QR",
+    "view_on_stellar_expert": "Voir la transaction sur Stellar Expert",
+    "close_tour": "Fermer la visite",
+    "previous_step": "Étape précédente",
+    "next_step": "Étape suivante",
+    "scroll_to_top": "Revenir en haut",
+    "cookie_consent": "Consentement aux cookies",
+    "close_consent_banner": "Fermer la bannière de consentement",
+    "confirm": "Confirmer"
   },
   "language": {
     "select_language": "Sélectionner la langue",
@@ -632,6 +648,140 @@
     "rosterPage": {
       "title": "Effectif de l’académie",
       "subtitle": "Gérez les portefeuilles signataires de l’académie dont vous êtes propriétaire."
+    }
+  },
+  "account": {
+    "sessions": {
+      "connect_prompt": "Connectez votre portefeuille pour voir les sessions actives.",
+      "loading": "Chargement des sessions…",
+      "load_error": "Échec du chargement des sessions actives.",
+      "empty": "Aucune session active trouvée.",
+      "this_device": "Cet appareil",
+      "signed_in": "Connecté {time}",
+      "last_active": "Dernière activité {time}",
+      "revoke": "Révoquer",
+      "revoking": "Révocation…",
+      "confirm_revoke_current": "Ceci est votre session actuelle. La révoquer vous déconnectera immédiatement. Continuer ?",
+      "revoked_logged_out": "Session révoquée — vous avez été déconnecté",
+      "revoked": "Session révoquée",
+      "revoke_error": "Échec de la révocation de la session",
+      "device_label": "{browser} sur {os}",
+      "unknown_device": "Appareil inconnu",
+      "unknown_browser": "Navigateur inconnu",
+      "unknown_os": "Système inconnu"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bell_label": "{count, plural, =0 {Notifications} one {Notifications, # notification non lue} other {Notifications, # notifications non lues}}",
+    "mark_all_read": "Tout marquer comme lu",
+    "loading": "Chargement…",
+    "empty": "Aucune notification pour le moment.",
+    "preferences": {
+      "connect_prompt": "Connectez votre portefeuille pour gérer vos préférences de notification.",
+      "loading": "Chargement des préférences…",
+      "saving": "Enregistrement…",
+      "milestone_approvals_label": "Validations de jalons",
+      "milestone_approvals_description": "M’avertir lorsqu’un validateur approuve l’un de mes jalons.",
+      "contact_unlocks_label": "Déblocages de contact",
+      "contact_unlocks_description": "M’avertir lorsque je débloque les coordonnées d’un joueur."
+    }
+  },
+  "stats": {
+    "title": "Statistiques du joueur",
+    "loading": "Chargement des statistiques du joueur",
+    "goals": "Buts",
+    "assists": "Passes décisives",
+    "appearances": "Matchs joués",
+    "clean_sheets": "Clean sheets"
+  },
+  "scout": {
+    "back_to_dashboard": "Retour au tableau de bord",
+    "watchlist": {
+      "title": "Ma liste de suivi",
+      "empty_title": "Votre liste de suivi est vide",
+      "empty_description": "Ajoutez des joueurs en les marquant d'une étoile dans les résultats de recherche ou sur leur profil."
+    },
+    "compare": {
+      "title": "Comparer des joueurs",
+      "select_prompt": "Sélectionnez 2 à {max} joueurs à comparer.",
+      "load_error": "Échec du chargement des joueurs : {error}",
+      "no_players": "Aucun joueur trouvé.",
+      "partial_failure": "{count, plural, one {# joueur n'a pas pu être chargé.} other {# joueurs n'ont pas pu être chargés.}}",
+      "vitals": "Profil",
+      "vitals_label": "{name} – Profil du joueur",
+      "age": "Âge",
+      "position": "Poste",
+      "region": "Région",
+      "nationality": "Nationalité",
+      "stats": "Statistiques",
+      "stats_label": "{name} – Statistiques du joueur",
+      "progress": "Progression",
+      "progress_label": "{name} – Niveau de progression",
+      "milestones": "Jalons",
+      "milestones_label": "{name} – Jalons",
+      "milestone_count": "{count, plural, one {# jalon} other {# jalons}}"
+    },
+    "profile": {
+      "title": "Profil du recruteur",
+      "description": "Consultez les détails d'abonnement et l'activité récente de ce recruteur.",
+      "not_found_title": "Recruteur introuvable",
+      "not_found_description": "Le profil de recruteur que vous recherchez n'existe pas.",
+      "meta_title": "Profil du recruteur | ScoutOff",
+      "meta_description": "Consultez les détails d'abonnement et l'activité récente de ce recruteur sur ScoutOff."
+    },
+    "subscribe": {
+      "title": "Abonnement recruteur",
+      "subtitle": "Améliorez votre accès et débloquez de meilleurs outils de recrutement.",
+      "status_loading": "Chargement de votre abonnement actuel...",
+      "status_none": "Aucun abonnement actif trouvé.",
+      "status_expired": "Votre abonnement {tier} a expiré le {date}.",
+      "status_active": "Abonnement actuel : {tier} — actif jusqu'au {date}.",
+      "cta_confirming": "Confirmation sur la chaîne…",
+      "cta_processing": "Traitement…",
+      "cta_renew": "Renouveler",
+      "cta_upgrade": "Passer au niveau supérieur",
+      "cta_subscribe": "S'abonner",
+      "success": "Abonnement {tier} souscrit avec succès",
+      "active_banner_label": "Abonnement actif",
+      "active_until": "Actif jusqu'au <strong>{date}</strong>",
+      "days_remaining": "{count, plural, one {# jour restant} other {# jours restants}}",
+      "referral_notice": "Vous avez été parrainé par un collègue ! Votre parrainage sera crédité automatiquement lors de votre abonnement.",
+      "active_subscription": "Abonnement actif",
+      "plan_name": "Formule {tier}",
+      "expires": "Expire le <strong>{date}</strong>",
+      "change_title": "Changer de formule",
+      "change_description": "Vous êtes sur le point de passer de la formule <strong>{from}</strong> à la formule <strong>{to}</strong>.",
+      "notice_title": "Avis important concernant votre temps restant",
+      "notice_body": "Changer de formule démarre immédiatement une nouvelle période d'abonnement {to}. {count, plural, one {Le # jour restant} other {Les # jours restants}} de la formule {from} actuelle ne seront ni reportés ni calculés au prorata.",
+      "notice_replace": "Le nouvel abonnement {to} sera actif immédiatement et remplacera votre abonnement {from} actuel.",
+      "confirm_change": "Confirmer le changement",
+      "current_plan": "Formule actuelle",
+      "recommended": "Recommandé",
+      "paused": "Le contrat est actuellement en pause",
+      "tiers": {
+        "basic": {
+          "title": "Basique",
+          "description": "Commencez avec l'accès essentiel de recruteur et les fonctions de contact de base.",
+          "features": {
+            "browse": "Parcourir les profils de joueurs",
+            "connect": "Entrer en contact avec des talents vérifiés",
+            "pay_to_contact": "Paiement pour obtenir les coordonnées des joueurs"
+          }
+        },
+        "pro": {
+          "title": "Pro",
+          "description": "Recommandé pour les recruteurs actifs qui veulent un accès prioritaire et des outils avancés.",
+          "features": {
+            "all_basic": "Toutes les fonctions Basique",
+            "priority_discovery": "Découverte prioritaire des joueurs",
+            "faster_contact": "Accès plus rapide aux coordonnées"
+          }
+        },
+        "elite": {
+          "title": "Élite"
+        }
+      }
     }
   }
 }

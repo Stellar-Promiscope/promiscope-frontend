@@ -83,7 +83,9 @@ describe('NotificationBell', () => {
     setup({ unreadCount: 3 });
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Notifications, 3 unread' }),
+      screen.getByRole('button', {
+        name: 'Notifications, 3 unread notifications',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -106,7 +108,9 @@ describe('NotificationBell', () => {
 
     const user = userEvent.setup({ delay: null });
     await user.click(
-      screen.getByRole('button', { name: 'Notifications, 2 unread' }),
+      screen.getByRole('button', {
+        name: 'Notifications, 2 unread notifications',
+      }),
     );
     await user.click(screen.getByRole('button', { name: 'Mark all as read' }));
 

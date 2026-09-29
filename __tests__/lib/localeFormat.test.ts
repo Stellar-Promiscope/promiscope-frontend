@@ -3,6 +3,7 @@ import {
   formatXlmAmount,
   formatDate,
   formatDateTime,
+  formatRelativeTime,
 } from '@/lib/localeFormat';
 
 describe('formatNumber', () => {
@@ -53,5 +54,20 @@ describe('formatDateTime', () => {
     const result = formatDateTime(new Date('2024-03-15T14:30:00Z'), 'sw');
     expect(typeof result).toBe('string');
     expect(result.length).toBeGreaterThan(0);
+  });
+});
+
+describe('formatRelativeTime', () => {
+  const now = Date.UTC(2026, 0, 1, 12, 0, 0);
+  it('picks the largest fitting unit, per locale', () => {
+    expect(formatRelativeTime(now - 5 * 60_000, 'en', now)).toBe(
+      '5 minutes ago',
+    );
+    expect(formatRelativeTime(now - 2 * 86_400_000, 'fr', now)).toBe(
+      'avant-hier',
+    );
+    expect(formatRelativeTime(now - 3 * 3_600_000, 'en', now)).toBe(
+      '3 hours ago',
+    );
   });
 });

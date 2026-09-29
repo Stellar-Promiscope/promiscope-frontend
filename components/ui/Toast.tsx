@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useTranslations } from 'next-intl';
 
 type ToastVariant = 'success' | 'error' | 'info' | 'warning';
 
@@ -55,18 +56,18 @@ const VARIANT_META: Record<
   success: {
     border: 'border-brand-green',
     iconClass: 'text-brand-green',
-    label: 'Success',
+    label: 'success',
   },
   error: {
     border: 'border-red-500',
     iconClass: 'text-red-500',
-    label: 'Error',
+    label: 'error',
   },
-  info: { border: 'border-sky-400', iconClass: 'text-sky-400', label: 'Info' },
+  info: { border: 'border-sky-400', iconClass: 'text-sky-400', label: 'info' },
   warning: {
     border: 'border-yellow-400',
     iconClass: 'text-yellow-400',
-    label: 'Warning',
+    label: 'warning',
   },
 };
 
@@ -79,6 +80,7 @@ function generateToastId() {
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations('common');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const toastTimers = useRef<Record<string, number>>({});
 
@@ -176,7 +178,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 }
                 aria-live={toast.variant === 'error' ? 'assertive' : 'polite'}
                 aria-atomic="true"
-                aria-label={`${meta.label} notification: ${toast.message}`}
+                aria-label={t('notification_label', {
+                  variant: t(meta.label),
+                  message: toast.message,
+                })}
                 className={`pointer-events-auto flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-800 border-l-4 bg-brand-card p-4 shadow-2xl ${meta.border}`}
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/5 dark:bg-white/5">
@@ -192,7 +197,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 </div>
                 <div className="flex-1 text-sm leading-6 text-gray-700 dark:text-gray-200">
                   <p className="font-semibold text-gray-900 dark:text-white">
-                    {meta.label}
+                    {t(meta.label)}
                   </p>
                   <p>{toast.message}</p>
                 </div>
@@ -211,7 +216,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => removeToast(toast.id)}
-                  aria-label="Close notification"
+                  aria-label={t('close_notification')}
                   className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 transition hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                 >
                   <span aria-hidden="true">×</span>

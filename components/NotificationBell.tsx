@@ -2,20 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useWallet } from '@/hooks/useWallet';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { Notification } from '@/types';
+import { formatRelativeTime } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
 
 const MAX_BADGE_COUNT = 9;
-
-function timeAgo(unixSeconds: number) {
-  const secs = Math.floor(Date.now() / 1000 - unixSeconds);
-  if (secs < 5) return 'just now';
-  if (secs < 60) return `${secs}s ago`;
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-  return `${Math.floor(secs / 86400)}d ago`;
-}
 
 function NotificationItem({
   notification,
@@ -24,6 +18,7 @@ function NotificationItem({
   notification: Notification;
   onRead: (id: number) => void;
 }) {
+  const locale = useLocale() as Locale;
   return (
     <li>
       <button
@@ -45,7 +40,7 @@ function NotificationItem({
             {notification.message}
           </span>
           <span className="text-[11px] text-gray-500">
-            {timeAgo(notification.createdAt)}
+            {formatRelativeTime(notification.createdAt * 1000, locale)}
           </span>
         </span>
       </button>
@@ -62,6 +57,7 @@ export default function NotificationBell() {
   const { notifications, unreadCount, loading, markRead, markAllRead } =
     useNotifications(isAuthenticated ? publicKey : null);
 
+  const t = useTranslations('notifications');
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -99,11 +95,7 @@ export default function NotificationBell() {
         className="relative p-2 rounded text-gray-300 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-green"
         aria-haspopup="true"
         aria-expanded={open}
-        aria-label={
-          unreadCount > 0
-            ? `Notifications, ${unreadCount} unread`
-            : 'Notifications'
-        }
+        aria-label={t('bell_label', { count: unreadCount })}
       >
         <Bell size={20} aria-hidden="true" />
         {unreadCount > 0 && (
@@ -119,12 +111,12 @@ export default function NotificationBell() {
       {open && (
         <div
           role="dialog"
-          aria-label="Notifications"
+          aria-label={t('title')}
           className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-brand-dark border border-gray-800 rounded-lg shadow-lg z-50 flex flex-col"
         >
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-800">
             <span className="text-sm font-semibold text-white">
-              Notifications
+              {t('title')}
             </span>
             {unreadCount > 0 && (
               <button
@@ -132,18 +124,18 @@ export default function NotificationBell() {
                 onClick={() => markAllRead()}
                 className="text-xs text-brand-green hover:text-green-400 transition"
               >
-                Mark all as read
+                {t('mark_all_read')}
               </button>
             )}
           </div>
 
           {loading && notifications.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-gray-500">
-              Loading…
+              {t('loading')}
             </p>
           ) : notifications.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-gray-500">
-              No notifications yet.
+              {t('empty')}
             </p>
           ) : (
             <ul className="divide-y divide-gray-800">

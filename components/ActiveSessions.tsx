@@ -1,14 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Laptop, ShieldCheck } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
 import type { ActiveSessionSummary } from '@/app/api/auth/sessions/route';
-
-function formatTimestamp(ms: number): string {
-  return new Date(ms).toLocaleString();
-}
+import { formatDateTime, formatRelativeTime } from '@/lib/localeFormat';
+import type { Locale } from '@/lib/locales';
 
 /**
  * "Active sessions" view (issue #1187) — every currently-active server-side
@@ -25,6 +24,8 @@ function formatTimestamp(ms: number): string {
 export default function ActiveSessions() {
   const { isAuthenticated, disconnect } = useWallet();
   const { show } = useToast();
+  const t = useTranslations('account.sessions');
+  const locale = useLocale() as Locale;
   const [sessions, setSessions] = useState<ActiveSessionSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -51,9 +52,7 @@ export default function ActiveSessions() {
 
   const handleRevoke = async (session: ActiveSessionSummary) => {
     if (session.isCurrent) {
-      const confirmed = window.confirm(
-        'This is your current session. Revoking it will log you out immediately. Continue?',
-      );
+      const confirmed = window.confirm(t('confirm_revoke_current'));
       if (!confirmed) return;
     }
 
@@ -67,7 +66,7 @@ export default function ActiveSessions() {
       if (session.isCurrent) {
         disconnect();
         show({
-          message: 'Session revoked — you have been logged out',
+          message: t('revoked_logged_out'),
           variant: 'success',
           duration: 6000,
         });
@@ -75,10 +74,10 @@ export default function ActiveSessions() {
       }
 
       setSessions((prev) => prev?.filter((s) => s.id !== session.id) ?? null);
-      show({ message: 'Session revoked', variant: 'success', duration: 5000 });
+      show({ message: t('revoked'), variant: 'success', duration: 5000 });
     } catch {
       show({
-        message: 'Failed to revoke session',
+        message: t('revoke_error'),
         variant: 'error',
         duration: 6000,
       });
@@ -87,24 +86,30 @@ export default function ActiveSessions() {
     }
   };
 
+  const deviceLabel = (session: ActiveSessionSummary): string => {
+    // Older API responses only carry the English deviceLabel.
+    if (session.device === undefined) return session.deviceLabel;
+    if (session.device === null) return t('unknown_device');
+    return t('device_label', {
+      browser: session.device.browser ?? t('unknown_browser'),
+      os: session.device.os ?? t('unknown_os'),
+    });
+  };
+
   if (!isAuthenticated) {
-    return (
-      <p className="mt-4 text-xs text-gray-500">
-        Connect your wallet to view active sessions.
-      </p>
-    );
+    return <p className="mt-4 text-xs text-gray-500">{t('connect_prompt')}</p>;
   }
 
   return (
     <div className="flex flex-col gap-3">
       {loading ? (
-        <p className="text-sm text-gray-400">Loading sessions…</p>
+        <p className="text-sm text-gray-400">{t('loading')}</p>
       ) : error ? (
         <p role="alert" className="text-sm text-red-400">
-          Failed to load active sessions.
+          {t('load_error')}
         </p>
       ) : !sessions || sessions.length === 0 ? (
-        <p className="text-sm text-gray-400">No active sessions found.</p>
+        <p className="text-sm text-gray-400">{t('empty')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {sessions.map((session) => (
@@ -119,20 +124,24 @@ export default function ActiveSessions() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-white">
-                      {session.deviceLabel}
+                      {deviceLabel(session)}
                     </span>
                     {session.isCurrent && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-brand-green/40 bg-brand-green/10 px-2 py-0.5 text-xs font-semibold text-brand-green">
                         <ShieldCheck size={11} aria-hidden="true" />
-                        This device
+                        {t('this_device')}
                       </span>
                     )}
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    Signed in {formatTimestamp(session.createdAt)}
+                    {t('signed_in', {
+                      time: formatDateTime(session.createdAt, locale),
+                    })}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Last active {formatTimestamp(session.lastSeenAt)}
+                    {t('last_active', {
+                      time: formatRelativeTime(session.lastSeenAt, locale),
+                    })}
                   </p>
                 </div>
               </div>
@@ -142,7 +151,7 @@ export default function ActiveSessions() {
                 disabled={revokingId === session.id}
                 className="shrink-0 self-start rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed sm:self-center"
               >
-                {revokingId === session.id ? 'Revoking…' : 'Revoke'}
+                {revokingId === session.id ? t('revoking') : t('revoke')}
               </button>
             </li>
           ))}

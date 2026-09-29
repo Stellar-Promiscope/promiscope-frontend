@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface TruncatedAddressProps {
   address: string;
@@ -13,6 +14,7 @@ export default function TruncatedAddress({
   copyable = true,
   className = '',
 }: TruncatedAddressProps) {
+  const t = useTranslations('common');
   const [copied, setCopied] = useState(false);
 
   if (!address) return null;
@@ -42,7 +44,7 @@ export default function TruncatedAddress({
     <button
       onClick={handleCopy}
       className={`inline-flex items-center gap-1 ${className}`}
-      title="Click to copy address"
+      title={copied ? t('address_copied') : t('copy_address')}
     >
       <span className="font-mono">{truncated}</span>
       {copied ? (

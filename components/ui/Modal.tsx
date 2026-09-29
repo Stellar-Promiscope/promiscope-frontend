@@ -8,6 +8,7 @@ import {
   useState,
   ReactNode,
 } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export interface ModalProps {
   title?: string;
   /** Optional element ID containing the dialog description. */
   ariaDescribedBy?: string;
+  /** Overrides the translated close-button label. */
+  closeLabel?: string;
 }
 
 /** CSS selector that matches all natively focusable elements. */
@@ -48,7 +51,9 @@ export default function Modal({
   children,
   title,
   ariaDescribedBy,
+  closeLabel,
 }: ModalProps) {
+  const t = useTranslations('common');
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   // Keep a stable ref to the element that triggered the modal so we can
@@ -166,7 +171,7 @@ export default function Modal({
       >
         <button
           type="button"
-          aria-label="Close modal"
+          aria-label={closeLabel ?? t('close_modal')}
           className="absolute top-3 right-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
           onClick={onClose}
         >
