@@ -47,6 +47,7 @@ export default function PlayerProfileClient({
   const {
     player,
     loading: playerLoading,
+    error: playerError,
     refetch,
   } = usePlayer(id ?? null, initialPlayer ?? undefined);
   const { unlock, loading: contacting } = usePayToContact(id ?? '');
