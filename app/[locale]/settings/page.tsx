@@ -15,6 +15,7 @@ import {
 import DataDeletionModal from '@/components/player/DataDeletionModal';
 import NotificationPreferencesPanel from '@/components/NotificationPreferencesPanel';
 import ActiveSessions from '@/components/ActiveSessions';
+import PushNotificationToggle from '@/components/PushNotificationToggle';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/components/ui/Toast';
 
@@ -145,6 +146,9 @@ export default function SettingsPage({
               </p>
               <div className="mt-4">
                 <NotificationPreferencesPanel />
+              </div>
+              <div className="mt-6 border-t border-gray-800 pt-4">
+                <PushNotificationToggle />
               </div>
             </div>
           </div>

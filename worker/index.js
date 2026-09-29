@@ -168,3 +168,64 @@ self.addEventListener('message', function (event) {
     event.waitUntil(processOnboardingSync().catch(function () {}));
   }
 });
+
+// ── Milestone-approval Web Push (issue #558) ───────────────────────────────
+// The backend sends a VAPID-signed push with a JSON payload shaped like
+// `{ type: 'milestone_approved', playerId, milestone, validatorName? }` to
+// subscriptions registered via components/PushNotificationToggle.tsx.
+// Permission is only ever requested from that explicit opt-in button.
+self.addEventListener('push', function (event) {
+  var data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+
+  var milestone = data.milestone || data.milestoneDescription || '';
+  var approver = data.validatorName ? ' by ' + data.validatorName : '';
+  var title = data.title || 'Milestone approved';
+  var body =
+    data.body ||
+    (milestone
+      ? '“' + milestone + '” was approved' + approver + '.'
+      : 'One of your milestones was approved' + approver + '.');
+  var url = data.url || (data.playerId ? '/player/' + data.playerId : '/');
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: body,
+      tag: 'milestone-' + (data.milestoneId || data.playerId || 'approved'),
+      icon: '/icons/icon-192x192.png',
+      data: { url: url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  var target = new URL(
+    (event.notification.data && event.notification.data.url) || '/',
+    self.location.origin,
+  ).href;
+
+  event.waitUntil(
+    (async function () {
+      var clients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+      for (var i = 0; i < clients.length; i++) {
+        var client = clients[i];
+        if (client.url === target && 'focus' in client) return client.focus();
+      }
+      for (var j = 0; j < clients.length; j++) {
+        if ('navigate' in clients[j]) {
+          await clients[j].navigate(target);
+          return clients[j].focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    })(),
+  );
+});

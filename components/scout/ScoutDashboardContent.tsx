@@ -31,6 +31,14 @@ import type { Player, PlayerFilter } from '@/types';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import VirtualizedPlayerGrid from '@/components/scout/VirtualizedPlayerGrid';
+import ExportContactsCsvButton from '@/components/scout/ExportContactsCsvButton';
+import Select from '@/components/ui/Select';
+import {
+  PLAYER_SORT_OPTIONS,
+  parsePlayerSort,
+  sortPlayers,
+  type PlayerSort,
+} from '@/lib/playerSort';
 import type { VirtualizedPlayerGridHandle } from '@/components/scout/VirtualizedPlayerGrid';
 
 const PAGE_SIZE = 12;
@@ -80,7 +88,7 @@ export default function ScoutDashboardContent() {
   );
 
   const {
-    players,
+    players: unsortedPlayers,
     loading,
     isRateLimited,
     retryAfterSec,
@@ -89,6 +97,25 @@ export default function ScoutDashboardContent() {
     refetch,
   } = useScout();
   const { subscription } = useSubscription();
+
+  // Issue #556: sort is kept in the `sort` query param so it survives a
+  // refresh or shared link; sorting happens client-side over loaded results.
+  const sort = parsePlayerSort(searchParams.get('sort'));
+  const players = useMemo(
+    () => sortPlayers(unsortedPlayers, sort),
+    [unsortedPlayers, sort],
+  );
+  const handleSortChange = useCallback(
+    (next: PlayerSort) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === 'default') params.delete('sort');
+      else params.set('sort', next);
+      params.delete('page');
+      const query = params.toString();
+      router.replace(query ? `?${query}` : '?', { scroll: false });
+    },
+    [router, searchParams],
+  );
   const watchlist = useWatchlist(publicKey ?? null);
   const savedSearches = useSavedSearches(publicKey ?? null);
   const recentlyViewed = useRecentlyViewed();
@@ -364,7 +391,10 @@ export default function ScoutDashboardContent() {
         onComplete={tour.completeTour}
       />
       <div className="flex flex-col gap-8">
-        <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-bold text-white">Scout Dashboard</h1>
+          <ExportContactsCsvButton scoutId={publicKey} />
+        </div>
 
         {subscription &&
           (() => {
@@ -699,6 +729,23 @@ export default function ScoutDashboardContent() {
             onSaveSearch={handleSaveSearch}
             disabled={remainingSec !== null}
           />
+          <div className="mt-4 sm:max-w-xs">
+            <Select
+              id="player-sort"
+              label="Sort by"
+              value={sort}
+              onChange={(e) =>
+                handleSortChange(parsePlayerSort(e.target.value))
+              }
+              data-testid="player-sort"
+            >
+              {PLAYER_SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
 
         {showCompareBar && (
