@@ -132,6 +132,7 @@ export function buildCsp(opts: CspOptions): string {
     // PWA service worker
     "worker-src 'self'",
     'report-uri /api/csp-report',
+    'report-to csp-endpoint',
   ];
 
   return directives.join('; ');
