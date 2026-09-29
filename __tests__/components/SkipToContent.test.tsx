@@ -2,6 +2,11 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import SkipToContent from '@/components/SkipToContent';
 
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string) =>
+    key === 'skipToContent' ? 'Skip to main content' : key,
+}));
+
 describe('SkipToContent', () => {
   it('is visually hidden by default and becomes visible on focus', () => {
     render(<SkipToContent />);

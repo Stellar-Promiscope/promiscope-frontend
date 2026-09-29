@@ -27,7 +27,8 @@
     "search": "Rechercher",
     "filter": "Filtrer",
     "sort": "Trier",
-    "clear": "Effacer"
+    "clear": "Effacer",
+    "skipToContent": "Aller au contenu principal"
   },
   "language": {
     "select_language": "Sélectionner la langue",
@@ -449,5 +450,8 @@
     "title": "ScoutOff — Recrutement footballistique décentralisé",
     "description": "Profils de joueurs infalsifiables, étapes vérifiables et connexions directes entre recruteurs et joueurs — propulsé par les contrats intelligents Stellar Soroban.",
     "og_image_alt": "ScoutOff — Recrutement footballistique décentralisé sur Stellar"
+  },
+  "offline": {
+    "bannerMessage": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles jusqu'au retour de la connexion."
   }
 }

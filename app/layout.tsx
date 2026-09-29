@@ -9,6 +9,8 @@ import ContractIncompatibleBanner from '@/components/ContractIncompatibleBanner'
 import ContractPausedBanner from '@/components/ContractPausedBanner';
 import ConfigWarningBanner from '@/components/ConfigWarningBanner';
 import ServiceWorkerUpdateBanner from '@/components/ServiceWorkerUpdateBanner';
+import OfflineBanner from '@/components/OfflineBanner';
+import SkipToContent from '@/components/SkipToContent';
 import SessionExpiryWarning from '@/components/SessionExpiryWarning';
 import CookieConsentGate from '@/components/ui/CookieConsentGate';
 import A11yDevAudit from '@/components/A11yDevAudit';
@@ -114,18 +116,14 @@ export default async function RootLayout({
       </head>
       <body>
         <A11yDevAudit />
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-brand-green focus:text-black focus:px-6 focus:py-3 focus:rounded-lg focus:font-semibold"
-        >
-          Skip to main content
-        </a>
         <ThemeProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
+            <SkipToContent />
             <WalletProvider>
               <ToastProvider>
                 <ConfigWarningBanner warnings={configWarnings} />
                 <ServiceWorkerUpdateBanner />
+                <OfflineBanner />
                 <Navbar />
                 <ContractIncompatibleBanner />
                 <ContractPausedBanner />

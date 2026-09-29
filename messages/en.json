@@ -27,7 +27,8 @@
     "search": "Search",
     "filter": "Filter",
     "sort": "Sort",
-    "clear": "Clear"
+    "clear": "Clear",
+    "skipToContent": "Skip to main content"
   },
   "language": {
     "select_language": "Select Language",
@@ -449,5 +450,8 @@
     "title": "ScoutOff — Decentralized Football Scouting",
     "description": "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
     "og_image_alt": "ScoutOff — Decentralized Football Scouting on Stellar"
+  },
+  "offline": {
+    "bannerMessage": "You're offline. Some features may be unavailable until your connection returns."
   }
 }
