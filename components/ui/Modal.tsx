@@ -15,6 +15,8 @@ export interface ModalProps {
   children: ReactNode;
   /** Optional title rendered at the top of the modal */
   title?: string;
+  /** Optional element ID containing the dialog description. */
+  ariaDescribedBy?: string;
 }
 
 /** CSS selector that matches all natively focusable elements. */
@@ -45,6 +47,7 @@ export default function Modal({
   onClose,
   children,
   title,
+  ariaDescribedBy,
 }: ModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -154,6 +157,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
+        aria-describedby={ariaDescribedBy}
         // tabIndex="-1" lets the container receive programmatic focus when
         // no focusable children are present.
         tabIndex={-1}

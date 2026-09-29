@@ -27,6 +27,7 @@ import TransactionStatus from '@/components/ui/TransactionStatus';
 import type { TxStatus } from '@/components/ui/TransactionStatus';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import { useToast } from '@/components/ui/Toast';
+import { ARCHIVED_ENTRY_MESSAGE } from '@/lib/errors';
 import type { Player } from '@/types';
 
 /**
@@ -170,6 +171,7 @@ export default function PlayerProfileClient({
     try {
       const {
         generatePlayerCvPdf,
+        requestCvVerification,
         downloadPlayerCvPdf,
         CV_EXPORT_LARGE_MILESTONE_WARNING_THRESHOLD,
       } = await import('@/lib/cvExport');
@@ -181,7 +183,15 @@ export default function PlayerProfileClient({
           variant: 'info',
         });
       }
-      const bytes = await generatePlayerCvPdf(player, player.milestones);
+      const verification = await requestCvVerification(
+        player,
+        player.milestones,
+      );
+      const bytes = await generatePlayerCvPdf(
+        player,
+        player.milestones,
+        verification,
+      );
       downloadPlayerCvPdf(bytes, player.vitals.name);
       setCvExportStatus('idle');
     } catch {
@@ -195,6 +205,13 @@ export default function PlayerProfileClient({
 
   if (playerLoading) {
     return <PlayerProfileSkeleton showContactButton={!!publicKey} />;
+  }
+  if (playerError === ARCHIVED_ENTRY_MESSAGE) {
+    return (
+      <p className="mx-auto mt-20 max-w-xl px-6 text-center text-yellow-300">
+        {ARCHIVED_ENTRY_MESSAGE}
+      </p>
+    );
   }
   if (!player)
     return <p className="text-center text-gray-400 mt-20">Player not found.</p>;
@@ -376,6 +393,7 @@ export default function PlayerProfileClient({
           <button
             onClick={() => setConfirmOpen(true)}
             disabled={contacting}
+            aria-label={`Pay ${displayFee} XLM to contact ${player.vitals.name}`}
             className="bg-brand-green text-black font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
           >
             {contacting ? (
@@ -405,7 +423,8 @@ export default function PlayerProfileClient({
             onCancel={() => setConfirmOpen(false)}
             title="Contact Player"
             message={confirmMessage}
-            confirmLabel="Confirm"
+            confirmLabel={`Pay ${displayFee} XLM to contact`}
+            cancelLabel="Cancel"
             loading={feeCheckStatus === 'checking' || contacting}
           />
           <ContactModal

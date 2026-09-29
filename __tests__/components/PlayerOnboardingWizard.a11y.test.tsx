@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import PlayerOnboardingWizard from '@/components/player/PlayerOnboardingWizard';
@@ -116,6 +117,15 @@ describe('PlayerOnboardingWizard – accessibility', () => {
   });
 
   describe('field-level error ARIA linkage', () => {
+    it('moves focus to the first invalid field after validation', async () => {
+      const user = userEvent.setup();
+      renderWizard();
+
+      await user.click(screen.getByRole('button', { name: /continue/i }));
+
+      expect(screen.getByLabelText(/name \*/i)).toHaveFocus();
+    });
+
     it('sets aria-invalid on name input when name is missing', () => {
       renderWizard();
       fireEvent.click(screen.getByRole('button', { name: /continue/i }));
@@ -199,6 +209,24 @@ describe('PlayerOnboardingWizard – accessibility', () => {
         'aria-invalid',
       );
     });
+  });
+
+  it('moves focus to the new step heading and announces the step number', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+
+    await user.type(screen.getByLabelText(/name \*/i), 'Alice');
+    await user.type(screen.getByLabelText(/age \*/i), '22');
+    await user.type(screen.getByLabelText(/nationality \*/i), 'Kenyan');
+    const [regionSelect, positionSelect] = screen.getAllByRole('combobox');
+    await user.selectOptions(regionSelect, 'nigeria');
+    await user.selectOptions(positionSelect, 'ST');
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(
+      screen.getByRole('heading', { name: /highlight reel/i }),
+    ).toHaveFocus();
+    expect(screen.getByRole('status')).toHaveTextContent('Step 2 of 3');
   });
 
   describe('form-level validation summary', () => {

@@ -10,6 +10,9 @@
     "seed:players": "npm run build && node dist/scripts/seedPlayers.js",
     "test": "cd ../.. && npx jest packages/indexer"
   },
+  "dependencies": {
+    "@scoutoff/contract-events": "0.1.0"
+  },
   "devDependencies": {
     "typescript": "^6.0.3",
     "@types/node": "^20.14.2"

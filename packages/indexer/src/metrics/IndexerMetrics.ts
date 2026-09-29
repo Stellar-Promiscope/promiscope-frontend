@@ -11,15 +11,9 @@
  *  - Fixed-size sliding window for rate calculations to bound memory growth.
  */
 
-export type EventType =
-  | 'player_registered'
-  | 'profile_updated'
-  | 'milestone_approved'
-  | 'milestone_revoked'
-  | 'scout_subscribed'
-  | 'player_contacted'
-  | 'trial_offer_logged'
-  | 'fees_withdrawn';
+import type { EventType } from '@scoutoff/contract-events';
+
+export type { EventType } from '@scoutoff/contract-events';
 
 export interface MetricSnapshot {
   // Counters
@@ -29,6 +23,7 @@ export interface MetricSnapshot {
   totalRetries: number;
   totalBytesIngested: number;
   eventCounts: Record<EventType, number>;
+  unknownEvents: number;
 
   // Gauges
   lastProcessedAt: number | null; // Unix ms
@@ -128,7 +123,9 @@ export class IndexerMetrics {
     player_contacted: 0,
     trial_offer_logged: 0,
     fees_withdrawn: 0,
+    unknown: 0,
   };
+  private _unknownEvents = 0;
 
   // Gauges
   private _lastProcessedAt: number | null = null;
@@ -184,6 +181,7 @@ export class IndexerMetrics {
     this._totalSuccesses++;
     this._totalBytesIngested += bytes;
     this._eventCounts[type]++;
+    if (type === 'unknown') this._unknownEvents++;
     this._lastProcessedAt = ts;
     this._consecutiveErrors = 0;
     this._isHealthy = true;
@@ -297,6 +295,7 @@ export class IndexerMetrics {
       totalRetries: this._totalRetries,
       totalBytesIngested: this._totalBytesIngested,
       eventCounts: { ...this._eventCounts },
+      unknownEvents: this._unknownEvents,
       lastProcessedAt: this._lastProcessedAt,
       consecutiveErrors: this._consecutiveErrors,
       isHealthy: this._isHealthy,

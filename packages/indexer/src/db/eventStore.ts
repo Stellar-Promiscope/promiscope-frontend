@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS events (
   scout TEXT,
   validator TEXT,
   ledger INTEGER NOT NULL,
+  contract_version INTEGER NOT NULL DEFAULT 1,
   timestamp INTEGER NOT NULL,
   data TEXT NOT NULL,
   event_id TEXT,
@@ -125,6 +126,7 @@ export interface EventRecord {
   scout: string | null;
   validator: string | null;
   ledger: number;
+  contractVersion: number;
   timestamp: number;
   data: Record<string, unknown>;
   /** The content-derived id `insertEvent` deduplicates on; null for rows written before this column existed. */
@@ -268,6 +270,7 @@ interface EventRow {
   scout: string | null;
   validator: string | null;
   ledger: number;
+  contract_version: number;
   timestamp: number;
   data: string;
   event_id: string | null;
@@ -281,6 +284,7 @@ function rowToRecord(row: EventRow): EventRecord {
     scout: row.scout,
     validator: row.validator,
     ledger: row.ledger,
+    contractVersion: row.contract_version,
     timestamp: row.timestamp,
     data: JSON.parse(row.data),
     eventId: row.event_id,
@@ -400,6 +404,7 @@ export class EventStore {
     }
     this.db.exec(SCHEMA);
     this.migrateEventIdColumn();
+    this.migrateContractVersionColumn();
     this.db.exec(UNIQUE_EVENT_ID_INDEX);
     this.db.exec(VALIDATOR_TIMESTAMP_INDEX);
     this.db.exec(PLAYERS_SCHEMA);
@@ -418,6 +423,17 @@ export class EventStore {
     const hasEventId = columns.some((c) => c.name === 'event_id');
     if (!hasEventId) {
       this.db.exec('ALTER TABLE events ADD COLUMN event_id TEXT');
+    }
+  }
+
+  private migrateContractVersionColumn(): void {
+    const columns = this.db.prepare('PRAGMA table_info(events)').all() as {
+      name: string;
+    }[];
+    if (!columns.some((column) => column.name === 'contract_version')) {
+      this.db.exec(
+        'ALTER TABLE events ADD COLUMN contract_version INTEGER NOT NULL DEFAULT 1',
+      );
     }
   }
 
@@ -470,8 +486,8 @@ export class EventStore {
     const inserted = this.db.transaction(() => {
       const result = this.db
         .prepare(
-          `INSERT OR IGNORE INTO events (event_type, player_id, scout, validator, ledger, timestamp, data, event_id, inserted_at)
-           VALUES (@event_type, @player_id, @scout, @validator, @ledger, @timestamp, @data, @event_id, @inserted_at)`,
+          `INSERT OR IGNORE INTO events (event_type, player_id, scout, validator, ledger, contract_version, timestamp, data, event_id, inserted_at)
+           VALUES (@event_type, @player_id, @scout, @validator, @ledger, @contract_version, @timestamp, @data, @event_id, @inserted_at)`,
         )
         .run({
           event_type: decoded.type,
@@ -479,6 +495,7 @@ export class EventStore {
           scout: fieldAsString(decoded.data, 'scout'),
           validator: fieldAsString(decoded.data, 'validator'),
           ledger: decoded.ledger,
+          contract_version: decoded.contractVersion,
           timestamp: decoded.timestamp,
           data: JSON.stringify(decoded.data),
           event_id: decoded.eventId,
@@ -488,7 +505,6 @@ export class EventStore {
       if (wrote) this.applyProjection(decoded);
       return wrote;
     })();
-
     if (inserted && decoded.type === 'milestone_approved') {
       // A new approval can change any in-flight approval-counts result, so
       // drop the cache rather than serve a stale rollup until the TTL

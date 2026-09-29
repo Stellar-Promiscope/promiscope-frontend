@@ -32,6 +32,7 @@ const ICONS: Record<EventType, JSX.Element> = {
   player_contacted: <span>📇</span>,
   trial_offer_logged: <span>📣</span>,
   fees_withdrawn: <span>💰</span>,
+  unknown: <span>ℹ️</span>,
 };
 
 function renderDescription(ev: FeedEvent) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { getChunkedUploadStatus } from '@/lib/ipfs';
 import Spinner from '@/components/ui/Spinner';
@@ -79,6 +79,8 @@ export default function VideoUpload({
     promptResume,
   } = useChunkedUpload();
   const isProcessing = isUploading && phase === 'processing';
+  const lastAnnouncedProgressRef = useRef<number | null>(null);
+  const [progressAnnouncement, setProgressAnnouncement] = useState('');
 
   // After a reload, an interrupted upload persisted by useChunkedUpload can be
   // resumed by re-selecting the same file (see #1003). Show how far it got.
@@ -104,6 +106,26 @@ export default function VideoUpload({
     onUploadingChange?.(isUploading);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUploading]);
+
+  useEffect(() => {
+    if (!isUploading) {
+      lastAnnouncedProgressRef.current = null;
+      setProgressAnnouncement('');
+      return;
+    }
+    if (isProcessing) {
+      setProgressAnnouncement('Processing upload…');
+      return;
+    }
+    const milestone = progress >= 100 ? 100 : Math.floor(progress / 10) * 10;
+    if (
+      milestone > 0 &&
+      milestone !== lastAnnouncedProgressRef.current
+    ) {
+      lastAnnouncedProgressRef.current = milestone;
+      setProgressAnnouncement(`Upload progress: ${milestone} percent.`);
+    }
+  }, [isUploading, isProcessing, progress]);
 
   const displayError = error ?? localError;
   const errorId = displayError ? 'video-upload-error' : undefined;
@@ -219,13 +241,16 @@ export default function VideoUpload({
           className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden"
         >
           <div
-            className={`h-full bg-brand-green transition-[width] duration-200 ${
+            className={`h-full bg-brand-green motion-safe:transition-[width] motion-safe:duration-200 motion-reduce:transition-none ${
               isProcessing ? 'animate-pulse w-full' : ''
             }`}
             style={isProcessing ? undefined : { width: `${progress}%` }}
           />
         </div>
       )}
+      <div className="sr-only" role="status" aria-live="polite">
+        {progressAnnouncement}
+      </div>
       {displayError && (
         <p id={errorId} role="alert" className="text-sm text-red-500">
           {displayError}

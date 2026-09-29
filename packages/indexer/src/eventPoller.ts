@@ -1,5 +1,9 @@
 import { createHash } from 'crypto';
-import { SorobanRpc, Networks, xdr, scValToNative } from '@stellar/stellar-sdk';
+import { SorobanRpc, Networks, xdr } from '@stellar/stellar-sdk';
+import {
+  decodeSorobanEvent,
+  type EventType as SharedEventType,
+} from '@scoutoff/contract-events';
 import { IndexerMetrics, type EventType } from './metrics/IndexerMetrics';
 import { updateLastLedger, updateNetworkLedger } from './ledgerTracker';
 import { EventStore } from './db/eventStore';
@@ -24,6 +28,7 @@ export const EVENT_TYPES: readonly EventType[] = [
   'player_contacted',
   'trial_offer_logged',
   'fees_withdrawn',
+  'unknown',
 ];
 
 export function isEventType(name: unknown): name is EventType {
@@ -39,6 +44,7 @@ export interface PollerConfig {
   networkPassphrase: string;
   pollIntervalMs: number;
   startLedger: number;
+  contractVersion: number;
 }
 
 /** Reads and validates poller config from process.env. */
@@ -58,6 +64,9 @@ export function loadConfigFromEnv(): PollerConfig {
     startLedger: process.env.START_LEDGER
       ? parseInt(process.env.START_LEDGER, 10)
       : 0,
+    contractVersion: process.env.CONTRACT_VERSION
+      ? parseInt(process.env.CONTRACT_VERSION, 10)
+      : 1,
   };
 }
 
@@ -94,6 +103,7 @@ export interface RawEvent {
 
 export interface DecodedEvent {
   type: EventType;
+  contractVersion: number;
   ledger: number;
   timestamp: number;
   data: Record<string, unknown>;
@@ -115,46 +125,29 @@ export function createRpcClient(config: PollerConfig): RpcClient {
   }) as unknown as RpcClient;
 }
 
-/**
- * Decodes a raw Soroban contract event into one of the 8 documented event
- * types (README.md's "Indexed Event Schema").
- *
- * ASSUMPTION — no Rust contract source lives in this repository to confirm
- * the wire format against, so this assumes the common Soroban convention:
- * `topic[0]` is a Symbol equal to the event name (e.g. `"player_registered"`),
- * and `value` is a Map/struct ScVal holding the event's other documented
- * fields. `ledger`/`timestamp` come from the RPC envelope rather than the
- * decoded payload, since the README lists identical `ledger`/`timestamp`
- * fields across all 8 event types — those are naturally available from
- * every event's envelope regardless of what the contract encodes.
- *
- * If the actual contract encodes events differently, only this function
- * needs to change: the polling loop, ledger tracking, and metrics below are
- * decode-shape-agnostic.
- */
-export function decodeEvent(raw: RawEvent): DecodedEvent {
-  if (!raw.topic || raw.topic.length === 0) {
-    throw new Error('Event has no topic; cannot determine event type');
-  }
-
-  const name = scValToNative(raw.topic[0]);
-  if (!isEventType(name)) {
-    throw new Error(`Unrecognized event type: ${String(name)}`);
-  }
-
-  const payload = raw.value ? scValToNative(raw.value) : {};
-  if (typeof payload !== 'object' || payload === null) {
-    throw new Error(`Event "${name}" payload did not decode to an object`);
-  }
-
+export function decodeEvent(
+  raw: RawEvent,
+  contractVersion = 1,
+): DecodedEvent {
+  const decoded = decodeSorobanEvent({
+    topic: raw.topic ?? [],
+    value: raw.value,
+    contractVersion,
+  });
   const timestamp = Math.floor(new Date(raw.ledgerClosedAt).getTime() / 1000);
 
   return {
-    type: name,
+    type: decoded.type as SharedEventType,
+    contractVersion: decoded.version,
     ledger: raw.ledger,
     timestamp,
-    data: { ...payload, ledger: raw.ledger, timestamp },
-    eventId: computeEventId(name, raw),
+    data: {
+      ...decoded.data,
+      contractVersion: decoded.version,
+      ledger: raw.ledger,
+      timestamp,
+    },
+    eventId: computeEventId(decoded.type, raw),
   };
 }
 
@@ -328,7 +321,7 @@ export async function pollOnce(
       for (const raw of res.events) {
         const eventStart = Date.now();
         try {
-          const decoded = decodeEvent(raw);
+          const decoded = decodeEvent(raw, config.contractVersion);
           store.insertEvent(decoded);
           metrics.recordSuccess(
             decoded.type,

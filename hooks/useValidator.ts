@@ -25,7 +25,7 @@ export function invalidateValidatorCache(): Promise<void> {
 }
 
 export function useValidator(walletAddress?: string | null) {
-  const { publicKey: ctxKey, signAndSubmit } = useWallet();
+  const { publicKey: ctxKey, signAndSubmit, signOnly } = useWallet();
   const publicKey = walletAddress !== undefined ? walletAddress : ctxKey;
 
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,12 @@ export function useValidator(walletAddress?: string | null) {
       setLoading(true);
       setError(null);
       try {
-        return await buildApproveMilestone(publicKey, playerId, milestone);
+        return await buildApproveMilestone(
+          publicKey,
+          playerId,
+          milestone,
+          signOnly,
+        );
       } catch (e: any) {
         const msg = parseContractError(e);
         setError(msg);
@@ -65,7 +70,7 @@ export function useValidator(walletAddress?: string | null) {
         setLoading(false);
       }
     },
-    [publicKey],
+    [publicKey, signOnly],
   );
 
   const revokeMilestone = useCallback(
@@ -100,6 +105,7 @@ export function useValidator(walletAddress?: string | null) {
           publicKey,
           playerId,
           milestoneId,
+          signOnly,
         );
         const result = await signAndSubmit(xdr);
         const hash =
@@ -119,7 +125,7 @@ export function useValidator(walletAddress?: string | null) {
         setLoading(false);
       }
     },
-    [publicKey, signAndSubmit],
+    [publicKey, signAndSubmit, signOnly],
   );
 
   return {

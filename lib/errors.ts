@@ -93,3 +93,15 @@ export class ContractIncompatibleError extends Error {
     this.name = 'ContractIncompatibleError';
   }
 }
+
+/** Fixed message used by read paths and UI to identify archived Soroban state. */
+export const ARCHIVED_ENTRY_MESSAGE =
+  'This profile is archived on-chain — the owner can restore it by signing in.';
+
+/** Thrown when Soroban asks for a RestoreFootprint transaction before a read. */
+export class ArchivedEntryError extends Error {
+  constructor(message = ARCHIVED_ENTRY_MESSAGE) {
+    super(message);
+    this.name = 'ArchivedEntryError';
+  }
+}

@@ -81,6 +81,7 @@ export function seedPlayers(count: number): { registered: number } {
       seq += 1;
       const registration: DecodedEvent = {
         type: 'player_registered',
+        contractVersion: 1,
         ledger,
         timestamp,
         data: {
@@ -106,6 +107,7 @@ export function seedPlayers(count: number): { registered: number } {
         seq += 1;
         store.insertEvent({
           type: 'milestone_approved',
+          contractVersion: 1,
           ledger: ledger + 1,
           timestamp: timestamp + 1,
           data: {

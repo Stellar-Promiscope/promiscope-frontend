@@ -42,6 +42,7 @@ function baseConfig(overrides: Partial<PollerConfig> = {}): PollerConfig {
     networkPassphrase: 'Test SDF Network ; September 2015',
     pollIntervalMs: 5000,
     startLedger: 0,
+    contractVersion: 1,
     ...overrides,
   };
 }
@@ -103,15 +104,15 @@ describe('decodeEvent', () => {
     }
   });
 
-  it('throws for an event with no topic', () => {
+  it('records an unknown event when it has no topic', () => {
     const raw = makeRawEvent('player_registered', {});
     raw.topic = [];
-    expect(() => decodeEvent(raw)).toThrow(/no topic/i);
+    expect(decodeEvent(raw).type).toBe('unknown');
   });
 
-  it('throws for an unrecognized event type', () => {
+  it('records an unknown event for an unrecognized topic', () => {
     const raw = makeRawEvent('some_future_event', { x: 1 });
-    expect(() => decodeEvent(raw)).toThrow(/unrecognized event type/i);
+    expect(decodeEvent(raw).type).toBe('unknown');
   });
 
   // ── eventId (issue #1180: exactly-once notification delivery) ──────────
@@ -217,7 +218,7 @@ describe('pollOnce', () => {
     });
   });
 
-  it('does not persist an event that failed to decode', async () => {
+  it('persists an unknown event and counts it without stopping the poller', async () => {
     const badRaw = makeRawEvent('not_a_real_event', {}, { ledger: 777 });
     const rpc: jest.Mocked<RpcClient> = {
       getLatestLedger: jest.fn().mockResolvedValue({ sequence: 777 }),
@@ -229,7 +230,11 @@ describe('pollOnce', () => {
 
     await pollOnce(baseConfig(), rpc, metrics, 700, store);
 
-    expect(store.getEvents().events).toHaveLength(0);
+    expect(store.getEvents().events[0]).toMatchObject({
+      type: 'unknown',
+      contractVersion: 1,
+    });
+    expect(metrics.snapshot().unknownEvents).toBe(1);
   });
 
   it('calls updateNetworkLedger with the RPC-reported network tip even while behind it', async () => {
@@ -258,7 +263,7 @@ describe('pollOnce', () => {
     expect(nextCursor).toBe(501);
   });
 
-  it('records a decode failure but still advances past the bad event', async () => {
+  it('still advances past an unknown event', async () => {
     const badRaw = makeRawEvent('not_a_real_event', {}, { ledger: 777 });
     const rpc: jest.Mocked<RpcClient> = {
       getLatestLedger: jest.fn().mockResolvedValue({ sequence: 777 }),
@@ -267,11 +272,8 @@ describe('pollOnce', () => {
         .mockResolvedValue({ latestLedger: 777, events: [badRaw] }),
     };
     const metrics = IndexerMetrics.getInstance();
-    const recordFailureSpy = jest.spyOn(metrics, 'recordFailure');
-
     const nextCursor = await pollOnce(baseConfig(), rpc, metrics, 700, store);
 
-    expect(recordFailureSpy).toHaveBeenCalled();
     expect(nextCursor).toBe(778);
   });
 
