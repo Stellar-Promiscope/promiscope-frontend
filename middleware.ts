@@ -7,6 +7,7 @@ import {
   LOCALE_COOKIE_MAX_AGE,
 } from '@/lib/locales';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { buildCsp } from '@/lib/csp';
 
 function getLocale(request: NextRequest): string {
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
@@ -30,6 +31,11 @@ function getLocale(request: NextRequest): string {
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Generate a per-request nonce for CSP. crypto.randomUUID() is available
+  // in the Edge runtime used by Next.js middleware.
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  const csp = buildCsp({ nonce });
 
   if (pathname.startsWith('/api/admin/')) {
     const isReconciliation = pathname === '/api/admin/audit-log/reconcile';
@@ -60,14 +66,18 @@ export async function middleware(request: NextRequest) {
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
   );
 
+  // Shared header mutations: stamp the nonce so app/layout.tsx can read it
+  // via headers() and apply it to the no-flash theme script.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('x-pathname', pathname);
+
   if (pathnameHasLocale) {
-    // Forward the current pathname via a custom request header so the locale
-    // layout (app/[locale]/layout.tsx) can construct canonical URLs from it.
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-pathname', pathname);
-    return NextResponse.next({
+    const response = NextResponse.next({
       request: { headers: requestHeaders },
     });
+    response.headers.set('Content-Security-Policy', csp);
+    return response;
   }
 
   const locale = getLocale(request);
@@ -80,6 +90,7 @@ export async function middleware(request: NextRequest) {
     maxAge: LOCALE_COOKIE_MAX_AGE,
     sameSite: 'lax',
   });
+  response.headers.set('Content-Security-Policy', csp);
   return response;
 }
 

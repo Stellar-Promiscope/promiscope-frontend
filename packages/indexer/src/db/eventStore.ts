@@ -462,6 +462,47 @@ export class EventStore {
   }
 
   /**
+   * SSE subscriber registry. Keyed by a unique subscriber id. Each entry
+   * holds the filter (topics/wallet) and a push callback. `insertEvent`
+   * fans out to matching subscribers after every new write.
+   *
+   * NOTE: This is per-process. Horizontal scaling would require Redis
+   * pub/sub to broadcast across indexer instances.
+   */
+  private subscribers = new Map<
+    string,
+    {
+      topics: Set<string>;
+      wallet: string | null;
+      push: (record: EventRecord) => void;
+    }
+  >();
+
+  private nextSubscriberId = 0;
+
+  /**
+   * Registers an SSE subscriber that will be called with every new event
+   * that matches its filter. Returns an unsubscribe function.
+   *
+   * @param topics  - set of event type strings to include; empty = all topics
+   * @param wallet  - if set, only events where playerId, scout, or validator equals this wallet
+   * @param push    - callback invoked with each matched EventRecord
+   */
+  subscribe(
+    topics: string[],
+    wallet: string | null,
+    push: (record: EventRecord) => void,
+  ): () => void {
+    const id = String(this.nextSubscriberId++);
+    this.subscribers.set(id, {
+      topics: new Set(topics),
+      wallet,
+      push,
+    });
+    return () => this.subscribers.delete(id);
+  }
+
+  /**
    * Persists one decoded event. Called from the poll loop after a
    * successful decode.
    *
@@ -510,6 +551,36 @@ export class EventStore {
       // drop the cache rather than serve a stale rollup until the TTL
       // happens to expire on its own.
       this.approvalCountsCache.clear();
+    }
+    if (inserted) {
+      // Fan out to SSE subscribers after the write is committed.
+      if (this.subscribers.size > 0) {
+        // Fetch the actual written row so subscribers get the assigned id.
+        const row = this.db
+          .prepare(
+            'SELECT * FROM events WHERE event_id = ? ORDER BY id DESC LIMIT 1',
+          )
+          .get(decoded.eventId ?? '') as EventRow | undefined;
+        const record = row ? rowToRecord(row) : null;
+        if (record) {
+          for (const sub of this.subscribers.values()) {
+            const topicMatch =
+              sub.topics.size === 0 || sub.topics.has(record.type);
+            const walletMatch =
+              !sub.wallet ||
+              record.playerId === sub.wallet ||
+              record.scout === sub.wallet ||
+              record.validator === sub.wallet;
+            if (topicMatch && walletMatch) {
+              try {
+                sub.push(record);
+              } catch {
+                // Subscriber closed; will be removed by its own unsubscribe
+              }
+            }
+          }
+        }
+      }
     }
     return inserted;
   }

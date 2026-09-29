@@ -67,6 +67,16 @@ async function getLocale(): Promise<string> {
   return defaultLocale;
 }
 
+/**
+ * Reads the per-request nonce injected by middleware.ts into the x-nonce
+ * request header. The nonce is embedded in the CSP's script-src so this
+ * inline theme script (and Next.js's own inline RSC scripts) are allowed
+ * without 'unsafe-inline'.
+ */
+async function getNonce(): Promise<string> {
+  const headersList = await headers();
+  return headersList.get('x-nonce') ?? '';
+}
 export default async function RootLayout({
   children,
 }: {
@@ -74,6 +84,7 @@ export default async function RootLayout({
   params?: { locale?: string };
 }) {
   const locale = await getLocale();
+  const nonce = await getNonce();
   const messages = await getMessages();
 
   // Runtime configuration check — fires on every request so a deployment
@@ -107,8 +118,13 @@ export default async function RootLayout({
           lib/themeBootstrap.ts from the same storage key ThemeContext uses
           (ThemeProvider re-applies the same result on mount, so this is
           purely to avoid a flash of the wrong theme).
+
+          The nonce attribute must match the per-request nonce in the CSP
+          (set by middleware.ts) so this inline script is allowed without
+          'unsafe-inline'.
         */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: buildThemeBootstrapScript(),
           }}

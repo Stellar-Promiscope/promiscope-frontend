@@ -12,6 +12,7 @@ import {
   decodePlayerCursor,
   type PlayerQueryFilter,
   type PlayerRecord,
+  type EventRecord,
   type QueryFilter,
   type WalletApprovalWindow,
 } from './db/eventStore';
@@ -156,6 +157,106 @@ const VALIDATOR_EVENTS_PATH = /^\/validators\/([^/]+)\/events$/;
  * query strings; real values are short slugs/labels ("West Africa", "ST").
  */
 const MAX_FILTER_VALUE_LENGTH = 100;
+
+/**
+ * GET /stream?topics=<comma-separated>&wallet=<address>
+ *
+ * Server-Sent Events endpoint. Pushes decoded contract events to the client
+ * as they are ingested. Supports:
+ *
+ *   - `topics`      comma-separated list of event types to filter on;
+ *                   omit or leave blank to receive all topics.
+ *   - `wallet`      only receive events that involve this wallet address
+ *                   (playerId, scout, or validator field).
+ *   - `Last-Event-ID` HTTP header: the client's last received event id
+ *                   (the DB row id). On reconnect, any events whose id >
+ *                   Last-Event-ID are replayed before live streaming begins.
+ *
+ * Heartbeats (`: heartbeat\n\n`) are sent every 25 s so proxies and load
+ * balancers don't close idle connections.
+ *
+ * Scaling note: fan-out is in-process. A horizontally-scaled deployment
+ * would replace the EventStore subscriber registry with Redis pub/sub.
+ */
+function handleStream(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): void {
+  const topicsParam = url.searchParams.get('topics') ?? '';
+  const topics = topicsParam
+    ? topicsParam
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+  const wallet = url.searchParams.get('wallet') ?? null;
+
+  // Last-Event-ID resume: replay missed events before entering live mode.
+  const lastEventIdHeader = req.headers['last-event-id'];
+  const lastEventId =
+    typeof lastEventIdHeader === 'string' && lastEventIdHeader !== ''
+      ? parseInt(lastEventIdHeader, 10)
+      : null;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.flushHeaders?.();
+
+  const store = EventStore.getInstance();
+
+  // Helper: serialise one EventRecord as an SSE message.
+  function sendEvent(record: EventRecord): void {
+    const payload = JSON.stringify(record);
+    res.write(`id: ${record.id}\nevent: ${record.type}\ndata: ${payload}\n\n`);
+  }
+
+  // Replay missed events if Last-Event-ID was provided.
+  if (lastEventId !== null && !Number.isNaN(lastEventId)) {
+    const filter = {
+      ...(topics.length > 0 && {
+        type: topics[0] as import('./db/eventStore').QueryFilter['type'],
+      }),
+      limit: 200,
+    };
+    // Fetch recent events and replay those with id > lastEventId.
+    const { events } = store.getEvents(filter);
+    const missed = events
+      .filter((e) => e.id > lastEventId)
+      .sort((a, b) => a.id - b.id);
+    for (const event of missed) {
+      const walletMatch =
+        !wallet ||
+        event.playerId === wallet ||
+        event.scout === wallet ||
+        event.validator === wallet;
+      const topicMatch = topics.length === 0 || topics.includes(event.type);
+      if (topicMatch && walletMatch) {
+        sendEvent(event);
+      }
+    }
+  }
+
+  // Subscribe to live events.
+  const unsubscribe = store.subscribe(topics, wallet, (record) => {
+    sendEvent(record);
+  });
+
+  // Heartbeat every 25 s.
+  const heartbeat = setInterval(() => {
+    res.write(': heartbeat\n\n');
+  }, 25_000);
+
+  // Cleanup on client disconnect.
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  });
+}
 
 function sendJson(
   res: http.ServerResponse,
@@ -500,6 +601,9 @@ function route(req: http.IncomingMessage, res: http.ServerResponse): void {
   }
   if (req.method === 'GET' && url.pathname === '/events') {
     return handleEventsQuery(url, res);
+  }
+  if (req.method === 'GET' && url.pathname === '/stream') {
+    return handleStream(req, res, url);
   }
   // Exact match — must precede the /players/:id/events regex below (which
   // wouldn't match it anyway, but the ordering documents the intent).
