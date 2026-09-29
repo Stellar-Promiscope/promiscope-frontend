@@ -20,6 +20,7 @@
  */
 import type Database from 'better-sqlite3';
 import { openSqliteDb } from './sqliteDb';
+import { normalizeStellarAddress } from './stellar';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS fraud_throttles (
@@ -130,7 +131,8 @@ export class FraudThrottleStore {
    * re-running evaluation (on-demand or cron) doesn't spam new rows for a
    * wallet that's already under review.
    */
-  placeThrottle(entry: NewFraudThrottle): FraudThrottle {
+  placeThrottle(input: NewFraudThrottle): FraudThrottle {
+    const entry = { ...input, wallet: normalizeStellarAddress(input.wallet) };
     const existing = this.db
       .prepare(
         `SELECT * FROM fraud_throttles
@@ -171,7 +173,7 @@ export class FraudThrottleStore {
         `SELECT * FROM fraud_throttles WHERE wallet = ? AND status = 'throttled'
          ORDER BY throttled_at DESC LIMIT 1`,
       )
-      .get(wallet) as FraudThrottleRow | undefined;
+      .get(normalizeStellarAddress(wallet)) as FraudThrottleRow | undefined;
     return row ? rowToThrottle(row) : null;
   }
 
