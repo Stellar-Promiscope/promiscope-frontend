@@ -1,8 +1,10 @@
 import {
   analyzeReferralAbuse,
   analyzePayToContactAbuse,
+  analyzeValidatorAbuse,
   DEFAULT_THRESHOLDS,
   type FraudThresholds,
+  type ValidatorApproval,
 } from './fraudDetection.ts';
 import type { ReferralCode, FraudFlag } from '@/types';
 import type { ActivityEvent } from '@/lib/api';
@@ -35,6 +37,21 @@ export interface BacktestSnapshot {
   referralCodes: ReferralCode[];
   /** Global activity feed events (player_contacted, scout_subscribed, ...). */
   activityEvents: ActivityEvent[];
+  /** Milestone approvals for the validator heuristics (#1359). */
+  validatorApprovals?: ValidatorApproval[];
+  /**
+   * Ground-truth labels: validators known to be abusive in this dataset.
+   * When present, the report includes validator precision and recall.
+   */
+  knownBadValidators?: string[];
+}
+
+export interface ValidatorAccuracy {
+  truePositives: number;
+  falsePositives: number;
+  falseNegatives: number;
+  precision: number;
+  recall: number;
 }
 
 export interface HeuristicCount {
@@ -72,7 +89,11 @@ export interface BacktestReport {
   generatedAt: string;
   /** The exact threshold set used for the main run. */
   thresholds: FraudThresholds;
-  dataset: { referralCodes: number; activityEvents: number };
+  dataset: {
+    referralCodes: number;
+    activityEvents: number;
+    validatorApprovals: number;
+  };
   heuristicCounts: HeuristicCount[];
   totalFlags: number;
   /**
@@ -81,6 +102,8 @@ export interface BacktestReport {
    * sample rather than relying on aggregate counts alone.
    */
   flaggedCases: FraudFlag[];
+  /** Only when the snapshot carries `knownBadValidators` labels. */
+  validatorAccuracy?: ValidatorAccuracy;
   sweep?: {
     heuristic: string;
     thresholdKey: keyof FraudThresholds;
@@ -279,7 +302,97 @@ export function generateSampleSnapshot(): BacktestSnapshot {
     });
   }
 
-  return { referralCodes, activityEvents };
+  // Validator approvals (#1359): four abusive validators, one per
+  // heuristic, plus localized validators approving at a normal pace.
+  const validatorApprovals: ValidatorApproval[] = [];
+  const at = (ms: number) => Math.floor(ms / 1000);
+  const DAY = 86_400_000;
+
+  // validator_approval_burst: 12 approvals in 6 minutes.
+  for (let i = 0; i < 12; i++) {
+    validatorApprovals.push({
+      validator: 'GVALBURST',
+      playerId: `burst-player-${i}`,
+      timestamp: at(SAMPLE_BASE_MS + i * 30_000),
+      region: 'Lagos',
+    });
+  }
+  // validator_region_spread: a week in Accra, then 4 regions in one day.
+  for (let i = 0; i < 6; i++) {
+    validatorApprovals.push({
+      validator: 'GVALSPREAD',
+      playerId: `spread-home-${i}`,
+      timestamp: at(SAMPLE_BASE_MS + i * DAY),
+      region: 'Accra',
+    });
+  }
+  ['Nairobi', 'Kano', 'Dakar', 'Kumasi'].forEach((region, i) => {
+    validatorApprovals.push({
+      validator: 'GVALSPREAD',
+      playerId: `spread-away-${i}`,
+      timestamp: at(SAMPLE_BASE_MS + 10 * DAY + i * 3_600_000),
+      region,
+    });
+  });
+  // validator_circular_approval: approves a player its own wallet referred.
+  validatorApprovals.push({
+    validator: 'GVALCIRC',
+    playerId: 'circ-player',
+    timestamp: at(SAMPLE_BASE_MS + 2 * DAY),
+    region: 'Abuja',
+    referrerWallet: 'GVALCIRC',
+  });
+  // validator_level_jump: three players taken 0 -> 3 within hours.
+  for (let p = 0; p < 3; p++) {
+    for (let a = 0; a < 3; a++) {
+      validatorApprovals.push({
+        validator: 'GVALJUMP',
+        playerId: `jump-player-${p}`,
+        timestamp: at(SAMPLE_BASE_MS + 3 * DAY + p * DAY + a * 3_600_000),
+        region: 'Kampala',
+      });
+    }
+  }
+  // Clean validators: one approval a day, one region, referred by others.
+  for (let v = 0; v < 5; v++) {
+    for (let i = 0; i < 8; i++) {
+      validatorApprovals.push({
+        validator: `GVALCLEAN${v}`,
+        playerId: `clean-val-${v}-player-${i}`,
+        timestamp: at(SAMPLE_BASE_MS + i * DAY + v * 3_600_000),
+        region: `Region${v}`,
+        referrerWallet: `GSCOUTREF${i}`,
+      });
+    }
+  }
+
+  return {
+    referralCodes,
+    activityEvents,
+    validatorApprovals,
+    knownBadValidators: ['GVALBURST', 'GVALSPREAD', 'GVALCIRC', 'GVALJUMP'],
+  };
+}
+
+/** Precision/recall of validator flags against labeled bad validators. */
+export function computeValidatorAccuracy(
+  flags: FraudFlag[],
+  knownBad: string[],
+): ValidatorAccuracy {
+  const flagged = new Set(
+    flags.filter((f) => f.category === 'validator').map((f) => f.wallets[0]),
+  );
+  const bad = new Set(knownBad);
+  const truePositives = [...flagged].filter((w) => bad.has(w)).length;
+  const falsePositives = flagged.size - truePositives;
+  const falseNegatives = bad.size - truePositives;
+  return {
+    truePositives,
+    falsePositives,
+    falseNegatives,
+    precision: flagged.size ? truePositives / flagged.size : 1,
+    recall: bad.size ? truePositives / bad.size : 1,
+  };
 }
 
 // ── Analysis / reporting ───────────────────────────────────────────────────────
@@ -330,7 +443,19 @@ export function runBacktest(
     snapshot.activityEvents,
     thresholds,
   );
-  const flags = [...referralFlags, ...payToContactFlags].sort((a, b) => {
+  const validatorContext = {
+    walletClusters: referralFlags.map((f) => f.wallets),
+  };
+  const validatorFlags = analyzeValidatorAbuse(
+    snapshot.validatorApprovals ?? [],
+    validatorContext,
+    thresholds,
+  );
+  const flags = [
+    ...referralFlags,
+    ...payToContactFlags,
+    ...validatorFlags,
+  ].sort((a, b) => {
     const rank = { high: 0, medium: 1, low: 2 } as const;
     return rank[a.severity] - rank[b.severity];
   });
@@ -343,12 +468,20 @@ export function runBacktest(
     dataset: {
       referralCodes: snapshot.referralCodes.length,
       activityEvents: snapshot.activityEvents.length,
+      validatorApprovals: snapshot.validatorApprovals?.length ?? 0,
     },
     heuristicCounts,
     totalFlags,
     flaggedCases: flags,
     warnings,
   };
+
+  if (snapshot.knownBadValidators) {
+    report.validatorAccuracy = computeValidatorAccuracy(
+      validatorFlags,
+      snapshot.knownBadValidators,
+    );
+  }
 
   if (options.sweep) {
     const { heuristic, thresholdKey, min, max, step } = options.sweep;
@@ -362,6 +495,11 @@ export function runBacktest(
       const sweepFlags = [
         ...analyzeReferralAbuse(snapshot.referralCodes, t),
         ...analyzePayToContactAbuse(snapshot.activityEvents, t),
+        ...analyzeValidatorAbuse(
+          snapshot.validatorApprovals ?? [],
+          validatorContext,
+          t,
+        ),
       ];
       const summary = summarizeFlags(sweepFlags);
       points.push({
@@ -387,7 +525,7 @@ function formatText(report: BacktestReport): string {
   lines.push('Fraud-detection backtest report');
   lines.push(`Generated: ${report.generatedAt}`);
   lines.push(
-    `Dataset: ${report.dataset.referralCodes} referral codes, ${report.dataset.activityEvents} activity events`,
+    `Dataset: ${report.dataset.referralCodes} referral codes, ${report.dataset.activityEvents} activity events, ${report.dataset.validatorApprovals} validator approvals`,
   );
   lines.push('');
   lines.push('Thresholds used:');
@@ -404,6 +542,14 @@ function formatText(report: BacktestReport): string {
   for (const h of report.heuristicCounts) {
     lines.push(
       `  ${h.heuristic.padEnd(28)} ${String(h.count).padStart(3)}  (${h.severity.high}/${h.severity.medium}/${h.severity.low})`,
+    );
+  }
+
+  if (report.validatorAccuracy) {
+    const a = report.validatorAccuracy;
+    lines.push('');
+    lines.push(
+      `Validator heuristics vs labels: precision ${(a.precision * 100).toFixed(1)}%, recall ${(a.recall * 100).toFixed(1)}% (TP ${a.truePositives}, FP ${a.falsePositives}, FN ${a.falseNegatives})`,
     );
   }
 

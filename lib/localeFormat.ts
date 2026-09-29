@@ -53,3 +53,20 @@ export function formatDateTime(value: Date | number, locale: Locale): string {
     timeStyle: 'short',
   }).format(value);
 }
+
+/** e.g. "3 minutes ago" / "il y a 3 minutes", from a past timestamp. */
+export function formatRelativeTime(
+  value: Date | number,
+  locale: Locale,
+  now: number = Date.now(),
+): string {
+  const diffSec = Math.round((Number(value) - now) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(toIntlLocale(locale), {
+    numeric: 'auto',
+  });
+  const abs = Math.abs(diffSec);
+  if (abs < 60) return rtf.format(diffSec, 'second');
+  if (abs < 3600) return rtf.format(Math.round(diffSec / 60), 'minute');
+  if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), 'hour');
+  return rtf.format(Math.round(diffSec / 86400), 'day');
+}

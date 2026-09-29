@@ -5,6 +5,7 @@ import { useValidatorActionLog } from '@/hooks/useValidatorActionLog';
 import { buildValidatorActionLogCsv } from '@/lib/validatorActionLogCsv';
 import TruncatedAddress from '@/components/ui/TruncatedAddress';
 import EmptyState from '@/components/ui/EmptyState';
+import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 
 const ACTION_LABELS = {
   approved: 'Approved',
@@ -61,6 +62,7 @@ export default function ValidatorActionLog() {
           Milestone approve/revoke actions across all players, sourced from
           indexed contract events.
         </p>
+        <DataFreshnessBadge className="mt-2" />
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

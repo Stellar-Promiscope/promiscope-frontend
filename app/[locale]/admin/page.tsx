@@ -727,7 +727,16 @@ function AdminDashboardContent() {
 
       <AutomatedModerationLog />
 
-      <FraudFlagsPanel />
+      <FraudFlagsPanel
+        onRemoveValidator={(address) => {
+          setRemoveTarget(address);
+          setDialog({
+            action: 'remove',
+            label: 'Remove Validator',
+            message: `Remove ${address.slice(0, 4)}…${address.slice(-4)} from validators?`,
+          });
+        }}
+      />
 
       <DisputedMilestonesPanel />
 

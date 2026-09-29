@@ -15,6 +15,7 @@ import {
 import { usePlatformAnalytics } from '@/hooks/usePlatformAnalytics';
 import type { DailyPoint, WeeklyPoint } from '@/hooks/usePlatformAnalytics';
 import EmptyState from '@/components/ui/EmptyState';
+import DataFreshnessBadge from '@/components/ui/DataFreshnessBadge';
 
 const BRAND_GREEN = '#00C853';
 const BRAND_BLUE = '#3B82F6';
@@ -185,6 +186,7 @@ export default function PlatformAnalyticsCharts() {
           Registration and milestone-approval trends, sourced from indexed
           contract history.
         </p>
+        <DataFreshnessBadge className="mt-2" />
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

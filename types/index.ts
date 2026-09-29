@@ -236,7 +236,7 @@ export interface ReferralOverview {
 }
 
 // ── Fraud / abuse detection ────────────────────────────────────────────────────
-export type FraudFlagCategory = 'referral' | 'pay_to_contact';
+export type FraudFlagCategory = 'referral' | 'pay_to_contact' | 'validator';
 
 export type FraudFlagSeverity = 'low' | 'medium' | 'high';
 

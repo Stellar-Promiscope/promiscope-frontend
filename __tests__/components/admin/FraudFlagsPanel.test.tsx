@@ -44,10 +44,38 @@ const payToContactFlag: FraudFlag = {
   evidence: { unlocks: 15, windowMinutes: 10, targets: ['p1', 'p2'] },
 };
 
+const validatorFlag: FraudFlag = {
+  id: 'flag-3',
+  category: 'validator',
+  heuristic: 'validator_approval_burst',
+  severity: 'high',
+  wallets: ['GVALIDATOR000000000000000000000000000000000000000000000'],
+  reason: '25 milestone approvals within 10 minutes.',
+  evidence: { maxInWindow: 25, events: ['p1@2024-01-01T00:00:00.000Z'] },
+};
+
 describe('FraudFlagsPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedFetchFraudThrottles.mockResolvedValue({ throttles: [] });
+  });
+
+  it('shows validator flags with an alert and a remove-validator action', async () => {
+    mockedFetchFraudFlags.mockResolvedValue({
+      flags: [validatorFlag],
+      warnings: [],
+      evaluatedAt: 1_700_000_000_000,
+    });
+    const onRemoveValidator = jest.fn();
+
+    render(<FraudFlagsPanel onRemoveValidator={onRemoveValidator} />);
+
+    expect(await screen.findByText('Validator')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'High-severity validator activity detected',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Remove validator' }));
+    expect(onRemoveValidator).toHaveBeenCalledWith(validatorFlag.wallets[0]);
   });
 
   it('shows a loading message while fetching', () => {
@@ -80,7 +108,7 @@ describe('FraudFlagsPanel', () => {
     expect(await screen.findByText('No flags')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'No suspicious referral or pay-to-contact patterns detected.',
+        'No suspicious referral, pay-to-contact or validator patterns detected.',
       ),
     ).toBeInTheDocument();
   });

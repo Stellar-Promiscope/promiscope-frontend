@@ -6,6 +6,7 @@ jest.mock('@/lib/api', () => ({
 jest.mock('@/lib/fraudDetection', () => ({
   analyzeReferralAbuse: jest.fn(),
   analyzePayToContactAbuse: jest.fn(),
+  analyzeValidatorAbuse: jest.fn(() => []),
 }));
 
 import { GET } from '@/app/api/admin/fraud-flags/route';

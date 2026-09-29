@@ -14,6 +14,7 @@ import {
   TransactionFailedError,
   TransactionTimeoutError,
 } from '@/lib/stellar';
+import { markPendingIndexerWrite } from '@/hooks/useIndexerFreshness';
 
 /** ~2s between getTransaction polls — half a typical ~5s ledger close. */
 export const CONFIRM_POLL_INTERVAL_MS = 2_000;
@@ -239,9 +240,16 @@ export async function submitAndConfirmApproval(
     emit(onPhase, 'confirming', { hash });
 
     try {
-      await pollTransaction(hash, confirmMaxAttempts, confirmDelayMs, {
-        signal,
-      });
+      const tx = await pollTransaction(
+        hash,
+        confirmMaxAttempts,
+        confirmDelayMs,
+        { signal },
+      );
+      // Indexer-backed views show a "may take a minute" hint until the
+      // indexer passes this ledger (see DataFreshnessBadge).
+      const ledger = (tx as { ledger?: number } | undefined)?.ledger;
+      if (typeof ledger === 'number') markPendingIndexerWrite(ledger);
     } catch (err) {
       if (err instanceof TransactionFailedError) {
         const message =

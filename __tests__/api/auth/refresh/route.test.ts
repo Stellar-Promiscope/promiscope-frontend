@@ -20,6 +20,7 @@ jest.mock('@stellar/stellar-sdk', () => ({
   Keypair: {
     fromSecret: jest.fn((secret: string) => ({ publicKey: () => secret })),
   },
+  StrKey: { isValidEd25519PublicKey: (key: string) => key.startsWith('G') },
 }));
 
 import { WebAuth } from '@stellar/stellar-sdk';

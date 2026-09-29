@@ -1,4 +1,4 @@
-import { WebAuth, Networks, Keypair } from '@stellar/stellar-sdk';
+import { WebAuth, Networks, Keypair, StrKey } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
@@ -14,6 +14,25 @@ import { SessionStore } from '@/lib/sessionStore';
 // better-sqlite3 (via lib/sessionStore.ts) is a native addon and needs the
 // Node.js runtime, not edge.
 export const runtime = 'nodejs';
+
+// Same check as lib/stellar's isValidStellarAddress, without importing that
+// module's RPC client into the auth route. Only G-addresses pass; muxed
+// (M...) accounts aren't supported.
+const isValidStellarAddress = (key: string) =>
+  StrKey.isValidEd25519PublicKey(key);
+
+// Both handlers need the server signing key and home domain. An empty home
+// domain would make every verification fail, so it's a config error too.
+function getSep10Config(): { serverKey: string; homeDomain: string } | null {
+  const serverKey = process.env.SEP10_SERVER_KEY;
+  const homeDomain = process.env.SEP10_HOME_DOMAIN;
+  if (!serverKey || !homeDomain) return null;
+  return { serverKey, homeDomain };
+}
+
+function serverNotConfigured(): NextResponse {
+  return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
+}
 
 // Returns the set of origins this route will accept requests from. This is
 // derived ONLY from server-controlled configuration (env vars) — never from
@@ -81,8 +100,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const serverKey = process.env.SEP10_SERVER_KEY ?? '';
-  const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
+  if (typeof publicKey !== 'string' || !isValidStellarAddress(publicKey)) {
+    return NextResponse.json({ error: 'Invalid publicKey' }, { status: 400 });
+  }
+
+  const config = getSep10Config();
+  if (!config) return serverNotConfigured();
+  const { serverKey, homeDomain } = config;
   const network =
     process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
       ? Networks.PUBLIC
@@ -164,9 +188,7 @@ export async function POST(req: NextRequest) {
     });
     return withRequestId(
       NextResponse.json(
-        {
-          error: error instanceof Error ? error.message : 'Verification failed',
-        },
+        { error: 'Challenge verification failed' },
         { status: 401 },
       ),
       log.requestId,
@@ -184,15 +206,16 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const serverKey = process.env.SEP10_SERVER_KEY;
-  if (!serverKey) {
+  if (!isValidStellarAddress(account)) {
     return NextResponse.json(
-      { error: 'Server not configured' },
-      { status: 500 },
+      { error: 'Invalid account parameter' },
+      { status: 400 },
     );
   }
 
-  const homeDomain = process.env.SEP10_HOME_DOMAIN ?? '';
+  const config = getSep10Config();
+  if (!config) return serverNotConfigured();
+  const { serverKey, homeDomain } = config;
   const network =
     process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
       ? Networks.PUBLIC

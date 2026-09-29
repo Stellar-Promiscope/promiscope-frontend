@@ -92,6 +92,7 @@ function handleHealth(res: http.ServerResponse): void {
   sendJson(res, status === 'unhealthy' ? 503 : 200, {
     status,
     lastLedger,
+    lastUpdated: timestamp > 0 ? timestamp : null,
     ledgerLag,
     pollerRunning,
     lastError: pollerStartError ?? getLastPollError(),

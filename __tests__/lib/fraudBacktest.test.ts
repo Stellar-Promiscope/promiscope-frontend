@@ -18,6 +18,10 @@ const HEURISTICS = [
   'cross_scout_redeemer_ring',
   'rapid_contact_burst',
   'subscription_cycling',
+  'validator_approval_burst',
+  'validator_region_spread',
+  'validator_circular_approval',
+  'validator_level_jump',
 ];
 
 function countFor(report: ReturnType<typeof runBacktest>, heuristic: string) {
