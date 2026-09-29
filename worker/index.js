@@ -166,6 +166,22 @@ self.addEventListener('sync', function (event) {
 self.addEventListener('message', function (event) {
   if (event.data && event.data.type === 'TRY_ONBOARDING_SYNC') {
     event.waitUntil(processOnboardingSync().catch(function () {}));
+  } else if (event.data && event.data.type === 'CLEAR_USER_CACHES') {
+    event.waitUntil(
+      caches.keys().then(function (cacheNames) {
+        return Promise.all(
+          cacheNames.map(function (cacheName) {
+            if (
+              cacheName === 'api-cache' ||
+              cacheName.includes('api') ||
+              cacheName.includes('player-scout')
+            ) {
+              return caches.delete(cacheName);
+            }
+          }),
+        );
+      }),
+    );
   }
 });
 

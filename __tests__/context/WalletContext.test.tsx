@@ -1034,7 +1034,13 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
     expect(result.current.publicKey).toBe(PUBLIC_KEY);
     // The SEP-10 flow ran in full.
     expect(freighter.signTransaction).toHaveBeenCalled();
-    expect(mockFetch).toHaveBeenCalledTimes(2); // challenge GET + auth POST
+    expect(mockFetch).toHaveBeenCalledWith(
+      `/api/auth/sep10?account=${PUBLIC_KEY}`,
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/auth/sep10',
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
   it('AC3 – ordinary connect with rememberMe=true works the same as before', async () => {

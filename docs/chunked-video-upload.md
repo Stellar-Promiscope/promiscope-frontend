@@ -31,7 +31,7 @@ Browser                          Next.js app                      Pinata
   ├──────────────────────────────────▶  keyed by sessionId+index      │
   │  ◀── repeat per chunk ─────────────                               │
   │                                   │                               │
-  │  POST /api/ipfs/upload/complete   │  concatenates all chunks,     │
+  │  POST /api/ipfs/upload/complete   │  streams all chunks,          │
   ├──────────────────────────────────▶  validates (MIME + magic       │
   │                                   │  bytes), then makes ONE        │
   │                                   │  pinFileToIPFS call ──────────▶
@@ -59,6 +59,29 @@ Browser                          Next.js app                      Pinata
   in every chunk. Both checks are the same logic `app/api/ipfs/upload`
   already used (extracted to `lib/fileSignature.ts` so it isn't duplicated).
   Client-side `validateFile` in `VideoUpload.tsx` is unchanged.
+- **`/complete` assembles by streaming, not concatenating (issues #1294,
+  #1295)**: the old `assembleFile()` path did `Buffer.concat` over every
+  chunk and then made further full-size copies (`Uint8Array`, `File`, plus a
+  second copy from the gateway re-download during verification) — ~300-400 MB
+  peak RSS for a 100 MB upload, so a few concurrent completes could OOM a
+  1 GB serverless function. `/complete` now uses
+  `prepareStreamedAssembly()` in `lib/chunkedUploadStore.ts`: it validates
+  the session, asserts the SQLite byte aggregate equals the declared
+  `fileSize` (issue #1294 — a client used to be able to declare 1 MB and
+  stream gigabytes into the chunk store), and computes the sha256 plus the
+  leading 12 bytes for the magic-byte gate in a single pass that reads one
+  chunk at a time. It then hands `lib/streamingMultipart.ts` a generator
+  yielding one chunk at a time, which builds the `pinFileToIPFS` multipart
+  body lazily and sends it with `fetch(..., { body: stream, duplex: 'half' })`,
+  so Pinata still receives exactly one complete file. Integrity verification
+  streams the gateway response through the same hash
+  (`verifyUploadedDigest`) instead of buffering it. Peak residency is one
+  chunk (~1 MB). `assembleFile()` is retained as the buffered reference path
+  that the issue-#1294 size-mismatch tests assert against; no route calls it.
+  Memory is measured by `__tests__/api/ipfs/upload/streamingMemory.test.ts`,
+  run with `npm run test:memory`, which seeds a real 100 MB / 100-chunk
+  session and asserts live-memory growth stays under the issue's 64 MB
+  budget (currently ~3 MB).
 - **Chunk-store persistence (fixed in issue #1175)**: `lib/chunkedUploadStore.ts`
   used to keep an in-memory session map and write each chunk to a given
   instance's own `os.tmpdir()` — correct only for a single, long-running

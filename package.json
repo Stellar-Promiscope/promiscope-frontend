@@ -14,6 +14,7 @@
     "test:integration": "jest --config=jest.integration.config.js --runInBand",
     "test:integration:local": "docker compose -f docker-compose.test.yml up -d && ./scripts/deploy-test-contract.sh && npm run test:integration",
     "test:watch": "jest --watch",
+    "test:memory": "cross-env NODE_OPTIONS=--expose-gc jest __tests__/api/ipfs/upload/streamingMemory.test.ts --runInBand",
     "test:coverage": "jest --passWithNoTests --maxWorkers=2 --workerIdleMemoryLimit=512MB --coverage",
     "typecheck": "tsc --noEmit",
     "type-check": "tsc --noEmit --project tsconfig.typecheck.json",

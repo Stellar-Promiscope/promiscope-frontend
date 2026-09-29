@@ -474,6 +474,106 @@ export interface AssembledFile {
 }
 
 /**
+ * Streaming assembly descriptor (issue #1295) — everything /complete needs
+ * to pin a session's file *without* concatenating it into one Buffer:
+ *
+ * - `chunks()` yields each stored chunk in index order, one at a time, so
+ *   peak residency is a single chunk (~1 MB), not the file.
+ * - `sha256` is the hex digest computed over those same bytes (hashed from
+ *   the identical chunk reads, in order) for integrity verification.
+ * - `totalBytes` is the summed stored length, already asserted to equal the
+ *   declared `fileSize`, so the multipart `Content-Length` is exact.
+ * - `header` carries the first 12 bytes for magic-byte validation before
+ *   any byte is pinned.
+ *
+ * Sizes are checked from SQLite `length(data)` aggregates *before* any
+ * chunk is read, so a session whose bytes drifted out-of-band (issue #1294)
+ * fails without streaming anything.
+ */
+export interface StreamedAssembly {
+  filename: string;
+  fileType: string;
+  fileSize: number;
+  totalChunks: number;
+  totalBytes: number;
+  sha256: string;
+  header: Uint8Array;
+  chunks: () => Generator<Buffer, void, void>;
+}
+
+/**
+ * Validates a session for streaming assembly and precomputes its digest.
+ * Reads each chunk exactly once to hash it (same order as the later upload
+ * pass); hashing is O(1) memory and representative of the streaming
+ * pipeline's own reads, keeping the route's extra peak at one chunk.
+ *
+ * Throws 400-class errors for unknown/incomplete sessions, performs the
+ * issue-#1294 size-mismatch cleanup, and does NOT clean up on success —
+ * the caller cleans up only after Pinata + verification succeed.
+ */
+export async function prepareStreamedAssembly(
+  sessionId: string,
+): Promise<StreamedAssembly> {
+  const session = await getMetadataStore().get(sessionId);
+  if (!session) {
+    throw new Error('Upload session not found or expired');
+  }
+  if (session.receivedChunks.length !== session.totalChunks) {
+    throw new Error(
+      `Incomplete upload: received ${session.receivedChunks.length}/${session.totalChunks} chunks`,
+    );
+  }
+
+  const store = ChunkedUploadChunkStore.getInstance();
+  const totalBytes = store.totalBytes(sessionId);
+  const count = store.receivedIndices(sessionId).length;
+  if (count !== session.totalChunks) {
+    throw new Error(
+      `Incomplete upload: received ${count}/${session.totalChunks} chunks`,
+    );
+  }
+  if (totalBytes !== session.fileSize) {
+    // Same poisoned-session cleanup as assembleFile(): the client must
+    // start over with a truthful size.
+    store.deleteForSession(sessionId);
+    await getMetadataStore().remove(sessionId);
+    throw new SizeMismatchError(
+      `Assembled size ${totalBytes} bytes does not match the declared file size of ${session.fileSize} bytes`,
+    );
+  }
+
+  // Hash pass over the stored chunks, one at a time. Also captures the
+  // leading 12 bytes for the route's magic-byte gate.
+  const hash = crypto.createHash('sha256');
+  let seen = 0;
+  const headerBytes = new Uint8Array(12);
+  let headerFilled = 0;
+  for (const piece of store.iterateChunks(sessionId, session.totalChunks)) {
+    hash.update(new Uint8Array(piece));
+    if (headerFilled < 12) {
+      const take = Math.min(12 - headerFilled, piece.length);
+      headerBytes.set(piece.subarray(0, take), headerFilled);
+      headerFilled += take;
+    }
+    seen += piece.length;
+  }
+  if (seen !== totalBytes) {
+    throw new Error('Upload session changed during assembly');
+  }
+
+  return {
+    filename: session.filename,
+    fileType: session.fileType,
+    fileSize: session.fileSize,
+    totalChunks: session.totalChunks,
+    totalBytes,
+    sha256: hash.digest('hex'),
+    header: headerBytes.subarray(0, headerFilled),
+    chunks: () => store.iterateChunks(sessionId, session.totalChunks),
+  };
+}
+
+/**
  * Concatenates every received chunk, in order, into a single Buffer.
  * Throws if the session is unknown/expired or any chunk is still missing —
  * correctly regardless of which instance originally received a given

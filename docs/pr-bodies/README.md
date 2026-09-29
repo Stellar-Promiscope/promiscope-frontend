@@ -15,6 +15,7 @@ arguments when opening cross-fork PRs against `scout-off/scout-off-frontend`'s
 | [`test-error-boundary-production.md`](./test-error-boundary-production.md) | `test/error-boundary-production` | test(error-boundary): lock in production-mode error detail suppression (Issue #23 AC #3) |
 | [`test-fix-lib-api-parser.md`](./test-fix-lib-api-parser.md)               | `test/fix-lib-api-parser`        | fix(test): remove orphan redeemReferralCode declaration in lib/api.ts (TS1005)           |
 | [`test-jest-provider-helper.md`](./test-jest-provider-helper.md)           | `test/jest-provider-helper`      | test(infra): add setup-providers.tsx helper for app-level renders                        |
+| [`issue-1295.md`](./issue-1295.md)                                         | `issue/1295`                     | fix(ipfs): stream /complete assembly to Pinata instead of buffering it                   |
 
 ## How to use
 

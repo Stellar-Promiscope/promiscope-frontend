@@ -62,6 +62,28 @@ export function sha256Hex(bytes: Buffer): string {
 }
 
 /**
+ * Incremental sha256 over an async byte stream — the constant-memory half
+ * of issue #1295's pipeline. No chunk is retained after it is hashed: peak
+ * residency is one yielded piece, not the file.
+ */
+export async function sha256HexOfStream(
+  stream: AsyncIterable<Uint8Array | Buffer>,
+): Promise<string> {
+  const hash = crypto.createHash('sha256');
+  for await (const piece of stream) {
+    // Copy into a plain-ArrayBuffer-backed view so @types/node's
+    // Buffer-over-ArrayBufferLike generic satisfies BinaryLike — same
+    // mismatch sha256Hex() documents above.
+    hash.update(
+      piece instanceof Uint8Array && !(piece instanceof Buffer)
+        ? piece
+        : new Uint8Array(piece),
+    );
+  }
+  return hash.digest('hex');
+}
+
+/**
  * Re-fetches `cid` from the configured IPFS gateway and confirms the bytes
  * served back are byte-identical (by sha256) to `uploadedBytes` — the bytes
  * this server actually sent to Pinata. Throws {@link UploadVerificationError}
@@ -94,5 +116,96 @@ export async function verifyUploadedContent(
     throw new UploadVerificationError(
       'Uploaded file failed integrity verification. Please try again.',
     );
+  }
+}
+
+/**
+ * Digest-based verification (issue #1295): confirms the bytes served back
+ * for `cid` hash to `expectedDigest` — the sha256 the server computed while
+ * *streaming* the file to Pinata, without ever holding the file itself.
+ * Throws the same {@link UploadVerificationError}s as
+ * {@link verifyUploadedContent}, so callers treat mismatches identically.
+ *
+ * `fetchGatewayBytes` is injectable so tests can feed a byte stream without
+ * touching the network; production passes a fetch-backed stream.
+ */
+export async function verifyUploadedDigest(
+  cid: string,
+  expectedDigest: string,
+  fetchGatewayBytes?: () =>
+    | AsyncIterable<Uint8Array | Buffer>
+    | Promise<AsyncIterable<Uint8Array | Buffer>>,
+): Promise<void> {
+  let stream: AsyncIterable<Uint8Array | Buffer>;
+  try {
+    stream = fetchGatewayBytes
+      ? await fetchGatewayBytes()
+      : await fetchGatewayStream(cid);
+  } catch {
+    throw new UploadVerificationError(
+      'Could not verify the upload against the IPFS gateway. Please try again.',
+    );
+  }
+
+  let actualHash: string;
+  try {
+    actualHash = await sha256HexOfStream(stream);
+  } catch {
+    throw new UploadVerificationError(
+      'Could not verify the upload against the IPFS gateway. Please try again.',
+    );
+  }
+
+  if (actualHash !== expectedDigest) {
+    throw new UploadVerificationError(
+      'Uploaded file failed integrity verification. Please try again.',
+    );
+  }
+}
+
+/**
+ * Streams the gateway response for `cid` as async byte pieces — no
+ * buffering of the whole file. Falls back across fetch implementations:
+ * undici/Node-18+ `Response.body` (WHATWG stream) first, then Node
+ * `IncomingMessage` async iteration for axios-style streams.
+ */
+export async function fetchGatewayStream(
+  cid: string,
+): Promise<AsyncIterable<Uint8Array | Buffer>> {
+  const url = `${GATEWAY}/${cid}`;
+  // Prefer global fetch (undici on Node 18+) with a timeout race — keeps
+  // the same bounded-wait contract as VERIFY_TIMEOUT_MS above.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok || !res.body) {
+      throw new UploadVerificationError(
+        'Could not verify the upload against the IPFS gateway. Please try again.',
+      );
+    }
+    return streamFromWebReadable(res.body as ReadableStream<Uint8Array>);
+  } catch (err) {
+    if (err instanceof UploadVerificationError) throw err;
+    throw new UploadVerificationError(
+      'Could not verify the upload against the IPFS gateway. Please try again.',
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function* streamFromWebReadable(
+  body: ReadableStream<Uint8Array>,
+): AsyncGenerator<Uint8Array, void, void> {
+  const reader = body.getReader();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      if (value && value.length > 0) yield value;
+    }
+  } finally {
+    reader.releaseLock();
   }
 }

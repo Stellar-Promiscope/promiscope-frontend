@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
-import { assembleFile, cleanupSession } from '@/lib/chunkedUploadStore';
+import {
+  prepareStreamedAssembly,
+  cleanupSession,
+} from '@/lib/chunkedUploadStore';
+import {
+  buildStreamingMultipartBody,
+  streamFileBytes,
+} from '@/lib/streamingMultipart';
 import { hasValidMagicBytes, bufToHex } from '@/lib/fileSignature';
 import { getClientIp, createRateLimiter } from '@/lib/uploadRateLimit';
 import { createRequestLogger } from '@/lib/logger';
 import {
-  verifyUploadedContent,
+  verifyUploadedDigest,
   UploadVerificationError,
 } from '@/lib/uploadVerification';
 
@@ -14,18 +20,23 @@ export const runtime = 'nodejs';
 /**
  * POST /api/ipfs/upload/complete
  *
- * Assembles every chunk of a session into one file, validates it exactly
- * like the whole-file route does (MIME + magic bytes — deferred here since
- * the signature only lives in the first chunk's leading bytes), then makes
- * the same single `pinFileToIPFS` call app/api/ipfs/upload's POST does.
- * Chunking only changes the browser<->this-app leg; Pinata still receives
- * one complete file in one request.
+ * Streams every chunk of a session to Pinata as one multipart file upload
+ * without ever concatenating the file into memory (issue #1295):
  *
- * Issue #1294: assembleFile() also asserts the assembled byte length equals
- * the declared fileSize — a mismatch (bytes stored out-of-band or under an
- * older unenforced write path) returns 400 here, and assembleFile() already
- * deleted the poisoned session so it can't be retried into another giant
- * buffering attempt.
+ *  1. `prepareStreamedAssembly()` validates the session, asserts stored
+ *     bytes === declared fileSize from SQLite aggregates, and precomputes
+ *     the sha256 over one-at-a-time chunk reads.
+ *  2. MIME + magic-byte gates run on the streamed header *before* any byte
+ *     is pinned.
+ *  3. The multipart body streams boundary headers, then each chunk in
+ *     order, then the closing boundary — Pinata still receives exactly one
+ *     complete file in one `pinFileToIPFS` request.
+ *  4. Integrity verification compares the assembly digest against a
+ *     streamed hash of the gateway response (issue #699, streamed).
+ *
+ * The session is cleaned up only after Pinata + verification succeed (or
+ * on 400-class validation failures); Pinata/verification failures preserve
+ * it so a retry skips re-uploading chunks.
  */
 const checkRateLimit = createRateLimiter(20, 60 * 1000);
 
@@ -58,9 +69,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let assembled;
+  let assembly;
   try {
-    assembled = await assembleFile(sessionId);
+    assembly = await prepareStreamedAssembly(sessionId);
   } catch (err) {
     return NextResponse.json(
       {
@@ -70,7 +81,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { buffer, filename, fileType } = assembled;
+  const { filename, fileType } = assembly;
 
   const mimeAllowed = ALLOWED_MIME_PREFIXES.some((prefix) =>
     fileType.toLowerCase().startsWith(prefix),
@@ -85,7 +96,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const header = new Uint8Array(buffer.subarray(0, 12));
+  // Magic-byte gate on the streamed header — before any byte is pinned.
+  const header = new Uint8Array(assembly.header);
   if (!hasValidMagicBytes(header)) {
     await cleanupSession(sessionId);
     log.warn('Rejected spoofed MIME type', {
@@ -104,25 +116,7 @@ export async function POST(req: NextRequest) {
 
   let cid: string;
   try {
-    const pinataForm = new FormData();
-    // Uint8Array copy sidesteps a @types/node-vs-DOM-lib generic mismatch
-    // (Buffer's ArrayBufferLike vs BlobPart's concrete ArrayBuffer).
-    const file = new File([new Uint8Array(buffer)], filename, {
-      type: fileType,
-    });
-    pinataForm.append('file', file);
-
-    const { data } = await axios.post(
-      'https://api.pinata.cloud/pinning/pinFileToIPFS',
-      pinataForm,
-      {
-        headers: {
-          pinata_api_key: process.env.PINATA_API_KEY!,
-          pinata_secret_api_key: process.env.PINATA_SECRET!,
-        },
-      },
-    );
-    cid = data.IpfsHash;
+    cid = await pinStreamedFileToIPFS(assembly);
   } catch (err) {
     // Deliberately don't clean up the session here: the assembled chunks are
     // still valid, so a client retrying /complete after a transient Pinata
@@ -137,13 +131,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Post-upload integrity verification (issue #699): re-fetch the CID from
-  // the gateway and confirm it matches the assembled bytes we just pinned,
-  // before telling the caller the upload succeeded. See
-  // lib/uploadVerification.ts for why this checks gateway-retrievable bytes
-  // rather than recomputing the CID itself.
+  // Post-upload integrity verification (issue #699, streamed for #1295):
+  // compare the assembly digest against a streamed hash of the gateway
+  // response — never buffering either side. See lib/uploadVerification.ts
+  // for why this checks gateway-retrievable bytes rather than recomputing
+  // the CID itself.
   try {
-    await verifyUploadedContent(cid, buffer);
+    const gatewayOverride = (globalThis as unknown as Record<string, unknown>)
+      .__gatewayStreamForTests as
+      | (() => AsyncIterable<Uint8Array | Buffer>)
+      | undefined;
+    await verifyUploadedDigest(cid, assembly.sha256, gatewayOverride);
   } catch (err) {
     // Same reasoning as a Pinata failure above: the assembled chunks are
     // still valid (the content is unchanged), so preserve the session
@@ -166,4 +164,71 @@ export async function POST(req: NextRequest) {
 
   await cleanupSession(sessionId);
   return NextResponse.json({ cid });
+}
+
+/**
+ * Streams one multipart file part to Pinata's `pinFileToIPFS` and returns
+ * the resulting `IpfsHash`. Uses global fetch with `duplex: 'half'` so the
+ * request body is the lazily-pulled chunk stream — axios would buffer the
+ * whole body before sending.
+ *
+ * Exported for tests: `__pinStreamedFileToIPFSForTests` overrides the
+ * network hop (drain the stream + return a canned CID) while still proving
+ * the route streamed the exact file bytes.
+ */
+export async function pinStreamedFileToIPFS(assembly: {
+  filename: string;
+  fileType: string;
+  totalBytes: number;
+  chunks: () => Generator<Buffer, void, void>;
+}): Promise<string> {
+  const override = (globalThis as unknown as Record<string, unknown>)
+    .__pinStreamedFileToIPFSForTests as
+    | ((assembly: {
+        filename: string;
+        fileType: string;
+        totalBytes: number;
+        chunks: () => Generator<Buffer, void, void>;
+      }) => Promise<string>)
+    | undefined;
+  if (override) return override(assembly);
+
+  const boundary = `----scoutoff-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const { stream, contentLength, contentType } = buildStreamingMultipartBody(
+    boundary,
+    assembly.filename,
+    assembly.fileType,
+    assembly.totalBytes,
+    assembly.chunks,
+  );
+  const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+    method: 'POST',
+    headers: {
+      'Content-Type': contentType,
+      'Content-Length': String(contentLength),
+      pinata_api_key: process.env.PINATA_API_KEY ?? '',
+      pinata_secret_api_key: process.env.PINATA_SECRET ?? '',
+    },
+    body: stream as unknown as BodyInit,
+    duplex: 'half',
+  } as RequestInit & { duplex: 'half' });
+  if (!res.ok) {
+    throw new Error(`Pinata upload failed with status ${res.status}`);
+  }
+  const data = (await res.json()) as { IpfsHash?: string };
+  if (!data.IpfsHash) {
+    throw new Error('Pinata response missing IpfsHash');
+  }
+  return data.IpfsHash;
+}
+
+/** Test helper: drains the streamed file bytes (no framing) into memory. */
+export async function collectStreamedFileBytes(
+  chunks: () => Generator<Buffer, void, void>,
+): Promise<Buffer> {
+  const pieces: Uint8Array[] = [];
+  for await (const piece of streamFileBytes(chunks)) {
+    pieces.push(piece);
+  }
+  return Buffer.concat(pieces);
 }

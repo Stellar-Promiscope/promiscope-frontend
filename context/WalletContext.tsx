@@ -14,6 +14,7 @@ import { walletAdapters } from '@/lib/walletAdapters';
 import type { WalletProvider as WalletProviderAlias } from '@/lib/walletAdapters';
 import { purgeAllContactDetails } from '@/lib/contactDetailsCache';
 import { getServerSession, refreshSession } from '@/lib/sessionClient';
+import { clearUserCaches } from '@/lib/pwaCacheConfig';
 import {
   WALLET_SESSION_KEY,
   REMEMBERED_ADDRESSES_KEY,
@@ -677,6 +678,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setSessionExpiry(expiresAt);
         setStoredSession(pk, provider, CURRENT_NETWORK_TYPE);
         setShowWalletModal(false);
+        clearUserCaches();
 
         // Remember this address for account switcher
         addRememberedAddress({
@@ -773,6 +775,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // pending auto-purge timers, which the blanket mutate alone wouldn't do.
     mutate(() => true, undefined, { revalidate: false });
     purgeAllContactDetails();
+    clearUserCaches();
 
     // Cross-tab propagation: writing then removing a localStorage key fires
     // the browser's native `storage` event in every other same-origin tab.

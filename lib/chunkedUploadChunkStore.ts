@@ -121,6 +121,42 @@ export class ChunkedUploadChunkStore {
   }
 
   /**
+   * Reads a single chunk's bytes, or null when absent. At most one chunk
+   * (~1 MB) is ever resident — the streaming read path for issue #1295.
+   */
+  readChunk(sessionId: string, chunkIndex: number): Buffer | null {
+    const row = this.db
+      .prepare(
+        `SELECT data FROM chunked_upload_chunks WHERE session_id = ? AND chunk_index = ?`,
+      )
+      .get(sessionId, chunkIndex) as { data: Buffer } | undefined;
+    if (!row) return null;
+    return Buffer.from(new Uint8Array(row.data));
+  }
+
+  /**
+   * Yields every chunk for a session in index order, one at a time.
+   * Throws on the first missing index. Peak residency is a single chunk,
+   * so a 100 MB assembly streams at ~1 MB — see prepareStreamedAssembly()
+   * in lib/chunkedUploadStore.ts (issue #1295).
+   */
+  *iterateChunks(
+    sessionId: string,
+    totalChunks: number,
+  ): Generator<Buffer, void, void> {
+    const stmt = this.db.prepare(
+      `SELECT data FROM chunked_upload_chunks WHERE session_id = ? AND chunk_index = ?`,
+    );
+    for (let i = 0; i < totalChunks; i++) {
+      const row = stmt.get(sessionId, i) as { data: Buffer } | undefined;
+      if (!row) {
+        throw new Error(`Incomplete upload: missing chunk ${i}/${totalChunks}`);
+      }
+      yield Buffer.from(new Uint8Array(row.data));
+    }
+  }
+
+  /**
    * Concatenates every chunk for a session, in index order, into one
    * Buffer. Throws if the count doesn't match `totalChunks` — a defense-in-
    * depth check independent of the caller's own metadata-based check.

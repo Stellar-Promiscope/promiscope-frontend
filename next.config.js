@@ -8,6 +8,8 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   openAnalyzer: false,
 });
 
+const { tunedRuntimeCaching } = require('./lib/pwaCacheConfig.ts');
+
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 /** @type {import('next').NextConfig} */
@@ -21,34 +23,7 @@ const withPWA = require('next-pwa')({
   // detect updates. With this off, workbox injects a SKIP_WAITING message
   // listener instead, and the banner's "Reload" button triggers it.
   skipWaiting: false,
-  runtimeCaching: [
-    // Network-first for API / RPC calls
-    {
-      urlPattern: /\/api\/.*/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'api-cache',
-        expiration: { maxEntries: 64, maxAgeSeconds: 60 },
-      },
-    },
-    // Cache-first for static assets
-    {
-      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico|woff2?|ttf|eot)$/i,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'static-assets',
-        expiration: { maxEntries: 128, maxAgeSeconds: 30 * 24 * 60 * 60 },
-      },
-    },
-    {
-      urlPattern: /\.(?:js|css)$/i,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'static-js-css',
-        expiration: { maxEntries: 64, maxAgeSeconds: 7 * 24 * 60 * 60 },
-      },
-    },
-  ],
+  runtimeCaching: tunedRuntimeCaching,
 });
 
 const nextConfig = {

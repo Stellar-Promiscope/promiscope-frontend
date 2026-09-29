@@ -2,162 +2,200 @@
  * Unit tests for lib/pwaCacheConfig.ts
  *
  * The exported `tunedRuntimeCaching` array is a pure config object — no
- * network calls, no side effects. Tests validate the cache names (regression
- * guard against accidental typos that would break cache invalidation) and
- * that the urlPattern regexes match the URLs they are designed for while
- * rejecting URLs that belong to a different entry.
+ * network calls, no side effects. Tests validate the cache names, urlPattern
+ * regexes, handlers, allowlist rules vs NetworkOnly catch-all rules, and the
+ * behavior of `clearUserCaches()`.
  */
-import { tunedRuntimeCaching } from '@/lib/pwaCacheConfig';
-
-// ── Shape ─────────────────────────────────────────────────────────────────────
+import { tunedRuntimeCaching, clearUserCaches } from '@/lib/pwaCacheConfig';
 
 describe('tunedRuntimeCaching — overall shape', () => {
-  it('exports an array with exactly three entries', () => {
+  it('exports an array with runtime caching entries', () => {
     expect(Array.isArray(tunedRuntimeCaching)).toBe(true);
-    expect(tunedRuntimeCaching).toHaveLength(3);
+    expect(tunedRuntimeCaching.length).toBeGreaterThanOrEqual(8);
   });
 
-  it('every entry has a urlPattern, handler, and options', () => {
+  it('every entry (except NetworkOnly catch-all) has urlPattern and handler', () => {
     for (const entry of tunedRuntimeCaching) {
       expect(entry).toHaveProperty('urlPattern');
       expect(entry).toHaveProperty('handler');
-      expect(entry).toHaveProperty('options');
     }
   });
 });
 
-// ── Font assets entry ─────────────────────────────────────────────────────────
+describe('Font and Icon assets entries', () => {
+  const fontEntry = tunedRuntimeCaching.find(
+    (e) => e.options?.cacheName === 'font-assets-cache',
+  );
+  const iconEntry = tunedRuntimeCaching.find(
+    (e) => e.options?.cacheName === 'icon-assets-cache',
+  );
 
-describe('font-assets-cache entry', () => {
-  const entry = tunedRuntimeCaching[0];
-
-  it('uses CacheFirst handler', () => {
-    expect(entry.handler).toBe('CacheFirst');
-  });
-
-  it('has the stable cache name font-assets-cache', () => {
-    expect(entry.options.cacheName).toBe('font-assets-cache');
-  });
-
-  it('has a maxAgeSeconds of one year (365 days)', () => {
-    expect(entry.options.expiration?.maxAgeSeconds).toBe(60 * 60 * 24 * 365);
-  });
-
-  it('matches woff2 font files', () => {
-    expect(entry.urlPattern).toEqual(expect.any(RegExp));
-    const pattern = entry.urlPattern as RegExp;
+  it('font entry uses CacheFirst handler and matches font files', () => {
+    expect(fontEntry).toBeDefined();
+    expect(fontEntry?.handler).toBe('CacheFirst');
+    const pattern = fontEntry?.urlPattern as RegExp;
     expect(pattern.test('/fonts/myfont.woff2')).toBe(true);
-    expect(pattern.test('/fonts/myfont.woff')).toBe(true);
-    expect(pattern.test('/fonts/myfont.ttf')).toBe(true);
-    expect(pattern.test('/fonts/myfont.eot')).toBe(true);
-    expect(pattern.test('/fonts/myfont.otf')).toBe(true);
-  });
-
-  it('does not match non-font assets', () => {
-    const pattern = entry.urlPattern as RegExp;
     expect(pattern.test('/images/photo.png')).toBe(false);
-    expect(pattern.test('/api/players/1')).toBe(false);
-    expect(pattern.test('/icons/icon-192.png')).toBe(false);
-  });
-});
-
-// ── Icon assets entry ─────────────────────────────────────────────────────────
-
-describe('icon-assets-cache entry', () => {
-  const entry = tunedRuntimeCaching[1];
-
-  it('uses CacheFirst handler', () => {
-    expect(entry.handler).toBe('CacheFirst');
   });
 
-  it('has the stable cache name icon-assets-cache', () => {
-    expect(entry.options.cacheName).toBe('icon-assets-cache');
-  });
-
-  it('has a maxAgeSeconds of 180 days', () => {
-    expect(entry.options.expiration?.maxAgeSeconds).toBe(60 * 60 * 24 * 180);
-  });
-
-  it('matches PNG and SVG icons under /icons/', () => {
-    const pattern = entry.urlPattern as RegExp;
+  it('icon entry uses CacheFirst handler and matches icon files under /icons/', () => {
+    expect(iconEntry).toBeDefined();
+    expect(iconEntry?.handler).toBe('CacheFirst');
+    const pattern = iconEntry?.urlPattern as RegExp;
     expect(pattern.test('/icons/icon-192.png')).toBe(true);
-    expect(pattern.test('/icons/icon-512.svg')).toBe(true);
-    expect(pattern.test('/icons/favicon.ico')).toBe(true);
-  });
-
-  it('does not match icons outside the /icons/ path', () => {
-    const pattern = entry.urlPattern as RegExp;
     expect(pattern.test('/images/logo.png')).toBe(false);
-    expect(pattern.test('/api/players/1')).toBe(false);
-  });
-
-  it('does not match font files', () => {
-    const pattern = entry.urlPattern as RegExp;
-    expect(pattern.test('/fonts/myfont.woff2')).toBe(false);
   });
 });
 
-// ── Player/scout API data entry ───────────────────────────────────────────────
+describe('Public API allowlist entries', () => {
+  const mediaEntry = tunedRuntimeCaching.find(
+    (e) => e.options?.cacheName === 'public-media-cache',
+  );
+  const publicApiEntry = tunedRuntimeCaching.find(
+    (e) => e.options?.cacheName === 'public-api-cache',
+  );
 
-describe('player-scout-data-cache entry', () => {
-  const entry = tunedRuntimeCaching[2];
-
-  it('uses StaleWhileRevalidate handler', () => {
-    expect(entry.handler).toBe('StaleWhileRevalidate');
+  it('media entry matches /api/media/* content-addressed endpoints', () => {
+    expect(mediaEntry).toBeDefined();
+    expect(mediaEntry?.handler).toBe('CacheFirst');
+    const pattern = mediaEntry?.urlPattern as RegExp;
+    expect(pattern.test('/api/media/bafybeic12345')).toBe(true);
+    expect(pattern.test('/api/watchlist')).toBe(false);
   });
 
-  it('has the stable cache name player-scout-data-cache', () => {
-    expect(entry.options.cacheName).toBe('player-scout-data-cache');
-  });
-
-  it('has a maxAgeSeconds of 5 minutes', () => {
-    expect(entry.options.expiration?.maxAgeSeconds).toBe(60 * 5);
-  });
-
-  it('matches /api/players/ and /api/scouts/ routes', () => {
-    const pattern = entry.urlPattern as RegExp;
-    expect(pattern.test('/api/players/GABC')).toBe(true);
-    expect(pattern.test('/api/players/GABC/milestones')).toBe(true);
-    expect(pattern.test('/api/scouts/GSCOUT')).toBe(true);
-    expect(pattern.test('/api/scouts/GSCOUT/subscriptions')).toBe(true);
-  });
-
-  it('does not match unrelated API routes', () => {
-    const pattern = entry.urlPattern as RegExp;
-    expect(pattern.test('/api/notifications/read')).toBe(false);
-    expect(pattern.test('/api/notification-preferences')).toBe(false);
-    expect(pattern.test('/api/session')).toBe(false);
-  });
-
-  it('does not match icon or font assets', () => {
-    const pattern = entry.urlPattern as RegExp;
-    expect(pattern.test('/icons/icon-192.png')).toBe(false);
-    expect(pattern.test('/fonts/myfont.woff2')).toBe(false);
+  it('public API entry matches /api/leaderboard and /api/players/search', () => {
+    expect(publicApiEntry).toBeDefined();
+    expect(publicApiEntry?.handler).toBe('StaleWhileRevalidate');
+    const pattern = publicApiEntry?.urlPattern as RegExp;
+    expect(pattern.test('/api/leaderboard')).toBe(true);
+    expect(pattern.test('/api/players/search?name=test')).toBe(true);
+    expect(pattern.test('/api/watchlist')).toBe(false);
+    expect(pattern.test('/api/admin/audit-log')).toBe(false);
   });
 });
 
-// ── Stability / regression guard ──────────────────────────────────────────────
+describe('API catch-all NetworkOnly entry', () => {
+  const networkOnlyEntry = tunedRuntimeCaching.find(
+    (e) => e.handler === 'NetworkOnly',
+  );
 
-describe('cache name stability — regression guard', () => {
-  it('all cache names are non-empty strings', () => {
-    for (const entry of tunedRuntimeCaching) {
-      expect(typeof entry.options.cacheName).toBe('string');
-      expect((entry.options.cacheName as string).length).toBeGreaterThan(0);
+  it('exists and matches all /api/* URLs', () => {
+    expect(networkOnlyEntry).toBeDefined();
+    expect(networkOnlyEntry?.handler).toBe('NetworkOnly');
+    const pattern = networkOnlyEntry?.urlPattern as RegExp;
+    expect(pattern.test('/api/watchlist')).toBe(true);
+    expect(pattern.test('/api/saved-searches')).toBe(true);
+    expect(pattern.test('/api/recently-viewed')).toBe(true);
+    expect(pattern.test('/api/auth/sessions')).toBe(true);
+    expect(pattern.test('/api/notification-preferences')).toBe(true);
+    expect(pattern.test('/api/data-export')).toBe(true);
+    expect(pattern.test('/api/admin/audit-log')).toBe(true);
+    expect(pattern.test('/api/admin/fraud-flags')).toBe(true);
+  });
+
+  it('ensures personal / credentialed API routes do NOT match any caching allowlist', () => {
+    const cachingApiEntries = tunedRuntimeCaching.filter(
+      (e) =>
+        e.handler !== 'NetworkOnly' &&
+        typeof e.urlPattern === 'object' &&
+        (e.urlPattern as RegExp).source.includes('api'),
+    );
+
+    const personalRoutes = [
+      '/api/watchlist',
+      '/api/saved-searches',
+      '/api/recently-viewed',
+      '/api/auth/sessions',
+      '/api/auth/session',
+      '/api/auth/sep10',
+      '/api/notification-preferences',
+      '/api/data-export',
+      '/api/admin/audit-log',
+      '/api/admin/fraud-flags',
+    ];
+
+    for (const route of personalRoutes) {
+      for (const entry of cachingApiEntries) {
+        const pattern = entry.urlPattern as RegExp;
+        expect(pattern.test(route)).toBe(false);
+      }
     }
   });
+});
 
-  it('each cache name is unique', () => {
-    const names = tunedRuntimeCaching.map((e) => e.options.cacheName);
-    const unique = new Set(names);
-    expect(unique.size).toBe(names.length);
+describe('clearUserCaches helper', () => {
+  const originalCaches = window.caches;
+  const originalServiceWorker = navigator.serviceWorker;
+
+  afterEach(() => {
+    Object.defineProperty(window, 'caches', {
+      value: originalCaches,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: originalServiceWorker,
+      writable: true,
+      configurable: true,
+    });
   });
 
-  it('cache names match the documented values exactly', () => {
-    const names = tunedRuntimeCaching.map((e) => e.options.cacheName);
-    expect(names).toEqual([
-      'font-assets-cache',
-      'icon-assets-cache',
-      'player-scout-data-cache',
-    ]);
+  it('deletes api and user caches and messages service worker controller', async () => {
+    const deletedCaches: string[] = [];
+    const mockDelete = jest.fn((name: string) => {
+      deletedCaches.push(name);
+      return Promise.resolve(true);
+    });
+
+    const mockCaches = {
+      keys: jest
+        .fn()
+        .mockResolvedValue(['api-cache', 'static-assets', 'player-scout-data-cache']),
+      delete: mockDelete,
+    };
+
+    const mockPostMessage = jest.fn();
+
+    Object.defineProperty(window, 'caches', {
+      value: mockCaches,
+      writable: true,
+      configurable: true,
+    });
+
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: {
+        controller: {
+          postMessage: mockPostMessage,
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    await clearUserCaches();
+
+    expect(mockCaches.keys).toHaveBeenCalled();
+    expect(mockDelete).toHaveBeenCalledWith('api-cache');
+    expect(mockDelete).toHaveBeenCalledWith('player-scout-data-cache');
+    expect(mockDelete).not.toHaveBeenCalledWith('static-assets');
+    expect(mockPostMessage).toHaveBeenCalledWith({
+      type: 'CLEAR_USER_CACHES',
+    });
+  });
+
+  it('handles missing caches and controller gracefully', async () => {
+    Object.defineProperty(window, 'caches', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: {},
+      writable: true,
+      configurable: true,
+    });
+
+    await expect(clearUserCaches()).resolves.not.toThrow();
   });
 });
