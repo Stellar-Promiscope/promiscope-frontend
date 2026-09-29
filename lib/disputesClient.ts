@@ -58,7 +58,12 @@ export async function createDispute(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new Error(body?.error ?? 'Failed to create dispute');
+    // #1323: migrated routes return { error: { code, message } }.
+    const error = body?.error;
+    throw new Error(
+      (typeof error === 'string' ? error : error?.message) ??
+        'Failed to create dispute',
+    );
   }
   return res.json();
 }

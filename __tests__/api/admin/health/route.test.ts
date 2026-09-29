@@ -1,5 +1,24 @@
 /** @jest-environment node */
+import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/admin/health/route';
+import { createSessionToken } from '@/lib/session';
+import { SessionStore } from '@/lib/sessionStore';
+
+const ADMIN = 'GADMIN0000000000000000000000000000000000000000000000000';
+const OTHER = 'GOTHER0000000000000000000000000000000000000000000000000';
+
+let sidCounter = 0;
+
+function makeRequest(wallet?: string): NextRequest {
+  const headers: Record<string, string> = {};
+  if (wallet !== undefined) {
+    const sid = `health-sid-${sidCounter++}`;
+    SessionStore.getInstance().create(sid, wallet, Date.now() + 60 * 60 * 1000);
+    headers['cookie'] =
+      `session=${createSessionToken(wallet, 'access', 20 * 60, { sid })}`;
+  }
+  return new NextRequest('http://localhost/api/admin/health', { headers });
+}
 
 const originalFetch = global.fetch;
 const originalIndexerUrl = process.env.NEXT_PUBLIC_INDEXER_API_URL;
@@ -14,6 +33,7 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 beforeEach(() => {
+  process.env.NEXT_PUBLIC_ADMIN_ADDRESS = ADMIN;
   process.env.NEXT_PUBLIC_INDEXER_API_URL = 'http://indexer.example.com';
   process.env.API_URL_INTERNAL = 'http://backend.example.com';
   delete process.env.NEXT_PUBLIC_API_URL;
@@ -27,12 +47,44 @@ afterEach(() => {
 });
 
 describe('GET /api/admin/health', () => {
+  it('returns 401 without a session', async () => {
+    global.fetch = jest.fn();
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 for a non-admin wallet', async () => {
+    global.fetch = jest.fn();
+    const res = await GET(makeRequest(OTHER));
+    expect(res.status).toBe(403);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('only passes allow-listed detail fields through', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse(200, {
+        status: 'ok',
+        lastLedger: 42,
+        uptime: 100,
+        dbPassword: 'secret',
+      }),
+    ) as unknown as typeof fetch;
+    const res = await GET(makeRequest(ADMIN));
+    const body = await res.json();
+    expect(body.indexer.detail).toEqual({
+      status: 'ok',
+      lastLedger: 42,
+      uptime: 100,
+    });
+  });
+
   it('reports ok for both subsystems when their /health endpoints succeed', async () => {
     global.fetch = jest
       .fn()
       .mockImplementation(async () => jsonResponse(200, { status: 'ok' }));
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.indexer).toEqual({ status: 'ok', detail: { status: 'ok' } });
@@ -47,7 +99,7 @@ describe('GET /api/admin/health', () => {
         jsonResponse(200, { status: 'degraded' }),
       );
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer.status).toBe('degraded');
     expect(body.backend.status).toBe('degraded');
@@ -60,7 +112,7 @@ describe('GET /api/admin/health', () => {
         jsonResponse(503, { status: 'unhealthy', pollerRunning: false }),
       );
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer.status).toBe('unhealthy');
     expect(body.indexer.detail.pollerRunning).toBe(false);
@@ -71,7 +123,7 @@ describe('GET /api/admin/health', () => {
       .fn()
       .mockResolvedValue(jsonResponse(200, { status: 'starting' }));
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer.status).toBe('starting');
   });
@@ -79,7 +131,7 @@ describe('GET /api/admin/health', () => {
   it('reports unreachable with the HTTP status when a subsystem responds non-ok', async () => {
     global.fetch = jest.fn().mockResolvedValue(jsonResponse(503, {}));
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer).toEqual({ status: 'unreachable', error: 'HTTP 503' });
   });
@@ -87,7 +139,7 @@ describe('GET /api/admin/health', () => {
   it('reports unreachable with the error message when fetch throws', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer).toEqual({
       status: 'unreachable',
@@ -106,7 +158,7 @@ describe('GET /api/admin/health', () => {
       return Promise.reject(err);
     });
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer).toEqual({
       status: 'unreachable',
@@ -120,7 +172,7 @@ describe('GET /api/admin/health', () => {
       .fn()
       .mockResolvedValue(jsonResponse(200, { status: 'ok' }));
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer).toEqual({
       status: 'unreachable',
@@ -136,7 +188,7 @@ describe('GET /api/admin/health', () => {
       .mockResolvedValue(jsonResponse(200, { status: 'ok' }));
     global.fetch = fetchMock;
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     expect(res.status).toBe(200);
     const backendCall = fetchMock.mock.calls.find((call) =>
       String(call[0]).startsWith('http://public-backend.example.com'),
@@ -152,7 +204,7 @@ describe('GET /api/admin/health', () => {
       }),
     );
 
-    const res = await GET();
+    const res = await GET(makeRequest(ADMIN));
     const body = await res.json();
     expect(body.indexer.status).toBe('ok');
   });

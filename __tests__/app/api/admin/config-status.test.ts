@@ -1,5 +1,9 @@
 /** @jest-environment node */
+import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/admin/config-status/route';
+
+// The route is admin-gated; these tests cover the payload, not the auth gate.
+jest.mock('@/lib/adminAuth', () => ({ requireAdminWallet: () => true }));
 
 describe('Config Status API', () => {
   const originalEnv = process.env;
@@ -19,7 +23,9 @@ describe('Config Status API', () => {
   });
 
   it('returns presence information for all config variables', async () => {
-    const response = await GET();
+    const response = await GET(
+      new NextRequest('http://localhost/api/admin/config-status'),
+    );
     const data = await response.json();
     expect(Array.isArray(data)).toBe(true);
     const names = data.map((d: any) => d.name);

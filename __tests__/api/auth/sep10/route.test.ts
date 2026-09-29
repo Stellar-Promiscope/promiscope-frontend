@@ -179,7 +179,10 @@ describe('POST /api/auth/sep10 — SEP-10 verification failures', () => {
 
     expect(res.status).toBe(401);
     const body = await res.json();
-    expect(body).toEqual({ error: 'Challenge verification failed' });
+    // #1323: the raw stellar-sdk message must not reach the client.
+    expect(body).toEqual({
+      error: { code: 'INVALID_SIGNATURE', message: 'Verification failed' },
+    });
   });
 });
 

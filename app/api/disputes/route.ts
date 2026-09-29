@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import { getSessionWallet } from '@/lib/session';
 import { requireAdminWallet } from '@/lib/adminAuth';
 import {
@@ -178,10 +179,20 @@ export async function POST(req: NextRequest) {
     return privateJson(dispute, { status: 201 });
   } catch (err) {
     if (err instanceof DuplicateDisputeError) {
-      return privateJson({ error: err.message }, { status: 409 });
+      return apiError(
+        ApiErrorCode.DISPUTE_ALREADY_PENDING,
+        409,
+        `Milestone ${trimmedMilestoneId} already has a pending dispute`,
+        { milestoneId: trimmedMilestoneId },
+      );
     }
     if (err instanceof MilestoneNotFoundError) {
-      return privateJson({ error: err.message }, { status: 404 });
+      return apiError(
+        ApiErrorCode.MILESTONE_NOT_FOUND,
+        404,
+        `Milestone ${trimmedMilestoneId} not found`,
+        { milestoneId: trimmedMilestoneId },
+      );
     }
     log.error('Failed to create dispute', {
       reason: err instanceof Error ? err.message : String(err),

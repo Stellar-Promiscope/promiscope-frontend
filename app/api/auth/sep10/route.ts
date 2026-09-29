@@ -1,5 +1,6 @@
 import { WebAuth, Networks, Keypair, StrKey } from '@stellar/stellar-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import { randomUUID } from 'crypto';
 import { createRequestLogger, withRequestId } from '@/lib/logger';
 import {
@@ -188,10 +189,7 @@ async function postSep10(req: NextRequest) {
       reason: error instanceof Error ? error.message : String(error),
     });
     return withRequestId(
-      NextResponse.json(
-        { error: 'Challenge verification failed' },
-        { status: 401 },
-      ),
+      apiError(ApiErrorCode.INVALID_SIGNATURE, 401, 'Verification failed'),
       log.requestId,
     );
   }

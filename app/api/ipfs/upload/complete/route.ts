@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, ApiErrorCode } from '@/lib/apiErrors';
 import {
   prepareStreamedAssembly,
   cleanupSession,
+  getSessionStatus,
 } from '@/lib/chunkedUploadStore';
 import {
   buildStreamingMultipartBody,
@@ -77,11 +79,25 @@ async function postCompleteUpload(req: NextRequest) {
   try {
     assembly = await prepareStreamedAssembly(sessionId);
   } catch (err) {
-    return NextResponse.json(
-      {
-        error: err instanceof Error ? err.message : 'Failed to assemble upload',
-      },
-      { status: 400 },
+    log.warn('Failed to assemble upload', {
+      sessionId,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    const session = await getSessionStatus(sessionId).catch(() => null);
+    if (session) {
+      const received = session.receivedChunks.length;
+      const total = session.totalChunks;
+      return apiError(
+        ApiErrorCode.UPLOAD_INCOMPLETE,
+        400,
+        `Incomplete upload: received ${received}/${total} chunks`,
+        { received, total },
+      );
+    }
+    return apiError(
+      ApiErrorCode.UPLOAD_SESSION_NOT_FOUND,
+      400,
+      'Upload session not found or expired',
     );
   }
 

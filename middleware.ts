@@ -6,6 +6,7 @@ import {
   LOCALE_COOKIE,
   LOCALE_COOKIE_MAX_AGE,
 } from '@/lib/locales';
+import { negotiateLocale } from '@/lib/negotiateLocale';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { buildCsp } from '@/lib/csp';
 
@@ -15,18 +16,11 @@ function getLocale(request: NextRequest): string {
     return cookieLocale;
   }
 
-  const acceptLanguage = request.headers.get('accept-language');
-  if (acceptLanguage) {
-    const preferredLocale = acceptLanguage
-      .split(',')[0]
-      .split('-')[0]
-      .toLowerCase();
-    if (locales.includes(preferredLocale)) {
-      return preferredLocale;
-    }
-  }
-
-  return defaultLocale;
+  return negotiateLocale(
+    request.headers.get('accept-language'),
+    locales,
+    defaultLocale,
+  );
 }
 
 export async function middleware(request: NextRequest) {
@@ -81,9 +75,11 @@ export async function middleware(request: NextRequest) {
   }
 
   const locale = getLocale(request);
-  const response = NextResponse.redirect(
-    new URL(`/${locale}${pathname}`, request.url),
-  );
+  // Clone nextUrl rather than resolving a new path against request.url so
+  // the query string (e.g. ?ref= referral codes) survives the redirect.
+  const url = request.nextUrl.clone();
+  url.pathname = `/${locale}${pathname}`;
+  const response = NextResponse.redirect(url);
 
   response.cookies.set(LOCALE_COOKIE, locale, {
     path: '/',

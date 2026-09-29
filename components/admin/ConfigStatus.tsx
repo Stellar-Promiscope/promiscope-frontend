@@ -9,12 +9,19 @@ type ConfigEntry = {
 export default function ConfigStatus() {
   const [config, setConfig] = useState<ConfigEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
     fetch('/api/admin/config-status')
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 401 || res.status === 403) {
+          setUnauthorized(true);
+          return [];
+        }
+        return res.json();
+      })
       .then((data) => {
-        setConfig(data);
+        setConfig(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(() => {
@@ -25,6 +32,14 @@ export default function ConfigStatus() {
 
   if (loading) {
     return <p className="text-sm text-gray-400">Loading config status…</p>;
+  }
+
+  if (unauthorized) {
+    return (
+      <p className="text-sm text-gray-400">
+        Admin session required to view config status.
+      </p>
+    );
   }
 
   return (
