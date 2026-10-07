@@ -1,37 +1,28 @@
-# Promiscope
+# Promiscope Frontend
 
-**Promises in view. Progress on record.** Promiscope is a community project accountability platform concept. It is intended to make project commitments, progress evidence, and community review easier to follow, with Stellar supporting transparent records where appropriate.
+Promiscope is a community project accountability platform concept for following project commitments, evidence, and progress. The home, project directory, and organization pages are an early visual preview with fictional example projects; project submission and review flows are not connected yet. Existing account and dashboard integrations still reflect the prior product domain.
 
-## Product status
+## Architecture and tree
 
-The home, project directory, and organization pages are an early visual preview. Project cards are fictional examples; project creation, evidence submission, community review, and organization accounts are not connected yet. Existing dashboards, APIs, data models, and Soroban contracts still implement the previous product workflows. Do not treat those legacy workflows as live Promiscope functionality.
+The app is a localized Next.js application. Server and client pages live under `app/[locale]/`; same-origin API handlers live under `app/api/`. Shared interface components are in `components/`, cross-page state in `context/`, hooks in `hooks/`, and Stellar/API helpers in `lib/`. Translations are in `messages/` (`en`, `fr`, `sw`), static assets in `public/`, unit tests in `__tests__/`, and browser flows in `e2e/`.
 
-## Project structure
+The Next.js app calls the Express service in `server/` for legacy API workflows. The standalone event indexer is in `packages/indexer/`. Wallet and contract access use Stellar/Soroban; media upload uses server-side Pinata credentials. Redis is used for shared rate limits and upload state in multi-instance deployments.
 
-- `app/[locale]/` — localized Next.js pages (`en`, `fr`, `sw`), including the public preview and legacy dashboard routes.
-- `components/` — shared navigation, wallet, accessibility, and interface components.
-- `messages/` — English, French, and Swahili interface strings.
-- `lib/` — Stellar, API, configuration, and shared application helpers.
-- `public/` — static assets, PWA manifest, and brand images.
-- `__tests__/` — Jest unit and component tests; `e2e/` contains Playwright flows.
-- `../promiscope-backend/` and `../promiscope-contracts/` — the sibling backend and Soroban contract repositories; both are still legacy-domain implementations.
+## Configuration
+
+Copy `.env.example` to `.env.local`. Treat that file as the full environment-variable reference; values are grouped by service:
+
+| Group | Main variables | Purpose |
+| --- | --- | --- |
+| Stellar | `NEXT_PUBLIC_NETWORK`, `NEXT_PUBLIC_HORIZON_URL`, `NEXT_PUBLIC_SOROBAN_RPC`, `NEXT_PUBLIC_CONTRACT_ID` | Network and contract access |
+| API | `NEXT_PUBLIC_API_URL`, `API_URL_INTERNAL`, `BACKEND_SERVICE_TOKEN` | Browser and server-side backend connections |
+| Media and storage | `PINATA_API_KEY`, `PINATA_SECRET`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Uploads, rate limits, and resumable uploads |
+| Operations | `SENTRY_DSN`, `CRON_SECRET`, `SESSION_SECRET` | Monitoring and protected server functions |
+
+Keep secrets server-side: never expose them through `NEXT_PUBLIC_` variables. Local development can leave optional integrations blank; production settings and feature-specific variables are documented inline in `.env.example`.
 
 ## Development
 
-Use Node.js 24 or later. From this directory:
+Use Node.js 24 or later. Run `npm install`, then `npm run dev`. Check with `npm run typecheck`, `npm run lint`, and `npm test`; browser tests run with `npm run test:e2e`. Update English, French, and Swahili strings together when shared UI copy changes. Keep demo records clearly identified as examples.
 
-```sh
-npm install
-npm run dev          # Start the local Next.js app
-npm run typecheck    # Check TypeScript types
-npm run lint         # Run Next.js lint checks
-npm test             # Run Jest tests
-```
-
-The frontend needs the environment values listed in `.env.example` for wallet and contract-backed features. Public preview pages use illustrative content and can be developed independently of those integrations.
-
-## Contribution notes
-
-Keep new user-facing language focused on community projects, commitments, evidence, and progress. Mark demo content clearly and never imply that an organization or update has been verified unless the workflow supports that claim. Follow the existing TypeScript and Tailwind patterns, update all three locale files when shared copy changes, and include a concise pull request summary with affected routes and screenshots for visual changes.
-
-For security-sensitive changes, use the process in [SECURITY.md](SECURITY.md). See [the workspace AGENTS.md](../AGENTS.md) for repository-specific contributor instructions.
+See [DEVELOPMENT.md](DEVELOPMENT.md), [CONTRIBUTING.md](CONTRIBUTING.md), and [SECURITY.md](SECURITY.md) for setup and contribution details.
