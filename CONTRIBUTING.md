@@ -2,7 +2,9 @@
 
 ## Introduction
 
-Thank you for contributing to the ScoutOff frontend. This repository is the Next.js frontend for the ScoutOff decentralized scouting platform. Contributions are welcome from anyone who wants to improve the code, tests, documentation, or developer experience.
+Thank you for contributing to the Promiscope frontend. Promiscope is pivoting to community project accountability. The home, project directory, and organization pages are a static product preview; the remaining dashboards, APIs, data models, and contract integrations still implement the former football scouting product. Project creation, evidence submission, and community review are not implemented yet.
+
+For new user-facing work, focus on project commitments, progress updates, supporting evidence, and community responses. Keep demo data visibly illustrative and avoid calling updates verified unless a real review workflow supports that claim. Legacy workflow docs below describe the current code and should not be treated as the new product specification.
 
 The typical contribution workflow is:
 
@@ -15,7 +17,7 @@ The typical contribution workflow is:
 
 ## Finding Something to Work On
 
-All work is tracked in [GitHub Issues](https://github.com/scout-off/scout-off-frontend/issues). Filter by the `easy`, `medium`, `hard`, or `good first issue` labels to find a task that fits. The old `ISSUES.md` list is archived at [`docs/archive/ISSUES-2026.md`](docs/archive/ISSUES-2026.md) for historical reference only.
+All work is tracked in [GitHub Issues](https://github.com/promiscope/promiscope-frontend/issues). Filter by the `easy`, `medium`, `hard`, or `good first issue` labels to find a task that fits. The old `ISSUES.md` list is archived at [`docs/archive/ISSUES-2026.md`](docs/archive/ISSUES-2026.md) for historical reference only.
 
 ## Local Development Setup
 
@@ -32,8 +34,8 @@ All work is tracked in [GitHub Issues](https://github.com/scout-off/scout-off-fr
 ### Clone the repository
 
 ```bash
-git clone https://github.com/scout-off/scout-off-frontend.git
-cd scout-off-frontend
+git clone https://github.com/promiscope/promiscope-frontend.git
+cd promiscope-frontend
 ```
 
 ### Install dependencies
@@ -236,7 +238,7 @@ For full indexer setup, environment variables, and schema details, see [packages
 When your changes include contract integration, run the smart contract tests from the contracts repository:
 
 ```bash
-cd ../scout-off-contracts && cargo test
+cd ../promiscope-contracts && cargo test
 ```
 
 Run smart contract tests when your frontend changes depend on on-chain contract behavior, contract IDs, or Soroban interaction logic.
@@ -318,6 +320,6 @@ assignment is needed — GitHub applies CODEOWNERS rules on PR creation.
 - Lighthouse CI runs on every PR as a `lighthouse` job — reports are uploaded as build artifacts.
 - Storybook visual regression runs on every PR as the `visual-regression` job (`.github/workflows/visual-regression.yml`); see [docs/visual-regression.md](docs/visual-regression.md) for how to review a failing diff and update baselines for intentional changes.
 - If Husky hooks are not active after cloning, run `npm run prepare`.
-- For offline PR-body drafts used when opening cross-fork PRs against `scout-off/scout-off-frontend:main`, see [docs/pr-bodies/](docs/pr-bodies/) — each file matches a branch in the bulk-deploy stack and is passed to `gh pr create --body-file`.
+- For offline PR-body drafts used when opening cross-fork PRs against `promiscope/promiscope-frontend:main`, see [docs/pr-bodies/](docs/pr-bodies/) — each file matches a branch in the bulk-deploy stack and is passed to `gh pr create --body-file`.
 
-Thank you for helping improve ScoutOff.
+Thank you for helping improve Promiscope.

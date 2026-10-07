@@ -6,12 +6,12 @@
  * the migration as failed.
  *
  * On-chain identity transfer:
- *   The ScoutOff Soroban contract does not currently expose a
+ *   The Promiscope Soroban contract does not currently expose a
  *   `transfer_player` entrypoint. Until it does, the on-chain profile
  *   remains bound to the original key. This function performs the complete
  *   off-chain migration and surfaces a clear notice to the caller.
  *
- *   Tracking issue: https://github.com/scout-off/scout-off-frontend/issues/1315
+ *   Tracking issue: https://github.com/promiscope/promiscope-frontend/issues/1315
  *
  * Stores migrated:
  *   - watchlist
@@ -138,9 +138,9 @@ export async function executeWalletMigration(
     },
     onChainTransferBlocked: {
       reason:
-        'The ScoutOff Soroban contract does not yet expose a transfer_player entrypoint. Your on-chain profile (registration, milestones, subscriptions) remains bound to the original wallet key. Only off-chain data has been migrated.',
+        'The Promiscope Soroban contract does not yet expose a transfer_player entrypoint. Your on-chain profile (registration, milestones, subscriptions) remains bound to the original wallet key. Only off-chain data has been migrated.',
       trackingIssue:
-        'https://github.com/scout-off/scout-off-frontend/issues/1315',
+        'https://github.com/promiscope/promiscope-frontend/issues/1315',
     },
   };
 }

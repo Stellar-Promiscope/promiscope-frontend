@@ -47,7 +47,7 @@ jobs:
     # reproducible even if the script defaults change.
     env:
       # Must match WASM_URL + WASM_SHA256 in scripts/deploy-test-contract.sh
-      WASM_URL: 'https://github.com/scout-off/scout-off-contracts/releases/download/v1.0.0/scout_off_contracts.wasm'
+      WASM_URL: 'https://github.com/promiscope/promiscope-contracts/releases/download/v1.0.0/promiscope_contracts.wasm'
       WASM_SHA256: 'a3f8c2d1e4b5a6f7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1'
       # Local quickstart uses its own passphrase (different from testnet)
       NETWORK_PASSPHRASE: 'Standalone Network ; February 2017'
@@ -62,7 +62,7 @@ jobs:
       # Unused by the integration suite but needed by Next.js imports
       NEXT_PUBLIC_IPFS_GATEWAY: 'https://gateway.pinata.cloud/ipfs'
       NEXT_PUBLIC_API_URL: 'http://localhost:4000'
-      NEXT_PUBLIC_APP_URL: 'https://scoutoff.app'
+      NEXT_PUBLIC_APP_URL: 'https://promiscope.example'
 
     steps:
       # ── 1. Checkout ─────────────────────────────────────────────────────────

@@ -51,7 +51,7 @@ function detectMismatches(locales) {
 
 describe('flattenKeys', () => {
   it('returns a single key for a flat object', () => {
-    const result = flattenKeys({ title: 'ScoutOff' });
+    const result = flattenKeys({ title: 'Promiscope' });
     expect(result).toEqual(['title']);
   });
 
@@ -130,17 +130,17 @@ describe('flattenKeys', () => {
 describe('mismatch detection', () => {
   it('reports no errors when all locales have identical key sets', () => {
     const locales = {
-      en: { title: 'ScoutOff', nav: { home: 'Home' } },
-      fr: { title: 'ScoutOff FR', nav: { home: 'Accueil' } },
-      sw: { title: 'ScoutOff SW', nav: { home: 'Nyumbani' } },
+      en: { title: 'Promiscope', nav: { home: 'Home' } },
+      fr: { title: 'Promiscope FR', nav: { home: 'Accueil' } },
+      sw: { title: 'Promiscope SW', nav: { home: 'Nyumbani' } },
     };
     expect(detectMismatches(locales)).toEqual([]);
   });
 
   it('reports a missing top-level key when one locale is missing it', () => {
     const locales = {
-      en: { title: 'ScoutOff', footer: 'Footer text' },
-      fr: { title: 'ScoutOff FR' }, // missing 'footer'
+      en: { title: 'Promiscope', footer: 'Footer text' },
+      fr: { title: 'Promiscope FR' }, // missing 'footer'
     };
     const errors = detectMismatches(locales);
     expect(errors).toHaveLength(1);
@@ -201,7 +201,7 @@ describe('mismatch detection', () => {
 
   it('passes with a single locale (nothing to compare against)', () => {
     // A single locale can never have a mismatch with itself.
-    const locales = { en: { title: 'ScoutOff' } };
+    const locales = { en: { title: 'Promiscope' } };
     expect(detectMismatches(locales)).toEqual([]);
   });
 

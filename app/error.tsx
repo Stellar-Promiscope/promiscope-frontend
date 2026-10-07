@@ -23,7 +23,7 @@ function reportToSentry(error: Error) {
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    console.error('[ScoutOff] Unhandled error:', error);
+    console.error('[Promiscope] Unhandled error:', error);
     reportToSentry(error);
   }, [error]);
 

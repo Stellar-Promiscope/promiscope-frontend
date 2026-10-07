@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const tmpDir = fs.mkdtempSync(
-  path.join(os.tmpdir(), 'scout-off-backend-db-test-'),
+  path.join(os.tmpdir(), 'promiscope-backend-db-test-'),
 );
 process.env.DB_PATH = path.join(tmpDir, 'nested', 'test.db');
 

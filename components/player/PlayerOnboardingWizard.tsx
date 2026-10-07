@@ -48,7 +48,7 @@ interface WizardData {
  * one player's in-progress data (including an already-obtained IPFS CID)
  * into another's form.
  */
-const WIZARD_STORAGE_PREFIX = 'scoutoff_onboarding_wizard_';
+const WIZARD_STORAGE_PREFIX = 'promiscope_onboarding_wizard_';
 
 function wizardStorageKey(wallet: string): string {
   return `${WIZARD_STORAGE_PREFIX}${wallet}`;

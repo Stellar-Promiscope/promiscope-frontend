@@ -106,7 +106,7 @@ export function buildExportPayload(
  *
  * @param payload - The export payload to download.
  * @param filename - Optional filename (defaults to
- *                   `scoutoff-export-<playerId>-<date>.json`).
+ *                   `promiscope-export-<playerId>-<date>.json`).
  */
 export function downloadExportPayload(
   payload: DataExportPayload,
@@ -120,7 +120,7 @@ export function downloadExportPayload(
   anchor.href = url;
   anchor.download =
     filename ??
-    `scoutoff-export-${payload.playerId}-${new Date().toISOString().split('T')[0]}.json`;
+    `promiscope-export-${payload.playerId}-${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);

@@ -54,7 +54,7 @@ describe('middleware.ts locale configuration', () => {
     });
 
     it('locale configuration has exactly 3 supported locales', () => {
-      // ScoutOff supports en, fr, sw — this ensures no accidental additions/removals
+      // Promiscope supports en, fr, sw — this ensures no accidental additions/removals
       expect(locales.length).toBe(3);
       expect(locales).toContain('en');
       expect(locales).toContain('fr');
@@ -123,45 +123,45 @@ describe('middleware locale redirect', () => {
   }
 
   it('keeps a ?ref= referral code (#1324)', async () => {
-    expect(await redirectFor('https://scoutoff.app/scout?ref=TEST')).toBe(
-      'https://scoutoff.app/en/scout?ref=TEST',
+    expect(await redirectFor('https://promiscope.example/scout?ref=TEST')).toBe(
+      'https://promiscope.example/en/scout?ref=TEST',
     );
   });
 
   it('keeps multiple query params', async () => {
     expect(
       await redirectFor(
-        'https://scoutoff.app/compare?ids=1,2&utm_source=x&utm_medium=y',
+        'https://promiscope.example/compare?ids=1,2&utm_source=x&utm_medium=y',
       ),
-    ).toBe('https://scoutoff.app/en/compare?ids=1,2&utm_source=x&utm_medium=y');
+    ).toBe('https://promiscope.example/en/compare?ids=1,2&utm_source=x&utm_medium=y');
   });
 
   it('keeps encoded values intact', async () => {
     expect(
-      await redirectFor('https://scoutoff.app/search?q=caf%C3%A9%20%26%20co'),
-    ).toBe('https://scoutoff.app/en/search?q=caf%C3%A9%20%26%20co');
+      await redirectFor('https://promiscope.example/search?q=caf%C3%A9%20%26%20co'),
+    ).toBe('https://promiscope.example/en/search?q=caf%C3%A9%20%26%20co');
   });
 
   it('redirects without a query string unchanged', async () => {
-    expect(await redirectFor('https://scoutoff.app/scout')).toBe(
-      'https://scoutoff.app/en/scout',
+    expect(await redirectFor('https://promiscope.example/scout')).toBe(
+      'https://promiscope.example/en/scout',
     );
   });
 
   it('negotiates the locale from accept-language q-values (#1325)', async () => {
     expect(
-      await redirectFor('https://scoutoff.app/scout', {
+      await redirectFor('https://promiscope.example/scout', {
         'accept-language': 'de-DE,de;q=0.9,fr;q=0.8,en;q=0.7',
       }),
-    ).toBe('https://scoutoff.app/fr/scout');
+    ).toBe('https://promiscope.example/fr/scout');
   });
 
   it('prefers the NEXT_LOCALE cookie over accept-language', async () => {
     expect(
-      await redirectFor('https://scoutoff.app/scout', {
+      await redirectFor('https://promiscope.example/scout', {
         'accept-language': 'fr',
         cookie: 'NEXT_LOCALE=sw',
       }),
-    ).toBe('https://scoutoff.app/sw/scout');
+    ).toBe('https://promiscope.example/sw/scout');
   });
 });

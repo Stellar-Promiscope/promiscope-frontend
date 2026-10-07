@@ -36,7 +36,7 @@ import {
 } from '@/lib/session';
 const mockVerify = WebAuth.verifyChallengeTxSigners as jest.Mock;
 
-const ALLOWED_ORIGIN = 'https://app.scoutoff.com';
+const ALLOWED_ORIGIN = 'https://app.promiscope.example';
 const VALID_PUBLIC_KEY =
   'GBXXXXXXXXVALIDSTELLARACCOUNTID0000000000000000000000000000';
 const SIGNED_XDR = 'AAAAAQAAAA...signedchallenge...XDR==';
@@ -65,7 +65,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_BASE_URL = ALLOWED_ORIGIN;
   process.env.SEP10_SERVER_KEY =
     'GBSERVERKEY0000000000000000000000000000000000000000000000000';
-  process.env.SEP10_HOME_DOMAIN = 'scoutoff.com';
+  process.env.SEP10_HOME_DOMAIN = 'promiscope.example';
   process.env.NEXT_PUBLIC_NETWORK = 'testnet';
 });
 
@@ -94,13 +94,13 @@ describe('POST /api/auth/sep10 — origin validation', () => {
   });
 
   test('returns 403 for a subdomain that is not an exact match', async () => {
-    const res = await POST(makeRequest('https://sub.app.scoutoff.com'));
+    const res = await POST(makeRequest('https://sub.app.promiscope.example'));
     expect(res.status).toBe(403);
     expect(mockVerify).not.toHaveBeenCalled();
   });
 
   test('returns 403 when scheme differs (http vs https)', async () => {
-    const res = await POST(makeRequest('http://app.scoutoff.com'));
+    const res = await POST(makeRequest('http://app.promiscope.example'));
     expect(res.status).toBe(403);
     expect(mockVerify).not.toHaveBeenCalled();
   });
@@ -119,8 +119,8 @@ describe('POST /api/auth/sep10 — successful authentication', () => {
       process.env.SEP10_SERVER_KEY,
       'Test SDF Network ; September 2015',
       [VALID_PUBLIC_KEY],
-      'scoutoff.com',
-      'scoutoff.com',
+      'promiscope.example',
+      'promiscope.example',
     );
 
     const body = await res.json();
@@ -259,14 +259,14 @@ describe('POST /api/auth/sep10 — SEP10_ALLOWED_ORIGINS allow-list', () => {
   test('allows request when Origin matches an entry in SEP10_ALLOWED_ORIGINS', async () => {
     delete process.env.NEXT_PUBLIC_BASE_URL;
     process.env.SEP10_ALLOWED_ORIGINS =
-      'https://scoutoff.app,https://www.scoutoff.app';
+      'https://promiscope.example,https://www.promiscope.example';
     mockVerify.mockReturnValueOnce(undefined);
 
     const req = new NextRequest('http://localhost:3000/api/auth/sep10', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        origin: 'https://www.scoutoff.app',
+        origin: 'https://www.promiscope.example',
       },
       body: JSON.stringify({
         signedXdr: SIGNED_XDR,
@@ -282,7 +282,7 @@ describe('POST /api/auth/sep10 — SEP10_ALLOWED_ORIGINS allow-list', () => {
 
   test('blocks request when Origin is not in SEP10_ALLOWED_ORIGINS', async () => {
     delete process.env.NEXT_PUBLIC_BASE_URL;
-    process.env.SEP10_ALLOWED_ORIGINS = 'https://scoutoff.app';
+    process.env.SEP10_ALLOWED_ORIGINS = 'https://promiscope.example';
 
     const req = new NextRequest('http://localhost:3000/api/auth/sep10', {
       method: 'POST',
@@ -401,8 +401,8 @@ describe('POST /api/auth/sep10 — production fails closed with no allow-list co
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        origin: 'https://scoutoff.app',
-        host: 'scoutoff.app',
+        origin: 'https://promiscope.example',
+        host: 'promiscope.example',
         'x-forwarded-proto': 'https',
       },
       body: JSON.stringify({

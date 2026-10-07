@@ -197,7 +197,7 @@ export const MAX_DELAY_MS = 300_000; // 5 min
 
 // ── Database ─────────────────────────────────────────────────────────────────
 
-const DB_NAME = 'scoutoff-offline-queue';
+const DB_NAME = 'promiscope-offline-queue';
 const DB_VERSION = 2;
 const STORE_NAME = 'actions';
 const FAILED_STORE_NAME = 'failed_actions';

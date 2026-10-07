@@ -18,7 +18,7 @@ describe('ThemeToggle', () => {
   });
 
   it('renders a moon icon and switches to light when currently dark', () => {
-    localStorage.setItem('scoutoff_theme_preference', 'dark');
+    localStorage.setItem('promiscope_theme_preference', 'dark');
     renderToggle();
 
     const button = screen.getByRole('button', { name: 'Switch to light mode' });
@@ -29,7 +29,7 @@ describe('ThemeToggle', () => {
   });
 
   it('renders a sun icon and switches to dark when currently light', () => {
-    localStorage.setItem('scoutoff_theme_preference', 'light');
+    localStorage.setItem('promiscope_theme_preference', 'light');
     renderToggle();
 
     const button = screen.getByRole('button', { name: 'Switch to dark mode' });

@@ -35,7 +35,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   _resetRateLimitStoreForTests();
   global.fetch = jest.fn();
-  process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
+  process.env.NEXT_PUBLIC_APP_URL = 'https://promiscope.example';
   delete process.env.MEDIA_URL_SIGNING_SECRET;
   jest.spyOn(console, 'error').mockImplementation(() => {});
   jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -144,7 +144,7 @@ describe('GET /api/media/[cid] — referrer gating (no signature)', () => {
     const req = makeRequest(
       'http://localhost:3000/api/media/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
       {
-        referer: 'https://scoutoff.app/player/abc',
+        referer: 'https://promiscope.example/player/abc',
       },
     );
     const res = await GET(req, {

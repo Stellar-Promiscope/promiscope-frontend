@@ -3,7 +3,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const DB_PATH =
-  process.env.DB_PATH ?? path.join(__dirname, '..', 'data', 'scout-off.db');
+  process.env.DB_PATH ?? path.join(__dirname, '..', 'data', 'promiscope.db');
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 

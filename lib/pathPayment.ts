@@ -253,7 +253,7 @@ export interface PendingSwap {
 const PENDING_SWAP_TTL_MS = 24 * 60 * 60 * 1000;
 
 function pendingSwapKey(wallet: string, playerId: string): string {
-  return `scoutoff_pending_contact_swap:${wallet}:${playerId}`;
+  return `promiscope_pending_contact_swap:${wallet}:${playerId}`;
 }
 
 export function savePendingSwap(

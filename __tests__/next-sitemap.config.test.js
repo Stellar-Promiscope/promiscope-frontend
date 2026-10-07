@@ -225,7 +225,7 @@ describe('next-sitemap.config.js', () => {
 
     it('emits real, locale-prefixed URLs and excludes archived/denylisted players', async () => {
       const paths = await getPlayerSitemapPaths({
-        siteUrl: 'https://scoutoff.app',
+        siteUrl: 'https://promiscope.example',
         indexerUrl: 'http://indexer',
         denylist: ['P3'],
         fetchImpl,
@@ -241,7 +241,7 @@ describe('next-sitemap.config.js', () => {
         new Date(1_710_000_000 * 1000).toISOString(),
       );
       expect(paths[0].alternateRefs).toContainEqual({
-        href: 'https://scoutoff.app/fr/player/P1',
+        href: 'https://promiscope.example/fr/player/P1',
         hreflang: 'fr',
         hrefIsAbsolute: true,
       });
@@ -250,7 +250,7 @@ describe('next-sitemap.config.js', () => {
     it('returns no player URLs (instead of failing the build) when the indexer is down', async () => {
       jest.spyOn(console, 'warn').mockImplementation(() => {});
       const paths = await getPlayerSitemapPaths({
-        siteUrl: 'https://scoutoff.app',
+        siteUrl: 'https://promiscope.example',
         fetchImpl: async () => ({ ok: false, status: 503 }),
       });
       expect(paths).toEqual([]);

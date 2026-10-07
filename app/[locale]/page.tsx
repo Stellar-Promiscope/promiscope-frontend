@@ -1,207 +1,189 @@
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
 import {
-  MessageCircle,
-  BookOpen,
-  Zap,
-  ShieldCheck,
-  Users,
-  TrendingUp,
-  Radio,
+  ArrowRight,
+  Check,
+  ClipboardCheck,
+  Eye,
+  FileCheck2,
+  MapPin,
 } from 'lucide-react';
-import RedirectReasonBanner from '@/components/ui/RedirectReasonBanner';
-import CookieSettingsLink from '@/components/ui/CookieSettingsLink';
+import { projectExamples as exampleProjects } from '@/lib/projectExamples';
 
-// ── Feature card data ─────────────────────────────────────────────────────────
-const features = [
+const steps = [
   {
-    icon: ShieldCheck,
-    title: 'Tamper-Proof Profiles',
+    icon: ClipboardCheck,
+    number: '01',
+    title: 'Set a clear commitment',
     description:
-      'Every player profile and milestone is stored on Stellar Soroban smart contracts — immutable, verifiable, and owned by the player.',
+      'Describe the project, its milestones, who is responsible, and what completion should look like.',
   },
   {
-    icon: TrendingUp,
-    title: 'On-Chain Milestones',
+    icon: FileCheck2,
+    number: '02',
+    title: 'Share updates with evidence',
     description:
-      'Validators approve performance milestones directly on-chain. No middlemen, no falsified records — just verifiable progress.',
+      'Project teams post progress, photos, documents, and context as work happens.',
   },
   {
-    icon: Users,
-    title: 'Direct Scout Access',
+    icon: Eye,
+    number: '03',
+    title: 'Review progress together',
     description:
-      'Scouts subscribe and pay to unlock player contact details. Transparent fees, instant access, no agency gatekeeping.',
-  },
-  {
-    icon: Zap,
-    title: 'Powered by Stellar',
-    description:
-      "Built on Stellar's fast, low-cost network. Transactions settle in seconds with near-zero fees — accessible to everyone.",
+      'Community reviewers can confirm an update, ask a question, or flag a concern.',
   },
 ];
 
-export default async function HomePage({
-  params,
-  searchParams,
-}: {
-  params: { locale: string };
-  searchParams?: { reason?: string | string[] };
-}) {
-  const locale = params.locale;
-  const t = await getTranslations({ locale, namespace: 'footer' });
-
+export default function HomePage({ params }: { params: { locale: string } }) {
   return (
-    <div className="flex flex-col gap-24 pb-20">
-      {searchParams?.reason && (
-        <div className="px-4">
-          <RedirectReasonBanner reason={searchParams.reason} />
-        </div>
-      )}
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section
-        className="relative flex flex-col items-center text-center gap-8 py-24 px-4 overflow-hidden rounded-2xl"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,200,83,0.12) 0%, transparent 70%), linear-gradient(180deg, #0d1526 0%, #0A0F1E 100%)',
-        }}
-      >
-        {/* Subtle grid overlay */}
+    <div className="-mx-4 -mt-8 overflow-hidden bg-[#f6f5ef] text-[#182923]">
+      <section className="relative isolate px-5 pb-20 pt-16 sm:px-10 sm:pb-28 sm:pt-24 lg:px-16">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              'linear-gradient(#00C853 1px, transparent 1px), linear-gradient(90deg, #00C853 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
+          className="absolute -right-24 -top-40 -z-10 h-[34rem] w-[34rem] rounded-full bg-[#d8e8dc] opacity-60 blur-3xl"
         />
+        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#bfd2c3] bg-white/70 px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#356b56]">
+              <span className="h-2 w-2 rounded-full bg-[#4b8b69]" />
+              Community-led project accountability
+            </div>
+            <h1 className="max-w-2xl text-5xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-6xl lg:text-[4.4rem]">
+              Good work deserves to be <em className="font-serif text-[#38745d]">seen.</em>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-[#596860]">
+              Promiscope helps communities follow local projects from promise to progress—with clear updates, supporting evidence, and a place for people to be heard.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/projects"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#245d49] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#194a39] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245d49]"
+              >
+                Explore example projects <ArrowRight size={16} />
+              </Link>
+              <Link
+                href="/organizations"
+                className="inline-flex items-center justify-center rounded-full border border-[#b8c7bd] bg-white/60 px-6 py-3.5 text-sm font-semibold text-[#245d49] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245d49]"
+              >
+                For project teams
+              </Link>
+            </div>
+            <p className="mt-4 text-xs text-[#7b8980]">
+              Example projects shown below are illustrative, not live community projects.
+            </p>
+          </div>
 
-        <div className="relative z-10 flex flex-col items-center gap-6 max-w-3xl mx-auto">
-          <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-brand-green border border-brand-green/30 bg-brand-green/10 px-4 py-1.5 rounded-full">
-            <Zap size={12} />
-            Powered by Stellar Soroban
-          </span>
-
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight">
-            Discover Football Talent{' '}
-            <span className="text-brand-green">On-Chain</span>
-          </h1>
-
-          <p className="text-gray-400 max-w-xl text-base sm:text-lg leading-relaxed">
-            Tamper-proof player profiles, verifiable milestones, and direct
-            scout-to-player connections — powered by Stellar Soroban smart
-            contracts.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <Link
-              href="/player"
-              className="bg-brand-green text-black font-semibold px-8 py-3 rounded-xl hover:opacity-90 active:scale-95 transition text-center"
-            >
-              I&apos;m a Player
-            </Link>
-            <Link
-              href="/scout"
-              className="border border-brand-green text-brand-green px-8 py-3 rounded-xl hover:bg-brand-green hover:text-black active:scale-95 transition text-center"
-            >
-              I&apos;m a Scout
-            </Link>
+          <div className="relative mx-auto w-full max-w-lg">
+            <div className="absolute -left-7 top-12 hidden h-24 w-24 rounded-full border border-[#c6d7c9] sm:block" />
+            <div className="relative rounded-[2rem] border border-[#e0e5dc] bg-white p-5 shadow-[0_24px_70px_-36px_rgba(27,62,46,0.34)] sm:p-7">
+              <div className="flex items-start justify-between gap-4 border-b border-[#edf0ea] pb-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[#728078]">Example project</p>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight">Community water point</h2>
+                  <p className="mt-1 flex items-center gap-1 text-sm text-[#758179]"><MapPin size={14} /> Kibera, Nairobi</p>
+                </div>
+                <span className="rounded-full bg-[#e6f1e9] px-3 py-1.5 text-xs font-semibold text-[#317052]">In progress</span>
+              </div>
+              <div className="py-5">
+                <div className="flex items-end justify-between">
+                  <span className="text-sm font-medium text-[#536159]">Project progress</span>
+                  <span className="text-2xl font-semibold text-[#245d49]">68%</span>
+                </div>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e9eee8]">
+                  <div className="h-full w-[68%] rounded-full bg-[#4b8b69]" />
+                </div>
+              </div>
+              <div className="rounded-2xl bg-[#f5f7f2] p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dcecdf] text-[#317052]"><Check size={17} /></span>
+                  <div>
+                    <p className="text-sm font-semibold">Water tank installed</p>
+                    <p className="mt-0.5 text-xs text-[#758179]">Update reviewed · 12 May</p>
+                  </div>
+                </div>
+                <p className="mt-3 border-l-2 border-[#8fb59a] pl-3 text-sm leading-6 text-[#596860]">
+                  “The tank is in place. The community review team visited the site and confirmed the installation.”
+                </p>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-xs text-[#758179]">
+                <span>2 of 3 milestones underway</span>
+                <span className="flex items-center gap-1"><Eye size={13} /> Public update</span>
+              </div>
+            </div>
+            <div className="absolute -bottom-5 -right-3 rounded-2xl border border-[#dce7dc] bg-white px-4 py-3 shadow-lg sm:-right-7">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#829087]">The record</p>
+              <p className="mt-1 text-sm font-semibold text-[#245d49]">Promise → evidence → review</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Features ──────────────────────────────────────────────────────── */}
-      <section className="px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-            Why ScoutOff?
-          </h2>
-          <p className="text-gray-400 max-w-lg mx-auto text-sm sm:text-base">
-            A decentralized platform that puts players and scouts in control —
-            no intermediaries, no hidden fees.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map(({ icon: Icon, title, description }) => (
-            <div
-              key={title}
-              className="flex flex-col gap-4 bg-brand-card border border-gray-800 rounded-2xl p-6 hover:border-brand-green/40 transition"
-            >
-              <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand-green/10 text-brand-green">
-                <Icon size={20} />
-              </div>
-              <h3 className="text-white font-semibold text-base">{title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                {description}
-              </p>
-            </div>
-          ))}
+      <section id="how-it-works" className="border-y border-[#e5e8df] bg-white px-5 py-16 sm:px-10 sm:py-20 lg:px-16">
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#528067]">How Promiscope works</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">A shared record, built as the work happens.</h2>
+            <p className="mt-4 text-base leading-7 text-[#647168]">Teams, funders, and community reviewers can follow the same project history and understand what has—and has not—been confirmed.</p>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {steps.map(({ icon: Icon, number, title, description }) => (
+              <article key={number} className="rounded-3xl border border-[#e5e9e1] bg-[#fbfcf9] p-6 sm:p-7">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#e7f0e8] text-[#397457]"><Icon size={20} /></span>
+                  <span className="font-mono text-xs text-[#9aa69d]">{number}</span>
+                </div>
+                <h3 className="mt-6 text-lg font-semibold">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#647168]">{description}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-800 pt-10 px-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 max-w-4xl mx-auto">
-          <p className="text-gray-400 text-sm">
-            © {new Date().getFullYear()} ScoutOff. Built on Stellar.
-          </p>
-          <nav
-            className="flex items-center gap-6"
-            aria-label="Footer navigation"
-          >
-            <a
-              href="https://github.com/jhayniffy/scout-off"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
-            >
-              GitHub
-            </a>
-            <a
-              href="https://discord.gg/stellar"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
-            >
-              <MessageCircle size={15} />
-              Stellar Discord
-            </a>
-            <a
-              href="/README.md"
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
-            >
-              <BookOpen size={15} />
-              README
-            </a>
-            <Link
-              href={`/${locale}/changelog`}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
-            >
-              <BookOpen size={15} />
-              {t('changelog')}
-            </Link>
-            <Link
-              href={`/${locale}/status`}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
-            >
-              <Radio size={15} />
-              {t('status')}
-            </Link>
-            <Link
-              href={`/${locale}/privacy`}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
-            >
-              {t('privacy')}
-            </Link>
-            <Link
-              href={`/${locale}/terms`}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition"
-            >
-              {t('terms')}
-            </Link>
-            <CookieSettingsLink label={t('cookie_settings')} />
-          </nav>
+      <section className="px-5 py-16 sm:px-10 sm:py-20 lg:px-16">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#528067]">A clearer view of local work</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Projects people can follow.</h2>
+            </div>
+            <Link href="/projects" className="inline-flex items-center gap-2 text-sm font-semibold text-[#2b6b50] hover:text-[#194a39]">Browse examples <ArrowRight size={16} /></Link>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {exampleProjects.map((project) => (
+              <Link key={project.slug} href={`/${params.locale}/projects/${project.slug}`} className="group block overflow-hidden rounded-3xl border border-[#e0e5dc] bg-white shadow-[0_12px_36px_-30px_rgba(27,62,46,0.4)] transition hover:-translate-y-1 hover:shadow-[0_20px_44px_-30px_rgba(27,62,46,0.6)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#245d49]">
+                <div className="flex h-32 items-end p-5" style={{ background: `linear-gradient(135deg, ${project.color}22, ${project.color}55)` }}>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-lg font-semibold" style={{ color: project.color }}>{project.letter}</span>
+                </div>
+                <div className="p-5">
+                  <p className="text-xs font-medium text-[#718078]">{project.category} · {project.location}</p>
+                  <h3 className="mt-2 text-lg font-semibold">{project.title}</h3>
+                  <div className="mt-5 flex items-center justify-between text-xs text-[#647168]">
+                    <span>{project.status}</span><span className="font-semibold text-[#2b6b50]">{project.progress}%</span>
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-[#edf0ea]"><div className="h-1.5 rounded-full bg-[#4b8b69]" style={{ width: `${project.progress}%` }} /></div>
+                  <p className="mt-4 flex items-center justify-between border-t border-[#edf0ea] pt-4 text-[11px] text-[#8a968e]"><span>Open illustrative record</span><ArrowRight size={14} className="transition-transform group-hover:translate-x-1" aria-hidden="true" /></p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 pb-16 sm:px-10 sm:pb-20 lg:px-16">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[2rem] bg-[#204e3d] px-7 py-9 text-white sm:flex-row sm:items-center sm:px-10 sm:py-11">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#b7d5bf]">For organizations and community teams</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Make every update easier to trust.</h2>
+            <p className="mt-3 text-sm leading-6 text-[#d6e4da]">Keep milestones, supporting evidence, reviewer feedback, and responses together in one project record.</p>
+          </div>
+          <Link href="/organizations" className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#204e3d] transition hover:bg-[#eaf2eb]">See the workflow <ArrowRight size={16} /></Link>
+        </div>
+      </section>
+
+      <footer className="border-t border-[#e3e7df] bg-[#f6f5ef] px-5 py-7 text-sm text-[#738078] sm:px-10 lg:px-16">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Promiscope. Promises in view. Progress on record.</p>
+          <p className="text-xs">A community project accountability platform.</p>
         </div>
       </footer>
     </div>

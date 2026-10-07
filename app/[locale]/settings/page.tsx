@@ -77,7 +77,7 @@ export default function SettingsPage({
       const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
       const filename =
         filenameMatch?.[1] ??
-        `scoutoff-data-export-${new Date().toISOString().split('T')[0]}.json`;
+        `promiscope-data-export-${new Date().toISOString().split('T')[0]}.json`;
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;

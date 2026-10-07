@@ -14,7 +14,7 @@ export default meta;
 type Story = StoryObj<typeof QRModal>;
 
 // Obviously-fake sample URL — not a real profile link.
-const SAMPLE_URL = 'https://scout-off.example/player/DEMO-PLAYER-0001';
+const SAMPLE_URL = 'https://promiscope.example/player/DEMO-PLAYER-0001';
 
 export const Open: Story = {
   args: {

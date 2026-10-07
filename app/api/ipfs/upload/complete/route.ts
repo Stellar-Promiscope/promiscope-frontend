@@ -251,7 +251,7 @@ export async function pinStreamedFileToIPFS(assembly: {
     | undefined;
   if (override) return override(assembly);
 
-  const boundary = `----scoutoff-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const boundary = `----promiscope-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const { stream, contentLength, contentType } = buildStreamingMultipartBody(
     boundary,
     assembly.filename,

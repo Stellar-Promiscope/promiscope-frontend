@@ -20,6 +20,7 @@ import { validateConfig } from '@/lib/config';
 import { locales, defaultLocale } from '@/lib/locales';
 import { getTextDirection } from '@/lib/rtl';
 import { buildThemeBootstrapScript } from '@/lib/themeBootstrap';
+import { BRAND_DESCRIPTION, BRAND_NAME } from '@/lib/brand';
 
 // Analytics and Web Vitals reporting are disabled in tests to avoid
 // polluting real analytics data and to keep jsdom-based test runs from
@@ -35,11 +36,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   ),
-  title: 'ScoutOff — Decentralized Football Scouting',
-  description:
-    'Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.',
+  title: `${BRAND_NAME} — Community project accountability`,
+  description: BRAND_DESCRIPTION,
   openGraph: {
-    siteName: 'ScoutOff',
+    siteName: BRAND_NAME,
     type: 'website',
   },
   twitter: {
@@ -96,22 +96,10 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={getTextDirection(locale)} suppressHydrationWarning>
       <head>
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="32x32"
-          href="/icons/icon-32x32.png"
-        />
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="16x16"
-          href="/icons/icon-16x16.png"
-        />
         <link rel="manifest" href="/manifest.json" />
-        {/* Keep in sync with brand.dark in tailwind.config.ts, --bg in app/globals.css, and theme_color/background_color in public/manifest.json */}
-        <meta name="theme-color" content="#0a0f1e" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        {/* Keep in sync with the Promiscope PWA theme colors in public/manifest.json. */}
+        <meta name="theme-color" content="#245d49" />
+        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
         {/*
           No-flash theme script: resolves stored-preference-or-system-preference
           and applies the `dark` class to <html> before first paint. Built in

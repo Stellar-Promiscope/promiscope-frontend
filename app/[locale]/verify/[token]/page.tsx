@@ -11,7 +11,7 @@ interface VerifyPageProps {
 export const runtime = 'nodejs';
 
 export const metadata: Metadata = {
-  title: 'Verify Player CV | ScoutOff',
+  title: 'Verify Player CV | Promiscope',
   robots: { index: false, follow: false },
 };
 
@@ -32,7 +32,7 @@ function Result({
 
   return (
     <main className="mx-auto mt-20 max-w-xl px-6">
-      <p className="mb-3 text-sm text-gray-400">ScoutOff CV verification</p>
+      <p className="mb-3 text-sm text-gray-400">Promiscope CV verification</p>
       <section className={`rounded-xl border p-6 ${colors[tone]}`}>
         <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="mt-3 text-sm leading-6">{message}</p>

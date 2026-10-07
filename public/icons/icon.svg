@@ -1,26 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Background -->
-  <rect width="512" height="512" fill="#0f172a"/>
-  
-  <!-- Outer circle -->
-  <circle cx="256" cy="256" r="240" fill="#ffffff"/>
-  
-  <!-- Inner shield/badge shape -->
-  <path d="M256 140 L160 180 L160 290 Q160 380 256 420 Q352 380 352 290 L352 180 Z" fill="#0f172a"/>
-  
-  <!-- Scout binoculars symbol -->
-  <!-- Left binocular -->
-  <circle cx="210" cy="260" r="28" fill="none" stroke="#ffffff" stroke-width="12"/>
-  <!-- Right binocular -->
-  <circle cx="302" cy="260" r="28" fill="none" stroke="#ffffff" stroke-width="12"/>
-  <!-- Bridge between binoculars -->
-  <rect x="238" y="252" width="36" height="16" fill="#ffffff"/>
-  
-  <!-- Football element (stylized) -->
-  <ellipse cx="256" cy="340" rx="24" ry="16" fill="#ffffff" opacity="0.9"/>
-  <!-- Football laces -->
-  <line x1="256" y1="328" x2="256" y2="352" stroke="#0f172a" stroke-width="2"/>
-  <line x1="250" y1="332" x2="262" y2="332" stroke="#0f172a" stroke-width="1.5"/>
-  <line x1="250" y1="340" x2="262" y2="340" stroke="#0f172a" stroke-width="1.5"/>
-  <line x1="250" y1="348" x2="262" y2="348" stroke="#0f172a" stroke-width="1.5"/>
+  <rect width="512" height="512" rx="120" fill="#f6f5ef"/>
+  <circle cx="256" cy="256" r="174" fill="#e4eee4"/>
+  <path d="M148 264c34-51 71-77 108-77s74 26 108 77c-34 51-71 77-108 77s-74-26-108-77Z" fill="#fff" stroke="#245d49" stroke-width="18" stroke-linejoin="round"/>
+  <circle cx="256" cy="264" r="35" fill="#4b8b69"/>
+  <path d="m238 265 13 13 27-30" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="154" cy="150" r="13" fill="#bd7047"/>
+  <circle cx="358" cy="150" r="13" fill="#bd7047"/>
 </svg>

@@ -1,14 +1,17 @@
 {
-  "app_title": "ScoutOff",
+  "app_title": "Promiscope",
   "nav": {
+    "projects": "Projects",
+    "how_it_works": "How it works",
+    "for_organizations": "For organizations",
     "scout_dashboard": "Scout Dashboard",
     "player_dashboard": "Player Dashboard",
     "sponsorship": "Sponsorship",
     "soon": "Soon",
-    "maintenance_warning": "ScoutOff is currently under maintenance. Write actions are temporarily disabled."
+    "maintenance_warning": "Promiscope is under maintenance. Project updates are temporarily paused."
   },
   "common": {
-    "connect_wallet": "Connect Wallet",
+    "connect_wallet": "Connect a Stellar wallet",
     "disconnect": "Disconnect",
     "loading": "Loading...",
     "error": "Error",
@@ -110,7 +113,7 @@
     "connected": "Connected",
     "disconnect": "Disconnect Wallet",
     "selectProvider": "Select Wallet",
-    "selectProviderHint": "Choose a Stellar wallet to connect with ScoutOff.",
+    "selectProviderHint": "Choose a Stellar wallet to continue to Promiscope.",
     "install": "Browser extension",
     "installMobile": "Browser extension / mobile",
     "cancel": "Cancel",
@@ -166,7 +169,7 @@
     "badge": "Coming Soon",
     "title": "Fractionalized Player Sponsorship",
     "description": "Fans and investors will soon be able to buy \"Player Tokens\" to fund a player's training and travel — with revenue routed transparently back on-chain.",
-    "metaDescription": "Support talented players from underserved regions through fractionalized XLM sponsorship on the Stellar blockchain. ScoutOff connects fans and backers directly with scouted talent.",
+    "metaDescription": "Support talented players from underserved regions through fractionalized XLM sponsorship on the Stellar blockchain. Promiscope connects fans and backers directly with scouted talent.",
     "howItWorksTitle": "How it will work",
     "howItWorksDescription": "Sponsors will purchase fractional Player Tokens representing a stake in a player's future earnings. Funds raised go directly toward training, travel, and development costs, while a share of the player's future on-chain revenue is routed back to token holders — all enforced by Soroban smart contracts.",
     "notice": "This page is a placeholder. No tokens can be purchased yet and no blockchain interaction is available here."
@@ -200,11 +203,11 @@
     "dependency_backend": "Backend API",
     "dependency_rpc": "Soroban RPC / Horizon",
     "live_status_title": "Live status & incident history",
-    "live_status_description": "Real-time status and historical incident summaries for ScoutOff are tracked on our external status page, updated automatically as issues are detected and resolved.",
+    "live_status_description": "Real-time status and historical incident summaries for Promiscope are tracked on our external status page, updated automatically as issues are detected and resolved.",
     "live_status_cta": "View live status page",
     "incident_history_note": "Past incidents and their resolutions are listed on the status page above.",
     "empty_title": "Status page not yet configured",
-    "empty_description": "A live status page hasn't been linked yet. Please check the ScoutOff Discord for updates in the meantime."
+    "empty_description": "A live status page hasn't been linked yet. Please check the Promiscope Discord for updates in the meantime."
   },
   "offline_queue": {
     "queued": "{count} {count, plural, one {action} other {actions}} queued — will submit when back online",
@@ -347,11 +350,11 @@
   "privacy": {
     "back_to_home": "Back to Home",
     "page_title": "Privacy Policy",
-    "page_description": "How ScoutOff collects, uses, and protects your personal data.",
+    "page_description": "How Promiscope collects, uses, and protects your personal data.",
     "eyebrow": "Legal",
     "last_updated": "Last updated: September 24, 2026",
     "section1_title": "1. Introduction",
-    "section1_content": "ScoutOff is committed to protecting your privacy. This policy explains how we collect, use, and protect your information. By using ScoutOff, you agree to the collection and use of information in accordance with this policy.",
+    "section1_content": "Promiscope is committed to protecting your privacy. This policy explains how we collect, use, and protect your information. By using Promiscope, you agree to the collection and use of information in accordance with this policy.",
     "section2_title": "2. Data We Collect",
     "section2_content": "On-chain data: Your Stellar public key, transaction history, subscription status, and registration data are stored on the Stellar blockchain. This data is public, immutable, and cannot be deleted by anyone. Off-chain data: We collect contact details, profile metadata, chat messages, and usage analytics via Vercel Analytics and Sentry.",
     "section3_title": "3. IPFS-Hosted Media",
@@ -363,7 +366,7 @@
     "section6_title": "6. Retention and Deletion",
     "section6_content": "On-chain data is permanent and cannot be deleted. Off-chain data is retained for as long as necessary. You can request deletion of your off-chain data through account settings. Use the ‘Request Data Deletion’ action in Account Settings. Your data export and deletion request cover your watchlist, saved searches, notification settings and read state, milestone disputes and endorsements, recently viewed players, login sessions (including device/browser information), and upload records. Deletion also signs you out of all devices. Upload records are kept with your wallet removed so orphaned media can still be cleaned up, and admin audit log entries are anonymized rather than deleted.",
     "section7_title": "7. Your Rights and Contact",
-    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through ScoutOff’s official channels.",
+    "section7_content": "Depending on your jurisdiction, you may have rights to access, correct, delete, or port your personal data. These rights apply only to off-chain data. For questions, contact us through Promiscope’s official channels.",
     "section8_title": "8. Third-Party Services",
     "section8_content": "To show approximate fiat values, our servers (not your browser) fetch the XLM exchange rate from CoinGecko and, as a fallback, the Stellar network's public Horizon API; your IP address is not shared with these providers. Uploaded media is pinned to IPFS through Pinata, and error reports are sent to Sentry.",
     "section9_title": "9. Media reports",
@@ -376,19 +379,19 @@
     "eyebrow": "Legal",
     "last_updated": "Last updated: July 29, 2026",
     "section1_title": "1. Acceptance of Terms",
-    "section1_content": "By using ScoutOff, you agree to these Terms of Service. If you do not agree, do not use the platform. ScoutOff is a decentralized football scouting platform built on the Stellar network.",
+    "section1_content": "By using Promiscope, you agree to these Terms of Service. If you do not agree, do not use the platform. Promiscope is a decentralized football scouting platform built on the Stellar network.",
     "section2_title": "2. Acceptable Use",
-    "section2_content": "You agree to use ScoutOff only for lawful purposes. You must not submit false information, use the platform to harass others, circumvent subscription fees, use automated tools without permission, or submit illegal content. We reserve the right to suspend access for violations.",
+    "section2_content": "You agree to use Promiscope only for lawful purposes. You must not submit false information, use the platform to harass others, circumvent subscription fees, use automated tools without permission, or submit illegal content. We reserve the right to suspend access for violations.",
     "section3_title": "3. Fees and Payments",
     "section3_content": "All fees are denominated in XLM (Stellar Lumens). Fees include scout subscriptions and platform fees. Fees are non-refundable unless otherwise stated. All payments are processed on-chain via Soroban smart contracts.",
     "section4_title": "4. On-Chain Actions and Irreversibility",
-    "section4_content": "Actions taken on the Stellar blockchain are permanent and irreversible. This includes player registrations, milestone approvals, subscription payments, and fee withdrawals. ScoutOff cannot reverse on-chain transactions once confirmed.",
+    "section4_content": "Actions taken on the Stellar blockchain are permanent and irreversible. This includes player registrations, milestone approvals, subscription payments, and fee withdrawals. Promiscope cannot reverse on-chain transactions once confirmed.",
     "section5_title": "5. Intellectual Property",
-    "section5_content": "Players retain ownership of their profile content and personal data. By submitting content to ScoutOff, you grant us a license to display that content solely for the purpose of operating the platform. The platform’s code is open source.",
+    "section5_content": "Players retain ownership of their profile content and personal data. By submitting content to Promiscope, you grant us a license to display that content solely for the purpose of operating the platform. The platform’s code is open source.",
     "section6_title": "6. Disclaimers and Limitations",
-    "section6_content": "ScoutOff is provided “as is” without warranties. We are not responsible for the accuracy of player information, IPFS content, losses from blockchain network issues, or smart contract bugs. Our liability will not exceed the fees you paid us in the 12 months prior to the claim.",
+    "section6_content": "Promiscope is provided “as is” without warranties. We are not responsible for the accuracy of player information, IPFS content, losses from blockchain network issues, or smart contract bugs. Our liability will not exceed the fees you paid us in the 12 months prior to the claim.",
     "section7_title": "Reporting and removal of media",
-    "section7_content": "Anyone can report a player's photo or video from the profile gallery (reasons: nudity, violence, impersonation, copyright, other). Our moderators review reports and may remove media that breaks these terms or the law. Removed media is no longer shown or served by ScoutOff, and may also be unpinned from our IPFS pinning service after a short grace period. Because IPFS is a public network, removal applies to ScoutOff only: the same content may remain reachable through public IPFS gateways or nodes that pin it independently. Copyright holders and anyone affected may also contact us to request a takedown, and we will act on valid requests promptly."
+    "section7_content": "Anyone can report a player's photo or video from the profile gallery (reasons: nudity, violence, impersonation, copyright, other). Our moderators review reports and may remove media that breaks these terms or the law. Removed media is no longer shown or served by Promiscope, and may also be unpinned from our IPFS pinning service after a short grace period. Because IPFS is a public network, removal applies to Promiscope only: the same content may remain reachable through public IPFS gateways or nodes that pin it independently. Copyright holders and anyone affected may also contact us to request a takedown, and we will act on valid requests promptly."
   },
   "settings": {
     "back_to_home": "Back to Home",
@@ -400,7 +403,7 @@
     "data_deletion_button": "Request Deletion",
     "connect_wallet_to_request": "Connect your wallet to request data deletion.",
     "data_export_title": "Download My Data",
-    "data_export_description": "Download a portable JSON export of the off-chain data ScoutOff holds about your wallet — your watchlist, saved searches, notification preferences and read state, milestone disputes, and any active uploads.",
+    "data_export_description": "Download a portable JSON export of the off-chain data Promiscope holds about your wallet — your watchlist, saved searches, notification preferences and read state, milestone disputes, and any active uploads.",
     "data_export_button": "Download My Data",
     "data_export_exporting": "Preparing your export…",
     "data_export_error": "Failed to prepare your data export. Please try again.",
@@ -442,13 +445,13 @@
   "dataDeletion": {
     "modal_title": "Request Data Deletion",
     "onchain_heading": "On-Chain Data (Cannot Be Deleted)",
-    "onchain_description": "Your Stellar public key, transaction history, player registration, and payments are stored permanently on the blockchain. No one — including ScoutOff — can modify or delete this data.",
+    "onchain_description": "Your Stellar public key, transaction history, player registration, and payments are stored permanently on the blockchain. No one — including Promiscope — can modify or delete this data.",
     "offchain_heading": "Off-Chain Data (Can Be Deleted)",
     "offchain_description": "Chat history, profile metadata, contact details, and analytics data stored on our servers can be deleted upon request.",
     "request_button": "Request Data Deletion",
     "request_note": "Only off-chain records can be deleted. On-chain data is permanent.",
     "confirm_title": "Are you sure?",
-    "confirm_message": "This will submit a request to delete your personal off-chain data from ScoutOff’s servers. On-chain data cannot be deleted and will remain on the Stellar blockchain permanently.",
+    "confirm_message": "This will submit a request to delete your personal off-chain data from Promiscope’s servers. On-chain data cannot be deleted and will remain on the Stellar blockchain permanently.",
     "confirm_button": "Yes, Request Deletion",
     "cancel": "Cancel",
     "close": "Close",
@@ -469,9 +472,9 @@
     "privacy_link": "Privacy Policy"
   },
   "meta": {
-    "title": "ScoutOff — Decentralized Football Scouting",
-    "description": "Tamper-proof player profiles, verifiable milestones, and direct scout-to-player connections — powered by Stellar Soroban smart contracts.",
-    "og_image_alt": "ScoutOff — Decentralized Football Scouting on Stellar"
+    "title": "Promiscope — Community project accountability",
+    "description": "Follow community projects from promise to progress with clear updates, supporting evidence, and community review.",
+    "og_image_alt": "Promiscope — Promises in view. Progress on record."
   },
   "offline": {
     "bannerMessage": "You're offline. Some features may be unavailable until your connection returns."
@@ -731,8 +734,8 @@
       "description": "Browse this scout's subscription details and recent activity.",
       "not_found_title": "Scout not found",
       "not_found_description": "The scout profile you are looking for does not exist.",
-      "meta_title": "Scout Profile | ScoutOff",
-      "meta_description": "Browse this scout's subscription details and recent activity on ScoutOff."
+      "meta_title": "Scout Profile | Promiscope",
+      "meta_description": "Browse this scout's subscription details and recent activity on Promiscope."
     },
     "subscribe": {
       "title": "Scout Subscription",

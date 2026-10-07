@@ -1,5 +1,5 @@
 {
-  "name": "ScoutOff Frontend",
+  "name": "Promiscope Frontend",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
   "postCreateCommand": "npm install",
   "customizations": {

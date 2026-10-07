@@ -119,7 +119,7 @@ export function buildCsp(opts: CspOptions): string {
   const directives: string[] = [
     "default-src 'self'",
     scriptSrc,
-    `img-src 'self' data: ${ipfsSrcs} https://scoutoff.app`,
+    `img-src 'self' data: ${ipfsSrcs} https://promiscope.example`,
     `connect-src ${connectSrcs}`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",

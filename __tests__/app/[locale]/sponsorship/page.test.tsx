@@ -22,7 +22,7 @@ jest.mock('next-intl/server', () => ({
       sponsorship: {
         title: 'Fractionalized Player Sponsorship',
         metaDescription:
-          'Support talented players from underserved regions through fractionalized XLM sponsorship on the Stellar blockchain. ScoutOff connects fans and backers directly with scouted talent.',
+          'Support talented players from underserved regions through fractionalized XLM sponsorship on the Stellar blockchain. Promiscope connects fans and backers directly with scouted talent.',
       },
     };
     return Promise.resolve((key: string) => en[namespace]?.[key] ?? key);
@@ -57,7 +57,7 @@ describe('generateMetadata — sponsorship page', () => {
 
   beforeEach(() => {
     mockHeaders.clear();
-    process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://promiscope.example';
   });
 
   afterAll(() => {
@@ -80,7 +80,7 @@ describe('generateMetadata — sponsorship page', () => {
     });
 
     expect(metadata.description).toBe(
-      'Support talented players from underserved regions through fractionalized XLM sponsorship on the Stellar blockchain. ScoutOff connects fans and backers directly with scouted talent.',
+      'Support talented players from underserved regions through fractionalized XLM sponsorship on the Stellar blockchain. Promiscope connects fans and backers directly with scouted talent.',
     );
   });
 
@@ -89,7 +89,7 @@ describe('generateMetadata — sponsorship page', () => {
       params: { locale: 'en' },
     });
 
-    expect(metadata.title).toContain('ScoutOff');
+    expect(metadata.title).toContain('Promiscope');
     expect(metadata.title).toContain('Fractionalized Player Sponsorship');
   });
 
@@ -101,7 +101,7 @@ describe('generateMetadata — sponsorship page', () => {
     });
 
     expect(metadata.alternates?.canonical).toBe(
-      'https://scoutoff.app/fr/sponsorship',
+      'https://promiscope.example/fr/sponsorship',
     );
   });
 });

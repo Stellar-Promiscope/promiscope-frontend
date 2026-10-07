@@ -2,7 +2,7 @@
 
 - **Date:** 2024-08-10
 - **Status:** Accepted
-- **Deciders:** ScoutOff engineering team
+- **Deciders:** Promiscope engineering team
 - **Last revised:** 2024-08-10
 
 ## Context

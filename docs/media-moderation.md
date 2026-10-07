@@ -4,7 +4,7 @@ Issue #1320. Covers reports on player profile media (images and video pinned to 
 
 ## Scope
 
-The denylist applies to **ScoutOff surfaces only**: the `/api/media/[cid]` proxy and the profile gallery. IPFS is content-addressed and public, so a denylisted CID can still be fetched from any public gateway, or from any node that pins it independently. The report dialog and the admin page both say this.
+The denylist applies to **Promiscope surfaces only**: the `/api/media/[cid]` proxy and the profile gallery. IPFS is content-addressed and public, so a denylisted CID can still be fetched from any public gateway, or from any node that pins it independently. The report dialog and the admin page both say this.
 
 The player Open Graph image (`app/[locale]/player/[id]/opengraph-image.tsx`) renders only text, never profile media, so there's nothing there to filter.
 

@@ -227,7 +227,7 @@ title=$(sed -n 's/<!-- Title: \(.*\) -->/\1/p' \
     docs/pr-bodies/issue-1295.md | head -n1)
 
 gh pr create \
-  --repo scout-off/scout-off-frontend \
+  --repo promiscope/promiscope-frontend \
   --base main \
   --head <your-fork>:issue-1295 \
   --title "$title" \

@@ -31,7 +31,7 @@ set -euo pipefail
 # After updating: run this script locally, confirm the integration suite passes,
 # then commit both the bumped WASM_URL/WASM_SHA256 and any changed call shapes
 # in lib/contract.ts in a single PR.
-WASM_URL="https://github.com/scout-off/scout-off-contracts/releases/download/v1.0.0/scout_off_contracts.wasm"
+WASM_URL="https://github.com/promiscope/promiscope-contracts/releases/download/v1.0.0/promiscope_contracts.wasm"
 WASM_SHA256="a3f8c2d1e4b5a6f7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1"
 # Expected contract version (must match EXPECTED_CONTRACT_VERSION in lib/contract.ts)
 EXPECTED_CONTRACT_VERSION=1
@@ -45,7 +45,7 @@ NETWORK_PASSPHRASE="${NETWORK_PASSPHRASE:-Standalone Network ; February 2017}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 WASM_CACHE="${REPO_ROOT}/.wasm-cache"
-WASM_FILE="${WASM_CACHE}/scout_off_contracts.wasm"
+WASM_FILE="${WASM_CACHE}/promiscope_contracts.wasm"
 ENV_FILE="${REPO_ROOT}/.env.integration"
 
 mkdir -p "${WASM_CACHE}"

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
 export const metadata = {
-  title: 'Page Not Found – ScoutOff',
+  title: 'Page Not Found – Promiscope',
   description: 'The page you are looking for does not exist or has been moved.',
 };
 

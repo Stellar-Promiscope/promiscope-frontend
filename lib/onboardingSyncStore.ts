@@ -54,7 +54,7 @@ export interface PendingOnboardingSubmission {
   lastError?: string;
 }
 
-const DB_NAME = 'scoutoff-onboarding-sync';
+const DB_NAME = 'promiscope-onboarding-sync';
 const DB_VERSION = 1;
 const STORE_NAME = 'submissions';
 

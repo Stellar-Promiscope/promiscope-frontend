@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains how the ScoutOff application icons are structured and how to generate or replace them. The icon system includes:
+This guide explains how the Promiscope application icons are structured and how to generate or replace them. The icon system includes:
 
 - **SVG source** (`icon.svg`) — Scalable vector format for web and design tools
 - **PNG variants** — Raster formats for browser favicons, app installs, and PWA

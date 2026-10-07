@@ -9,7 +9,7 @@ export { locales, defaultLocale };
  * Returns the base URL for the application from environment or a sensible default.
  */
 export function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL || 'https://scoutoff.app';
+  return process.env.NEXT_PUBLIC_APP_URL || 'https://promiscope.example';
 }
 
 /**
@@ -145,7 +145,7 @@ export interface PageMetadataOptions {
  * export async function generateMetadata({ params }: Props): Promise<Metadata> {
  *   const t = await getTranslations({ locale: params.locale, namespace: 'changelog' });
  *   return buildPageMetadata({
- *     title: `${t('page_title')} | ScoutOff`,
+ *     title: `${t('page_title')} | Promiscope`,
  *     description: t('page_description'),
  *     path: `/${params.locale}/changelog`,
  *   });
@@ -174,7 +174,7 @@ export async function buildPageMetadata({
       title,
       description,
       url: fullUrl,
-      siteName: 'ScoutOff',
+      siteName: 'Promiscope',
       type: openGraphType,
       images: [
         {

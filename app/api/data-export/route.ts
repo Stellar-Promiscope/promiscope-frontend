@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const log = createRequestLogger(req);
   try {
     const payload = await collectUserData(wallet);
-    const filename = `scoutoff-data-export-${wallet}-${
+    const filename = `promiscope-data-export-${wallet}-${
       new Date().toISOString().split('T')[0]
     }.json`;
 

@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import ConfigWarningBanner from '@/components/ConfigWarningBanner';
 import type { ConfigWarning } from '@/lib/config';
 
-const SESSION_KEY = 'scoutoff:configWarningDismissed';
+const SESSION_KEY = 'promiscope:configWarningDismissed';
 
 const errorWarning: ConfigWarning = {
   key: 'NEXT_PUBLIC_CONTRACT_ID',

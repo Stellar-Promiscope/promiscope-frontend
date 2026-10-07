@@ -31,7 +31,7 @@ session lifetime:
 
 | Export                   | Purpose                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------ |
-| `UPLOAD_RESUME_KEY`      | `'scout-off:upload-resume'` — single storage key                                     |
+| `UPLOAD_RESUME_KEY`      | `'promiscope:upload-resume'` — single storage key                                     |
 | `SESSION_TTL_MS`         | `2 * 60 * 60 * 1000` — mirrors `chunkedUploadStore.ts`                               |
 | `PersistedUploadState`   | Interface: `sessionId`, `filename`, `fileSize`, `fileType`, `totalChunks`, `savedAt` |
 | `saveResumeState(state)` | Writes a `PersistedUploadState` to `localStorage`                                    |

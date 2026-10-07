@@ -31,7 +31,7 @@ export default function BlockedStateMessage({
         If you believe this was done in error, you can request a review.
       </p>
       <a
-        href="mailto:support@scoutoff.io?subject=Block Appeal - ${targetType} ID: ${targetId}"
+        href="mailto:support@promiscope.example?subject=Block Appeal - ${targetType} ID: ${targetId}"
         className="inline-block text-brand-green text-sm hover:underline"
       >
         Contact Support for Review

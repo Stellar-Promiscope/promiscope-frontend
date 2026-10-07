@@ -32,7 +32,7 @@ function securityHeaders() {
 
 /**
  * CORS_ORIGINS is a comma-separated allow-list; CORS_ORIGIN_PATTERN an
- * optional regex for preview deployments (e.g. `^https://scout-off-.*\.vercel\.app$`).
+ * optional regex for preview deployments (e.g. `^https://promiscope-.*\.vercel\.app$`).
  * CORS_ORIGIN (single origin) is still honored for backward compatibility.
  */
 function corsMiddleware() {

@@ -59,7 +59,7 @@
       "requiredIn": ["production"],
       "secret": false,
       "usedBy": ["app/api/auth/sep10/route.ts"],
-      "description": "Public domain of this deployment (without protocol), used in SEP-10 challenges. Example: scoutoff.app (production) or localhost:3000 (local dev)"
+      "description": "Public domain of this deployment (without protocol), used in SEP-10 challenges. Example: promiscope.example (production) or localhost:3000 (local dev)"
     },
     {
       "name": "NEXT_PUBLIC_HORIZON_URL",
@@ -182,7 +182,7 @@
       "requiredIn": [],
       "secret": false,
       "usedBy": ["packages/indexer/src/eventPoller.ts"],
-      "description": "Deployed ScoutOff Soroban contract address the indexer watches. Required."
+      "description": "Deployed Promiscope Soroban contract address the indexer watches. Required."
     },
     {
       "name": "CORS_ORIGIN",
@@ -206,7 +206,7 @@
       "secret": false,
       "usedBy": ["server/src/middleware/security.js"],
       "envFile": "server/.env.example",
-      "description": "Optional regex for extra allowed origins, e.g. Vercel preview deployments: ^https://scout-off-[a-z0-9-]+\\.vercel\\.app$"
+      "description": "Optional regex for extra allowed origins, e.g. Vercel preview deployments: ^https://promiscope-[a-z0-9-]+\\.vercel\\.app$"
     },
     {
       "name": "DB_PATH",
@@ -214,7 +214,7 @@
       "secret": false,
       "usedBy": ["server/src/db.js"],
       "envFile": "server/.env.example",
-      "description": "Path to the SQLite database file. Defaults to ./data/scout-off.db (relative to server/) when unset."
+      "description": "Path to the SQLite database file. Defaults to ./data/promiscope.db (relative to server/) when unset."
     },
     {
       "name": "E2E_ADMIN_SECRET",
@@ -311,7 +311,7 @@
       "requiredIn": [],
       "secret": false,
       "usedBy": ["app/api/auth/sep10/route.ts"],
-      "description": "Canonical base URL of the frontend (e.g. https://scoutoff.app). Used as a convenience single-origin entry folded into SEP10_ALLOWED_ORIGINS and for absolute URL generation. Leave blank to derive from NEXT_PUBLIC_DOMAIN."
+      "description": "Canonical base URL of the frontend (e.g. https://promiscope.example). Used as a convenience single-origin entry folded into SEP10_ALLOWED_ORIGINS and for absolute URL generation. Leave blank to derive from NEXT_PUBLIC_DOMAIN."
     },
     {
       "name": "NEXT_PUBLIC_FEATURE_DARK_MODE_TOGGLE",
@@ -553,7 +553,7 @@
       "requiredIn": [],
       "secret": false,
       "usedBy": ["app/api/auth/sep10/route.ts", "playwright.config.ts"],
-      "description": "Home domain asserted in SEP-10 challenge transactions. Must match the deployed origin (e.g. scoutoff.app). For local development use: localhost:3000"
+      "description": "Home domain asserted in SEP-10 challenge transactions. Must match the deployed origin (e.g. promiscope.example). For local development use: localhost:3000"
     },
     {
       "name": "SEP10_SERVER_KEY",

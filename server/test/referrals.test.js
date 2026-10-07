@@ -8,7 +8,7 @@ const path = require('path');
 // fresh temp file before anything requires the app — this keeps every test
 // run isolated from any real/dev database on disk.
 const tmpDbPath = path.join(
-  fs.mkdtempSync(path.join(os.tmpdir(), 'scout-off-backend-test-')),
+  fs.mkdtempSync(path.join(os.tmpdir(), 'promiscope-backend-test-')),
   'test.db',
 );
 process.env.DB_PATH = tmpDbPath;

@@ -434,7 +434,7 @@ test.describe.serial('SEP-10 session lifecycle', () => {
    * Today `WalletContext.restoreSession` compares the server's session
    * wallet against the address cached in localStorage and, on any difference,
    * throws into its catch block — which wipes the session and fires
-   * `scoutoff:session-expired`. The reconnected wallet reported by the
+   * `promiscope:session-expired`. The reconnected wallet reported by the
    * extension is probed but the result is discarded, so `sessionCookieWallet`
    * can never disagree with `publicKey` and `SessionMismatchWarning` is
    * unreachable. Consequence: switching accounts in Freighter signs the user

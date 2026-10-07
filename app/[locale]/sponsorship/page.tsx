@@ -16,7 +16,7 @@ export async function generateMetadata({
 
   const { buildPageMetadata } = await import('@/lib/seo');
   return buildPageMetadata({
-    title: `${t('title')} | ScoutOff`,
+    title: `${t('title')} | Promiscope`,
     description: t('metaDescription'),
     path: `/${locale}/sponsorship`,
   });

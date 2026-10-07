@@ -84,7 +84,7 @@ running the same command against the parent commit `9092429` in a separate `git 
 | ------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Lint                      | `npm run lint`                            | ✅ exit 0                                                                                                 |
 | Types                     | `npm run type-check`                      | ✅ exit 0, 0 errors                                                                                       |
-| Indexer tests             | `npm test --workspace @scoutoff/indexer`  | ✅ 174/174 pass                                                                                           |
+| Indexer tests             | `npm test --workspace @promiscope/indexer`  | ✅ 174/174 pass                                                                                           |
 | Suites touched by this PR | `npx jest --ci` (8 suites)                | ✅ 81/81 pass                                                                                             |
 | Full frontend suite       | `npm run test`                            | ⚠️ 3360 passed / 15 failed — every one of the 15 also fails at `9092429` (see below)                      |
 | Accessibility (axe) gate  | `npx jest --ci --testPathPattern='a11y'`  | ✅ 87/87 pass (8 suites)                                                                                  |
@@ -94,7 +94,7 @@ running the same command against the parent commit `9092429` in a separate `git 
 | Locale key parity         | `node scripts/check-locale-keys.js`       | ✅ en / fr / sw                                                                                           |
 | Body-file contract        | `node scripts/validate-pr-bodies.js`      | ✅                                                                                                        |
 | E2E (Playwright)          | `npx playwright test e2e/`                | ⏭️ not run locally — needs the app plus a seeded indexer running; the CI e2e job covers it                |
-| Contract tests            | `cd ../scout-off-contracts && cargo test` | N/A — no contract code is touched by this PR                                                              |
+| Contract tests            | `cd ../promiscope-contracts && cargo test` | N/A — no contract code is touched by this PR                                                              |
 
 ### Pre-existing failures (verified on the parent commit, not introduced here)
 
@@ -133,7 +133,7 @@ that component (they are timing-flaky). All 15 remaining failures reproduce on t
   `useScout.test.ts`, `useSavedSearches.test.ts`, `swrDeduplication.test.ts`, `lib/indexerClient.test.ts`,
   `lib/contract.test.ts`, `api/indexer/route.test.ts`, `components/ScoutDashboard.test.tsx` and
   `ScoutDashboardContent.test.tsx` for the new data source.
-- **Manual smoke test** — `npm run seed:players --workspace @scoutoff/indexer -- --count 10000`,
+- **Manual smoke test** — `npm run seed:players --workspace @promiscope/indexer -- --count 10000`,
   then `time curl 'localhost:3001/players?limit=50&region=West%20Africa'` against a running indexer;
   the dashboard pages through the seeded registry in the virtualized grid with an accurate
   "N players found" count.
@@ -188,7 +188,7 @@ that component (they are timing-flaky). All 15 remaining failures reproduce on t
   title=$(sed -n 's/<!-- Title: \(.*\) -->/\1/p' \
       docs/pr-bodies/feat-1298-players-endpoint.md | head -n1)
   gh pr create \
-    --repo scout-off/scout-off-frontend \
+    --repo promiscope/promiscope-frontend \
     --base main \
     --head Astrowlrd777:feat/1298-players-endpoint \
     --title "$title" \

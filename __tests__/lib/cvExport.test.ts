@@ -60,25 +60,25 @@ beforeEach(() => {
 
 describe('buildCvFilename', () => {
   it('slugifies a normal name', () => {
-    expect(buildCvFilename('Jane Doe')).toBe('jane-doe-scoutoff-cv.pdf');
+    expect(buildCvFilename('Jane Doe')).toBe('jane-doe-promiscope-cv.pdf');
   });
 
   it('lowercases and strips punctuation', () => {
     expect(buildCvFilename("O'Brien, Séan!!")).toBe(
-      'o-brien-s-an-scoutoff-cv.pdf',
+      'o-brien-s-an-promiscope-cv.pdf',
     );
   });
 
   it('trims leading/trailing dashes produced by non-alphanumeric edges', () => {
-    expect(buildCvFilename('---Jane Doe---')).toBe('jane-doe-scoutoff-cv.pdf');
+    expect(buildCvFilename('---Jane Doe---')).toBe('jane-doe-promiscope-cv.pdf');
   });
 
   it('falls back to "player" when the name has no alphanumeric characters', () => {
-    expect(buildCvFilename('!!!')).toBe('player-scoutoff-cv.pdf');
+    expect(buildCvFilename('!!!')).toBe('player-promiscope-cv.pdf');
   });
 
   it('falls back to "player" for an empty string', () => {
-    expect(buildCvFilename('')).toBe('player-scoutoff-cv.pdf');
+    expect(buildCvFilename('')).toBe('player-promiscope-cv.pdf');
   });
 });
 
@@ -232,7 +232,7 @@ describe('downloadPlayerCvPdf', () => {
     expect(blobArg.type).toBe('application/pdf');
 
     const anchor = appendChildSpy.mock.calls[0][0] as HTMLAnchorElement;
-    expect(anchor.download).toBe('jane-doe-scoutoff-cv.pdf');
+    expect(anchor.download).toBe('jane-doe-promiscope-cv.pdf');
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(removeChildSpy).toHaveBeenCalledTimes(1);
   });

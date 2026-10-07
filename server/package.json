@@ -1,8 +1,8 @@
 {
-  "name": "scout-off-backend",
+  "name": "promiscope-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Off-chain data API for scout-off (referrals today; chat history and comments next) — the Node.js API depicted in the root README architecture diagram.",
+  "description": "Off-chain data API for promiscope (referrals today; chat history and comments next) — the Node.js API depicted in the root README architecture diagram.",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

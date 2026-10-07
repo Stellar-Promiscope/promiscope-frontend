@@ -105,10 +105,10 @@ export async function generateMetadata({
   const ogImageUrl = `${profileUrl}/opengraph-image`;
 
   return {
-    title: `${player.vitals.name} — Player Profile — ScoutOff`,
-    description: `View ${player.vitals.name}'s verified football profile on ScoutOff. ${player.vitals.position} · ${player.vitals.region} · On-chain milestones verified by validators.`,
+    title: `${player.vitals.name} — Player Profile — Promiscope`,
+    description: `View ${player.vitals.name}'s verified football profile on Promiscope. ${player.vitals.position} · ${player.vitals.region} · On-chain milestones verified by validators.`,
     openGraph: {
-      title: `${player.vitals.name} — ScoutOff Player Profile`,
+      title: `${player.vitals.name} — Promiscope Player Profile`,
       description: `${player.vitals.position} · ${player.vitals.region} · Level ${player.progressLevel} · Verified on-chain milestones.`,
       url: profileUrl,
       type: 'profile',
@@ -117,13 +117,13 @@ export async function generateMetadata({
           url: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: `${player.vitals.name} — ScoutOff Player Profile`,
+          alt: `${player.vitals.name} — Promiscope Player Profile`,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${player.vitals.name} — ScoutOff Player Profile`,
+      title: `${player.vitals.name} — Promiscope Player Profile`,
       description: `${player.vitals.position} · ${player.vitals.region} · Level ${player.progressLevel} · Verified on-chain milestones.`,
       images: [ogImageUrl],
     },

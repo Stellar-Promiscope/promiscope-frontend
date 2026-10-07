@@ -450,10 +450,10 @@ export default function AccountRecoveryPage() {
                   On-chain identity not transferred:{' '}
                 </span>
                 Your on-chain profile (registration, milestones, subscriptions)
-                remains bound to the original wallet key. The ScoutOff contract
+                remains bound to the original wallet key. The Promiscope contract
                 does not yet support ownership transfer.{' '}
                 <a
-                  href="https://github.com/scout-off/scout-off-frontend/issues/1315"
+                  href="https://github.com/promiscope/promiscope-frontend/issues/1315"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline"
@@ -598,7 +598,7 @@ export default function AccountRecoveryPage() {
                 Your on-chain identity (registration, milestones) remains on the
                 original wallet. Contract-level transfer is not yet supported.{' '}
                 <a
-                  href="https://github.com/scout-off/scout-off-frontend/issues/1315"
+                  href="https://github.com/promiscope/promiscope-frontend/issues/1315"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline"

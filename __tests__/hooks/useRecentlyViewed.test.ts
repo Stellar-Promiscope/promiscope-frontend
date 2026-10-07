@@ -7,7 +7,7 @@ jest.mock('@/hooks/useWallet', () => ({
   useWallet: () => ({ publicKey: null }),
 }));
 
-const STORAGE_KEY = 'scoutoff_recently_viewed';
+const STORAGE_KEY = 'promiscope_recently_viewed';
 
 beforeEach(() => {
   localStorage.clear();

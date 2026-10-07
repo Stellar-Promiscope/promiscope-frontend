@@ -36,7 +36,7 @@ const walletT: Record<string, string> = {
   connecting: 'Connecting…',
   disconnect: 'Disconnect Wallet',
   selectProvider: 'Select Wallet',
-  selectProviderHint: 'Choose a Stellar wallet to connect with ScoutOff.',
+  selectProviderHint: 'Choose a Stellar wallet to connect with Promiscope.',
   install: 'Browser extension',
   installMobile: 'Browser extension / mobile',
   cancel: 'Cancel',

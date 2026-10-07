@@ -3,7 +3,7 @@ import { SorobanRpc, Networks, xdr } from '@stellar/stellar-sdk';
 import {
   decodeSorobanEvent,
   type EventType as SharedEventType,
-} from '@scoutoff/contract-events';
+} from '@promiscope/contract-events';
 import { IndexerMetrics, type EventType } from './metrics/IndexerMetrics';
 import {
   setRole,
@@ -15,7 +15,7 @@ import type { LeaderElector } from './leaderElection';
 import { logger } from './logger';
 
 /**
- * Polls Soroban RPC's getEvents for new ScoutOff contract events and feeds
+ * Polls Soroban RPC's getEvents for new Promiscope contract events and feeds
  * them into ledgerTracker and IndexerMetrics — the module described but
  * never implemented in README.md's "Event Listener / Poller" section.
  *

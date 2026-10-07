@@ -15,7 +15,7 @@ beforeEach(() => {
 
 describe('buildThemeBootstrapScript', () => {
   it('uses the shared storage key', () => {
-    expect(THEME_STORAGE_KEY).toBe('scoutoff_theme_preference');
+    expect(THEME_STORAGE_KEY).toBe('promiscope_theme_preference');
     expect(buildThemeBootstrapScript()).toContain(
       JSON.stringify(THEME_STORAGE_KEY),
     );

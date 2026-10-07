@@ -314,7 +314,7 @@ export async function collectUserData(
     sections,
     onChainExcluded: {
       explanation:
-        'On-chain data (your Stellar public key, transaction history, player registration, and payments) is stored permanently on the blockchain and is not included in this off-chain export. No one — including ScoutOff — can modify or delete it.',
+        'On-chain data (your Stellar public key, transaction history, player registration, and payments) is stored permanently on the blockchain and is not included in this off-chain export. No one — including Promiscope — can modify or delete it.',
       explorerUrl: explorerUrlFor(wallet),
     },
     excluded,

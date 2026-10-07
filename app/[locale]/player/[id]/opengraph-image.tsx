@@ -8,7 +8,7 @@ import type { Player } from '@/types';
 // edge default for next/og image routes.
 export const runtime = 'nodejs';
 
-export const alt = 'ScoutOff Player Profile';
+export const alt = 'Promiscope Player Profile';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -76,7 +76,7 @@ export default async function Image({ params }: { params: { id: string } }) {
             color: '#f9fafb',
           }}
         >
-          ScoutOff
+          Promiscope
         </div>
       </div>
 
@@ -168,7 +168,7 @@ function fallbackImage() {
           color: '#f9fafb',
         }}
       >
-        ScoutOff
+        Promiscope
       </div>
       <div
         style={{

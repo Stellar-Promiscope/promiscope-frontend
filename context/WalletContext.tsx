@@ -484,7 +484,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       removeStoredSession();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
-          new CustomEvent('scoutoff:session-expired', {
+          new CustomEvent('promiscope:session-expired', {
             detail: {
               message:
                 'Your session expired. Please reconnect your wallet to continue.',
@@ -542,7 +542,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           removeSessionExpiry();
           if (typeof window !== 'undefined') {
             window.dispatchEvent(
-              new CustomEvent('scoutoff:session-expired', {
+              new CustomEvent('promiscope:session-expired', {
                 detail: {
                   message:
                     'Your session expired. Please reconnect your wallet to continue.',

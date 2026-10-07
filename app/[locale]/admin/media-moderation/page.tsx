@@ -132,7 +132,7 @@ function MediaModerationContent() {
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold text-white">Media moderation</h1>
         <p className="text-sm text-gray-400">
-          Denylisted media is blocked on ScoutOff surfaces only (the media proxy
+          Denylisted media is blocked on Promiscope surfaces only (the media proxy
           and profile galleries). It can still be reached through public IPFS
           gateways unless it is also unpinned and no other node pins it.
         </p>

@@ -1,33 +1,33 @@
 import type { Metadata } from 'next';
 import { ReactNode } from 'react';
 
-const ROOT_URL = 'https://scoutoff.app';
+const ROOT_URL = 'https://promiscope.example';
 
 export const metadata: Metadata = {
-  title: 'Scout Dashboard — ScoutOff',
+  title: 'Scout Dashboard — Promiscope',
   description:
-    'Discover and connect with verified football players on ScoutOff. Filter by region, position, and progress level.',
+    'Discover and connect with verified football players on Promiscope. Filter by region, position, and progress level.',
   openGraph: {
-    title: 'Scout Dashboard — ScoutOff',
+    title: 'Scout Dashboard — Promiscope',
     description:
-      'Discover and connect with verified football players on ScoutOff. Filter by region, position, and progress level.',
+      'Discover and connect with verified football players on Promiscope. Filter by region, position, and progress level.',
     url: `${ROOT_URL}/scout`,
-    siteName: 'ScoutOff',
+    siteName: 'Promiscope',
     type: 'website',
     images: [
       {
         url: `${ROOT_URL}/og-image.svg`,
         width: 1200,
         height: 630,
-        alt: 'Scout Dashboard — ScoutOff',
+        alt: 'Scout Dashboard — Promiscope',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Scout Dashboard — ScoutOff',
+    title: 'Scout Dashboard — Promiscope',
     description:
-      'Discover and connect with verified football players on ScoutOff. Filter by region, position, and progress level.',
+      'Discover and connect with verified football players on Promiscope. Filter by region, position, and progress level.',
     images: [`${ROOT_URL}/og-image.svg`],
   },
 };

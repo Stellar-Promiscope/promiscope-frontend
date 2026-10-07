@@ -1,53 +1,53 @@
-# CODEOWNERS — ScoutOff Frontend
+# CODEOWNERS — Promiscope Frontend
 #
 # When a PR touches files under a listed path, GitHub automatically
 # requests a review from the matching owner(s). The last matching rule
 # for a given file wins.
 #
 # Owners can be individual @-handles or GitHub teams.
-# Teams are preferred for shared areas (e.g. @scout-off/core).
+# Teams are preferred for shared areas (e.g. @promiscope/core).
 #
 # To validate: push to a branch and GitHub's UI will flag any syntax
 # errors (typo'd usernames, invalid team names, bad patterns).
 
 # ── Root configuration & CI ──────────────────────────────────────────────────
-/.github/         @scout-off/maintainers
-/package.json     @scout-off/maintainers
-/tsconfig.json    @scout-off/maintainers
+/.github/         @promiscope/maintainers
+/package.json     @promiscope/maintainers
+/tsconfig.json    @promiscope/maintainers
 
 # ── Security-sensitive auth routes ───────────────────────────────────────────
-/app/api/auth/    @scout-off/maintainers
+/app/api/auth/    @promiscope/maintainers
 
 # ── CSP & security ───────────────────────────────────────────────────────────
-/app/api/csp-report/  @scout-off/maintainers
+/app/api/csp-report/  @promiscope/maintainers
 
 # ── Smart contract interaction layer ─────────────────────────────────────────
-/lib/contract.ts      @scout-off/maintainers
-/lib/stellar.ts       @scout-off/maintainers
-/lib/contractErrorMessage.ts  @scout-off/maintainers
+/lib/contract.ts      @promiscope/maintainers
+/lib/stellar.ts       @promiscope/maintainers
+/lib/contractErrorMessage.ts  @promiscope/maintainers
 
 # ── Indexer package ──────────────────────────────────────────────────────────
-/packages/indexer/    @scout-off/maintainers
+/packages/indexer/    @promiscope/maintainers
 
 # ── Server / backend API ─────────────────────────────────────────────────────
-/server/              @scout-off/maintainers
+/server/              @promiscope/maintainers
 
 # ── i18n messages (translations must be reviewed by bilingual contributors) ──
-/messages/            @scout-off/maintainers
+/messages/            @promiscope/maintainers
 
 # ── Admin components & fraud detection ───────────────────────────────────────
-/components/admin/    @scout-off/maintainers
-/lib/fraudDetection.ts  @scout-off/maintainers
-/lib/adminAuth.ts      @scout-off/maintainers
+/components/admin/    @promiscope/maintainers
+/lib/fraudDetection.ts  @promiscope/maintainers
+/lib/adminAuth.ts      @promiscope/maintainers
 
 # ── Wallet & auth context ────────────────────────────────────────────────────
-/context/            @scout-off/maintainers
-/hooks/useWallet.ts   @scout-off/maintainers
-/hooks/useRequireWallet.ts  @scout-off/maintainers
+/context/            @promiscope/maintainers
+/hooks/useWallet.ts   @promiscope/maintainers
+/hooks/useRequireWallet.ts  @promiscope/maintainers
 
 # ── SEP-10 auth flow (Stellar-specific, high-security) ───────────────────────
-/lib/walletAdapters.ts  @scout-off/maintainers
+/lib/walletAdapters.ts  @promiscope/maintainers
 
 # ── Documentation ────────────────────────────────────────────────────────────
-/docs/               @scout-off/maintainers
-/DEVELOPMENT.md      @scout-off/maintainers
+/docs/               @promiscope/maintainers
+/DEVELOPMENT.md      @promiscope/maintainers

@@ -13,7 +13,7 @@ We provide security updates for the following versions:
 
 ### In scope
 
-This **frontend repository** (`scout-off/scout-off-frontend`) — including:
+This **frontend repository** (`promiscope/promiscope-frontend`) — including:
 
 - Next.js application code (`app/`, `components/`, `hooks/`, `lib/`)
 - API routes (`app/api/`)
@@ -23,7 +23,7 @@ This **frontend repository** (`scout-off/scout-off-frontend`) — including:
 
 ### Out of scope
 
-- The **smart-contract repository** (`scout-off/scout-off-contracts`) — see its own security policy
+- The **smart-contract repository** (`promiscope/promiscope-contracts`) — see its own security policy
 - Third-party services we depend on (Stellar network, Pinata IPFS, Sentry, Vercel)
 - Issues in dependencies that are already reported upstream
 - Theoretical attacks without a practical demonstration
@@ -36,7 +36,7 @@ Do **not** file a public GitHub issue for a security vulnerability.
 ### How to report
 
 1. Go to the **Security Advisories** page:
-   https://github.com/scout-off/scout-off-frontend/security/advisories/new
+   https://github.com/promiscope/promiscope-frontend/security/advisories/new
 
 2. Fill in the details:
    - **Title**: Brief description of the vulnerability
@@ -47,7 +47,7 @@ Do **not** file a public GitHub issue for a security vulnerability.
 3. Submit the advisory — it remains private until we resolve it.
 
 If you're unable to use the GitHub form for any reason, you may alternately
-email **security@scoutoff.app** — but the GitHub advisory is strongly
+email **security@promiscope.example** — but the GitHub advisory is strongly
 preferred as it provides structured fields and automatic tracking.
 
 ### What to expect
@@ -74,4 +74,4 @@ _None yet — be the first!_
 ## Security.txt
 
 This project also publishes an RFC 9116 `security.txt` file at:
-https://scoutoff.app/.well-known/security.txt
+https://promiscope.example/.well-known/security.txt

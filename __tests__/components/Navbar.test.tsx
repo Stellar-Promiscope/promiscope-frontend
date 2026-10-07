@@ -88,7 +88,7 @@ describe('Navbar', () => {
     mockUseToast.mockReturnValue({ show: jest.fn() });
   });
 
-  test('renders the ScoutOff logo/link', () => {
+  test('renders the Promiscope logo/link', () => {
     mockUseWallet.mockReturnValue({
       publicKey: null,
       isConnecting: false,
@@ -100,7 +100,7 @@ describe('Navbar', () => {
 
     renderNavbar();
 
-    expect(screen.getByRole('link', { name: /ScoutOff/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Promiscope/i })).toBeInTheDocument();
   });
 
   test('shows Connect Wallet button when wallet is disconnected', () => {
@@ -211,7 +211,7 @@ describe('Navbar', () => {
 
   test('logo link has aria-current="page" when on home route', () => {
     setup('/en');
-    const logo = screen.getByRole('link', { name: /ScoutOff/i });
+    const logo = screen.getByRole('link', { name: /Promiscope/i });
     expect(logo).toHaveAttribute('aria-current', 'page');
   });
 
@@ -274,7 +274,7 @@ describe('Navbar', () => {
 
     // Start focus from body
     await user.tab();
-    const logo = screen.getByRole('link', { name: /ScoutOff/i });
+    const logo = screen.getByRole('link', { name: /Promiscope/i });
     expect(logo).toHaveFocus();
 
     await user.tab();
@@ -315,7 +315,7 @@ describe('Navbar', () => {
   });
 
   // ── Accessibility ──────────────────────────────────────────────────────────
-  // Issue #722: audit of the app's branding/logo area (the ScoutOff wordmark
+  // Issue #722: audit of the app's branding/logo area (the Promiscope wordmark
   // link) for accessibility violations, including missing alt text on any
   // future image-based logo.
 

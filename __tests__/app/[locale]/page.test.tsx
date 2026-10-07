@@ -77,7 +77,7 @@ describe('HomePage', () => {
     expect(screen.getByText(new RegExp(year))).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
       'href',
-      'https://github.com/jhayniffy/scout-off',
+      'https://github.com/jhayniffy/promiscope',
     );
     expect(screen.getByRole('link', { name: 'Changelog' })).toHaveAttribute(
       'href',

@@ -50,7 +50,7 @@ export interface BulkImportSession {
 
 // ── Database ──────────────────────────────────────────────────────────────────
 
-const DB_NAME = 'scoutoff-bulk-import';
+const DB_NAME = 'promiscope-bulk-import';
 const DB_VERSION = 1;
 const STORE_NAME = 'sessions';
 

@@ -153,4 +153,4 @@ All three files contain complete and matching key structures:
 
 ## Summary
 
-The Swahili (`sw`) locale has been successfully integrated into the scout-off-frontend project using next-intl. The implementation follows Next.js 14 best practices with proper locale-based routing, automatic browser language detection, and persistent language selection via cookies. All 80+ UI strings have been translated to Swahili with machine translations marked for human review.
+The Swahili (`sw`) locale has been successfully integrated into the promiscope-frontend project using next-intl. The implementation follows Next.js 14 best practices with proper locale-based routing, automatic browser language detection, and persistent language selection via cookies. All 80+ UI strings have been translated to Swahili with machine translations marked for human review.

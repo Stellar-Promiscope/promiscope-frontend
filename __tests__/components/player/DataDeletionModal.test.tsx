@@ -15,7 +15,7 @@ jest.mock('next-intl', () => ({
       modal_title: 'Request Data Deletion',
       onchain_heading: 'On-Chain Data (Cannot Be Deleted)',
       onchain_description:
-        'Your Stellar public key, transaction history, player registration, and payments are stored permanently on the blockchain. No one — including ScoutOff — can modify or delete this data.',
+        'Your Stellar public key, transaction history, player registration, and payments are stored permanently on the blockchain. No one — including Promiscope — can modify or delete this data.',
       offchain_heading: 'Off-Chain Data (Can Be Deleted)',
       offchain_description:
         'Chat history, profile metadata, contact details, and analytics data stored on our servers can be deleted upon request.',
@@ -24,7 +24,7 @@ jest.mock('next-intl', () => ({
         'Only off-chain records can be deleted. On-chain data is permanent.',
       confirm_title: 'Are you sure?',
       confirm_message:
-        "This will submit a request to delete your personal off-chain data from ScoutOff's servers. On-chain data cannot be deleted and will remain on the Stellar blockchain permanently.",
+        "This will submit a request to delete your personal off-chain data from Promiscope's servers. On-chain data cannot be deleted and will remain on the Stellar blockchain permanently.",
       confirm_button: 'Yes, Request Deletion',
       cancel: 'Cancel',
       close: 'Close',

@@ -7,7 +7,7 @@
  * lib/contract.ts talk to (getHealth, getNetwork, getLatestLedger,
  * getLedgerEntries, simulateTransaction, sendTransaction, getTransaction) to
  * let a contributor browse the app and exercise read + write flows against a
- * deployed-contract-shaped ScoutOff without any real testnet, deployed
+ * deployed-contract-shaped Promiscope without any real testnet, deployed
  * contract, or credentials.
  *
  * This is a *mock*, not a Soroban node: it does not execute contract code,

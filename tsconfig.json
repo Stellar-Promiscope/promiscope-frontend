@@ -17,7 +17,7 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./*"],
-      "@scoutoff/contract-events": ["./packages/contract-events/src/index.ts"]
+      "@promiscope/contract-events": ["./packages/contract-events/src/index.ts"]
     },
     "types": ["jest", "node"]
   },

@@ -1,7 +1,7 @@
 const { getPlayerSitemapPaths } = require('./lib/playerSitemapPaths');
 
 /** @type {import('next-sitemap').IConfig} */
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://scoutoff.app';
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://promiscope.example';
 
 module.exports = {
   siteUrl,

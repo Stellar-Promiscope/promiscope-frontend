@@ -1,5 +1,5 @@
 /**
- * Curated flat list of African regions and countries used across ScoutOff for
+ * Curated flat list of African regions and countries used across Promiscope for
  * player registration and scout search filtering.
  *
  * Each entry is a `{ label, value }` object:
@@ -9,7 +9,7 @@
  *   argument to `filter_players()` on the Soroban contract (e.g. `"nigeria"`,
  *   `"west-africa"`). Slugs use hyphens as word separators and no accents.
  *
- * The list includes both individual countries (where ScoutOff has significant
+ * The list includes both individual countries (where Promiscope has significant
  * user density) and broad sub-regional groupings (for scouts who search across
  * a wider territory). It is alphabetically sorted by `label` so it can be
  * rendered directly without re-sorting.

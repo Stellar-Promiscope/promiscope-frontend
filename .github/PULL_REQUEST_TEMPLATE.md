@@ -25,7 +25,7 @@ Describe how this change was tested locally, including commands run.
 - `npm run lint`
 - `npm run test`
 - `node scripts/validate-env.js`
-- `cd ../scout-off-contracts && cargo test` (when contract integration is involved)
+- `cd ../promiscope-contracts && cargo test` (when contract integration is involved)
 
 ## Checklist
 
@@ -63,7 +63,7 @@ To open a cross-fork PR from a body file:
 title=$(sed -n 's/<!-- Title: \(.*\) -->/\1/p' \
     docs/pr-bodies/<branch>.md | head -n1)
 gh pr create \
-  --repo scout-off/scout-off-frontend \
+  --repo promiscope/promiscope-frontend \
   --base main \
   --head <your-fork>:<branch> \
   --title "$title" \

@@ -3,12 +3,12 @@
 # This file conforms to RFC 9116: https://www.rfc-editor.org/rfc/rfc9116.html
 # Please report security vulnerabilities through our GitHub Security Advisory.
 
-Contact: https://github.com/rahimatonize/scout-off-frontend/security/advisories/new
+Contact: https://github.com/rahimatonize/promiscope-frontend/security/advisories/new
 Expires: 2027-12-31T23:59:59.000Z
 Preferred-Languages: en, fr
-Canonical: https://scoutoff.com/.well-known/security.txt
-Policy: https://github.com/rahimatonize/scout-off-frontend/blob/main/SECURITY.md
-Acknowledgments: https://github.com/rahimatonize/scout-off-frontend/blob/main/SECURITY.md#hall-of-fame
+Canonical: https://promiscope.example/.well-known/security.txt
+Policy: https://github.com/rahimatonize/promiscope-frontend/blob/main/SECURITY.md
+Acknowledgments: https://github.com/rahimatonize/promiscope-frontend/blob/main/SECURITY.md#hall-of-fame
 
 # Encryption: https://keys.openpgp.org/vks/v1/by-fingerprint/YOUR_PGP_FINGERPRINT_HERE
 # (Uncomment and add your PGP key once available)

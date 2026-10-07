@@ -2,6 +2,8 @@
 
 This guide walks you from a freshly cloned repository to a fully running local stack: Stellar testnet contracts, backend API, Next.js frontend, and wallet connection. It assumes no prior project context. Target time: under 30 minutes.
 
+> **Product migration:** Promiscope is the community project accountability product. The public marketing and sample-record pages are a static preview; the local backend, indexer, mock data, and Soroban workflows still model the former football scouting product. Use this guide for legacy system development only. The new project, evidence, and community review flows are not implemented yet.
+
 ---
 
 ## Docker Compose Quick Start (recommended for first-time contributors)
@@ -70,19 +72,19 @@ cargo install stellar-cli --locked
 
 ### 1. Clone repositories
 
-The contracts live in a separate `scout-off-contracts` repository, expected as a sibling directory.
+The contracts live in a separate `promiscope-contracts` repository, expected as a sibling directory.
 
 ```bash
-git clone https://github.com/scout-off/scout-off-frontend.git
-git clone https://github.com/scout-off/scout-off-contracts.git
+git clone https://github.com/promiscope/promiscope-frontend.git
+git clone https://github.com/promiscope/promiscope-contracts.git
 ```
 
 Your directory layout should be:
 
 ```
 projects/
-├── scout-off-frontend/
-└── scout-off-contracts/
+├── promiscope-frontend/
+└── promiscope-contracts/
 ```
 
 ### 2. Install frontend dependencies
@@ -90,7 +92,7 @@ projects/
 The project pins its Node.js version in `.nvmrc` (currently `24`). If you use [nvm](https://github.com/nvm-sh/nvm), run `nvm use` in the project root to switch to the pinned version automatically. If you don't have that version installed yet, run `nvm install` instead — it will read `.nvmrc` and install the correct version for you.
 
 ```bash
-cd scout-off-frontend
+cd promiscope-frontend
 # Switch to (or install) the pinned Node version from .nvmrc:
 nvm use        # or: nvm install
 npm install
@@ -150,7 +152,7 @@ echo "SEP10_HOME_DOMAIN=localhost:3000" >> .env.local
 
 > `scripts/validate-env.js` only checks that variables are declared in `.env.example`; it does not currently verify these secrets have values, so double-check them manually.
 
-**SEP-10 origin allow-list:** `SEP10_ALLOWED_ORIGINS` can be left blank for local dev — `app/api/auth/sep10/route.ts` falls back to `http://<NEXT_PUBLIC_DOMAIN>` (default `http://localhost:3000`) when `NODE_ENV !== 'production'`. It **must** be set before deploying to any non-local environment: a comma-separated list of full origins allowed to call the SEP-10 POST endpoint, e.g. `SEP10_ALLOWED_ORIGINS=https://scoutoff.app,https://www.scoutoff.app`. In production, if this (and `NEXT_PUBLIC_BASE_URL`, honored as a convenience single-origin entry) are both unset, the route fails closed with `403` rather than trusting the request's own `Host` header.
+**SEP-10 origin allow-list:** `SEP10_ALLOWED_ORIGINS` can be left blank for local dev — `app/api/auth/sep10/route.ts` falls back to `http://<NEXT_PUBLIC_DOMAIN>` (default `http://localhost:3000`) when `NODE_ENV !== 'production'`. It **must** be set before deploying to any non-local environment: a comma-separated list of full origins allowed to call the SEP-10 POST endpoint, e.g. `SEP10_ALLOWED_ORIGINS=https://promiscope.example,https://www.promiscope.example`. In production, if this (and `NEXT_PUBLIC_BASE_URL`, honored as a convenience single-origin entry) are both unset, the route fails closed with `403` rather than trusting the request's own `Host` header.
 
 ### 4. Create and fund a Stellar testnet account
 
@@ -178,16 +180,16 @@ This deposits 10,000 testnet XLM into your account.
 ### 5. Build and deploy smart contracts
 
 ```bash
-cd ../scout-off-contracts
+cd ../promiscope-contracts
 
 # Build optimized WASM
 cargo build --target wasm32-unknown-unknown --release
 stellar contract optimize \
-  --wasm target/wasm32-unknown-unknown/release/scout_off.wasm
+  --wasm target/wasm32-unknown-unknown/release/promiscope.wasm
 
 # Deploy to testnet
 stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/scout_off.optimized.wasm \
+  --wasm target/wasm32-unknown-unknown/release/promiscope.optimized.wasm \
   --source deployer \
   --network testnet
 ```
@@ -241,7 +243,7 @@ If you don't have the backend running, you can still browse the UI and interact 
 ### 9. Start the frontend
 
 ```bash
-cd scout-off-frontend
+cd promiscope-frontend
 npm run dev
 ```
 
@@ -550,7 +552,7 @@ Public player profiles (`app/[locale]/player/[id]`) previously rendered `<img>`/
 
 ## Versioned contract event schemas
 
-Contract events are decoded through the shared `@scoutoff/contract-events`
+Contract events are decoded through the shared `@promiscope/contract-events`
 workspace package. `schema/v1.ts` owns the v1 topic symbols and payload
 decoders; both `packages/indexer` and `hooks/useContractEvents.ts` call that
 package instead of maintaining independent topic heuristics. Indexed rows

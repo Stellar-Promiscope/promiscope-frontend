@@ -115,7 +115,7 @@ export default function MediaReportButton({
               />
             )}
             <p className="text-xs text-gray-500">
-              Removal applies to ScoutOff only. Content stored on IPFS may
+              Removal applies to Promiscope only. Content stored on IPFS may
               remain reachable through public gateways.
             </p>
             {error && (

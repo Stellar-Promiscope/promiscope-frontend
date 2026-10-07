@@ -46,7 +46,7 @@ describe('ContractPausedBanner', () => {
     render(<ContractPausedBanner />);
 
     expect(
-      screen.getByText(/ScoutOff is currently under maintenance/i),
+      screen.getByText(/Promiscope is currently under maintenance/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /dismiss/i }),
@@ -67,7 +67,7 @@ describe('ContractPausedBanner', () => {
       fireEvent.click(dismiss);
     });
 
-    expect(sessionStorage.getItem('scoutoff:contractPausedDismissed')).toBe(
+    expect(sessionStorage.getItem('promiscope:contractPausedDismissed')).toBe(
       '1',
     );
     expect(screen.queryByText(/under maintenance/i)).toBeNull();
@@ -75,7 +75,7 @@ describe('ContractPausedBanner', () => {
 
   test('banner stays hidden on remount while still paused + dismissed', () => {
     mockUseIsPaused.mockReturnValue(true);
-    sessionStorage.setItem('scoutoff:contractPausedDismissed', '1');
+    sessionStorage.setItem('promiscope:contractPausedDismissed', '1');
 
     render(<ContractPausedBanner />);
     expect(screen.queryByText(/under maintenance/i)).toBeNull();
@@ -83,7 +83,7 @@ describe('ContractPausedBanner', () => {
 
   test('clearing sessionStorage flag (when contract un-pauses) restores visibility', () => {
     mockUseIsPaused.mockReturnValue(true);
-    sessionStorage.setItem('scoutoff:contractPausedDismissed', '1');
+    sessionStorage.setItem('promiscope:contractPausedDismissed', '1');
 
     const { rerender } = render(<ContractPausedBanner />);
     expect(screen.queryByText(/under maintenance/i)).toBeNull();
@@ -96,10 +96,10 @@ describe('ContractPausedBanner', () => {
     mockUseIsPaused.mockReturnValue(true);
     rerender(<ContractPausedBanner />);
     expect(
-      sessionStorage.getItem('scoutoff:contractPausedDismissed'),
+      sessionStorage.getItem('promiscope:contractPausedDismissed'),
     ).toBeNull();
     expect(
-      screen.getByText(/ScoutOff is currently under maintenance/i),
+      screen.getByText(/Promiscope is currently under maintenance/i),
     ).toBeInTheDocument();
   });
 

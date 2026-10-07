@@ -14,7 +14,7 @@ describe('ScoutLayout', () => {
   });
 
   it('exposes SEO metadata for the scout dashboard', () => {
-    expect(metadata.title).toBe('Scout Dashboard — ScoutOff');
-    expect(metadata.openGraph?.url).toBe('https://scoutoff.app/scout');
+    expect(metadata.title).toBe('Scout Dashboard — Promiscope');
+    expect(metadata.openGraph?.url).toBe('https://promiscope.example/scout');
   });
 });

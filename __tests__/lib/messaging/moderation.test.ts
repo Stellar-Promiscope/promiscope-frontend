@@ -25,7 +25,7 @@ import { setActiveWallet } from '@/lib/activeWallet';
 
 const WALLET_A = 'GWALLETA';
 const WALLET_B = 'GWALLETB';
-const BLOCKED_USERS_KEY = `scoutoff_blocked_users:${WALLET_A}`;
+const BLOCKED_USERS_KEY = `promiscope_blocked_users:${WALLET_A}`;
 
 beforeEach(() => {
   mockPost.mockReset();

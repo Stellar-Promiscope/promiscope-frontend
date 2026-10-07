@@ -1,4 +1,4 @@
-# scout-off backend
+# promiscope backend
 
 The off-chain data API depicted in the root README's architecture diagram
 ("Node.js API — Off-chain data & chat history"). This is where non-blockchain
@@ -44,7 +44,7 @@ npm start              # or `npm run dev` for auto-restart on file changes
 ```
 
 The server listens on `PORT` (default `4000`) and creates its SQLite
-database file at `DB_PATH` (default `server/data/scout-off.db`) on first
+database file at `DB_PATH` (default `server/data/promiscope.db`) on first
 run — the `data/` directory is gitignored, same as the frontend's `.data/`.
 
 Point the frontend at it by setting `NEXT_PUBLIC_API_URL=http://localhost:4000`

@@ -98,7 +98,7 @@ export async function generateMetadata({
 
   const { buildPageMetadata } = await import('@/lib/seo');
   return buildPageMetadata({
-    title: `${t('page_title')} | ScoutOff`,
+    title: `${t('page_title')} | Promiscope`,
     description: t('page_description'),
     path: `/${locale}/changelog`,
   });

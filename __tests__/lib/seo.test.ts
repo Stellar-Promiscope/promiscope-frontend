@@ -20,7 +20,7 @@ describe('lib/seo', () => {
 
   beforeEach(() => {
     mockHeaders.clear();
-    process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://promiscope.example';
   });
 
   afterAll(() => {
@@ -43,9 +43,9 @@ describe('lib/seo', () => {
       expect(getBaseUrl()).toBe('https://custom.example');
     });
 
-    it('falls back to the scoutoff.app default when unset', () => {
+    it('falls back to the promiscope.example default when unset', () => {
       delete process.env.NEXT_PUBLIC_APP_URL;
-      expect(getBaseUrl()).toBe('https://scoutoff.app');
+      expect(getBaseUrl()).toBe('https://promiscope.example');
     });
   });
 
@@ -54,10 +54,10 @@ describe('lib/seo', () => {
       const languages = buildLanguageAlternates('/en/player/123');
 
       expect(languages).toEqual({
-        en: 'https://scoutoff.app/en/player/123',
-        fr: 'https://scoutoff.app/fr/player/123',
-        sw: 'https://scoutoff.app/sw/player/123',
-        'x-default': 'https://scoutoff.app/en/player/123',
+        en: 'https://promiscope.example/en/player/123',
+        fr: 'https://promiscope.example/fr/player/123',
+        sw: 'https://promiscope.example/sw/player/123',
+        'x-default': 'https://promiscope.example/en/player/123',
       });
     });
 
@@ -77,10 +77,10 @@ describe('lib/seo', () => {
       const languages = buildLanguageAlternates('/fr/scout/dashboard/settings');
 
       expect(languages).toEqual({
-        en: 'https://scoutoff.app/en/scout/dashboard/settings',
-        fr: 'https://scoutoff.app/fr/scout/dashboard/settings',
-        sw: 'https://scoutoff.app/sw/scout/dashboard/settings',
-        'x-default': 'https://scoutoff.app/en/scout/dashboard/settings',
+        en: 'https://promiscope.example/en/scout/dashboard/settings',
+        fr: 'https://promiscope.example/fr/scout/dashboard/settings',
+        sw: 'https://promiscope.example/sw/scout/dashboard/settings',
+        'x-default': 'https://promiscope.example/en/scout/dashboard/settings',
       });
     });
 
@@ -88,10 +88,10 @@ describe('lib/seo', () => {
       const languages = buildLanguageAlternates('/en');
 
       expect(languages).toEqual({
-        en: 'https://scoutoff.app/en',
-        fr: 'https://scoutoff.app/fr',
-        sw: 'https://scoutoff.app/sw',
-        'x-default': 'https://scoutoff.app/en',
+        en: 'https://promiscope.example/en',
+        fr: 'https://promiscope.example/fr',
+        sw: 'https://promiscope.example/sw',
+        'x-default': 'https://promiscope.example/en',
       });
     });
 
@@ -99,10 +99,10 @@ describe('lib/seo', () => {
       const languages = buildLanguageAlternates('/sw/');
 
       expect(languages).toEqual({
-        en: 'https://scoutoff.app/en',
-        fr: 'https://scoutoff.app/fr',
-        sw: 'https://scoutoff.app/sw',
-        'x-default': 'https://scoutoff.app/en',
+        en: 'https://promiscope.example/en',
+        fr: 'https://promiscope.example/fr',
+        sw: 'https://promiscope.example/sw',
+        'x-default': 'https://promiscope.example/en',
       });
     });
 
@@ -134,13 +134,13 @@ describe('lib/seo', () => {
 
       const canonical = await getCanonicalUrl();
 
-      expect(canonical.toString()).toBe('https://scoutoff.app/en/player/123');
+      expect(canonical.toString()).toBe('https://promiscope.example/en/player/123');
     });
 
     it('falls back to root when x-pathname is absent', async () => {
       const canonical = await getCanonicalUrl();
 
-      expect(canonical.toString()).toBe('https://scoutoff.app/');
+      expect(canonical.toString()).toBe('https://promiscope.example/');
     });
   });
 
@@ -152,12 +152,12 @@ describe('lib/seo', () => {
 
       expect(metadata).toEqual({
         alternates: {
-          canonical: 'https://scoutoff.app/en/player/123',
+          canonical: 'https://promiscope.example/en/player/123',
           languages: {
-            en: 'https://scoutoff.app/en/player/123',
-            fr: 'https://scoutoff.app/fr/player/123',
-            sw: 'https://scoutoff.app/sw/player/123',
-            'x-default': 'https://scoutoff.app/en/player/123',
+            en: 'https://promiscope.example/en/player/123',
+            fr: 'https://promiscope.example/fr/player/123',
+            sw: 'https://promiscope.example/sw/player/123',
+            'x-default': 'https://promiscope.example/en/player/123',
           },
         },
       });
@@ -169,10 +169,10 @@ describe('lib/seo', () => {
       const metadata = await seoMetadata();
 
       expect(metadata.alternates?.languages).toEqual({
-        en: 'https://scoutoff.app/en',
-        fr: 'https://scoutoff.app/fr',
-        sw: 'https://scoutoff.app/sw',
-        'x-default': 'https://scoutoff.app/en',
+        en: 'https://promiscope.example/en',
+        fr: 'https://promiscope.example/fr',
+        sw: 'https://promiscope.example/sw',
+        'x-default': 'https://promiscope.example/en',
       });
     });
   });

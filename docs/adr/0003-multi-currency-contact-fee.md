@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-26
 - **Status:** Accepted
-- **Deciders:** ScoutOff frontend maintainers (issue #1321)
+- **Deciders:** Promiscope frontend maintainers (issue #1321)
 - **Last revised:** 2026-09-26
 
 ## Context

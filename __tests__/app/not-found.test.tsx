@@ -46,7 +46,7 @@ describe('NotFound', () => {
   });
 
   it('exposes the expected page title metadata', () => {
-    expect(metadata.title).toBe('Page Not Found – ScoutOff');
+    expect(metadata.title).toBe('Page Not Found – Promiscope');
   });
 
   it('renders a heading on the 404 page', () => {

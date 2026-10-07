@@ -1,8 +1,8 @@
 # PR Bodies (offline copy)
 
 This directory stores self-contained PR body markdown for branches staged on the
-user's fork (`dorisadams/scout-off-frontend`). Use them as `--body-file`
-arguments when opening cross-fork PRs against `scout-off/scout-off-frontend`'s
+user's fork (`dorisadams/promiscope-frontend`). Use them as `--body-file`
+arguments when opening cross-fork PRs against `promiscope/promiscope-frontend`'s
 `main` branch, instead of digging through chat scrollback.
 
 ## Files
@@ -22,9 +22,9 @@ arguments when opening cross-fork PRs against `scout-off/scout-off-frontend`'s
 
 ```bash
 # 1. Verify the branch is current. If git pull refuses with "not possible
-#    to fast-forward" (because upstream scout-off/scout-off-frontend's main
+#    to fast-forward" (because upstream promiscope/promiscope-frontend's main
 #    moved past chore/resolve-30-issues after PR 1 landed), rebase instead:
-#      git rebase scout-off/main    # or:  git rebase origin/main
+#      git rebase promiscope/main    # or:  git rebase origin/main
 git fetch origin
 git checkout chore/resolve-30-issues
 git pull --ff-only || git rebase origin/main
@@ -42,7 +42,7 @@ title=$(sed -n 's/<!-- Title: \(.*\) -->/\1/p' \
     docs/pr-bodies/chore-resolve-30-issues.md | head -n1)
 
 gh pr create \
-  --repo scout-off/scout-off-frontend \
+  --repo promiscope/promiscope-frontend \
   --base main \
   --head dorisadams:chore/resolve-30-issues \
   --title "$title" \
@@ -53,7 +53,7 @@ gh pr create \
 
 - After **rebases**: re-verify validation tables (rerun `tsc`, `eslint`, `prettier --check`, and `jest` on the rebased branch and update the numbers in the body). Update commit hashes in any "Stack" / commit-log sections if rebased onto newer `main`.
 - After **edit conflicts with another branch**: if the body conflicts with another PR's body when stacking, prefer the more specific branch's wording and link to it from the dependent branch's "Out-of-scope" section.
-- When **upstream merges**: delete files for branches whose content has been merged into `scout-off/scout-off-frontend:main` so this directory stays in sync with pending work, not historical work.
+- When **upstream merges**: delete files for branches whose content has been merged into `promiscope/promiscope-frontend:main` so this directory stays in sync with pending work, not historical work.
 - When **body-accuracy drift is reported**: body files hardcode the diff stats and test counts from their authoring moment; update them after any action that invalidates those numbers (e.g. a rebase that adds commits, or a follow-up commit on the same branch).
 
 ## Related

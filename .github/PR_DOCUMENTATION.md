@@ -1,6 +1,6 @@
 ﻿# Pull Request Guide
 
-This guide describes the ScoutOff frontend PR workflow and review expectations.
+This guide describes the Promiscope frontend PR workflow and review expectations.
 Use `.github/PULL_REQUEST_TEMPLATE.md` to add structured PR details and this guide for process clarity.
 
 ## Before opening a PR
@@ -45,7 +45,7 @@ Examples:
 - `npm run lint`
 - `npm run test`
 - `node scripts/validate-env.js`
-- `cd ../scout-off-contracts && cargo test`
+- `cd ../promiscope-contracts && cargo test`
 
 ### Review notes
 
@@ -86,7 +86,7 @@ Examples:
 
 ### Bulk-deploy PRs (using `docs/pr-bodies/`)
 
-For multi-PR stacks authored from a fork against `scout-off/scout-off-frontend:main`, store each PR's body in [`docs/pr-bodies/<branch-with-dashes>.md`](docs/pr-bodies/README.md) _before_ opening the PR. The CI `lint` job (`.github/workflows/ci.yml`) runs a contract check that every body file in `docs/pr-bodies/`:
+For multi-PR stacks authored from a fork against `promiscope/promiscope-frontend:main`, store each PR's body in [`docs/pr-bodies/<branch-with-dashes>.md`](docs/pr-bodies/README.md) _before_ opening the PR. The CI `lint` job (`.github/workflows/ci.yml`) runs a contract check that every body file in `docs/pr-bodies/`:
 
 - has both `<!-- Branch: <name> -->` and `<!-- Title: <commit-subject> -->` HTML comment headers at the top
 - contains a `## Summary` section and a `## Validation` table

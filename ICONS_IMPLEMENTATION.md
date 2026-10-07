@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully implemented the ScoutOff application icon system including SVG branding, layout integration, and manifest configuration.
+Successfully implemented the Promiscope application icon system including SVG branding, layout integration, and manifest configuration.
 
 ## Completed Tasks
 
@@ -169,7 +169,7 @@ npm run generate:icons
 ## Files Modified
 
 ```
-scout-off-frontend/
+promiscope-frontend/
 ├── app/layout.tsx                    [MODIFIED] — Added favicon references
 ├── public/manifest.json              [MODIFIED] — Updated icon declarations
 ├── package.json                      [MODIFIED] — Added generate:icons script
@@ -261,13 +261,13 @@ icon-maskable-512x512.png
 
 1. Open DevTools → **Application** → **Manifest**
 2. Check for **"Install"** button at top
-3. Or: Click browser menu → **Install ScoutOff**
+3. Or: Click browser menu → **Install Promiscope**
 4. Verify home screen icon displays correctly
 
 ### Step 5: Test iOS (Safari)
 
 1. Open Safari on iOS
-2. Navigate to `https://scoutoff.app` (production) or localhost (development)
+2. Navigate to `https://promiscope.example` (production) or localhost (development)
 3. Tap **Share** → **Add to Home Screen**
 4. Verify icon displays at 192x192
 
@@ -294,7 +294,7 @@ icon-maskable-512x512.png
    ```
    feat(icons): add application icons for PWA and branding
 
-   - Created SVG icon with ScoutOff branding
+   - Created SVG icon with Promiscope branding
    - Updated layout.tsx with favicon and manifest references
    - Updated manifest.json with proper icon declarations
    - Added icon generation script for PNG creation

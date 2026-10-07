@@ -1,24 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="og-title">
-  <title id="og-title">ScoutOff — Decentralized Football Scouting</title>
-  <desc>Brand image for ScoutOff showing the logo, headline, and mobile-first football scouting message on a dark gradient background.</desc>
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0f172a" />
-      <stop offset="100%" style="stop-color:#0a0f1e" />
-    </linearGradient>
-    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#22c55e" />
-      <stop offset="100%" style="stop-color:#16a34a" />
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="630" fill="url(#bg)" />
-  <rect x="0" y="0" width="1200" height="4" fill="url(#accent)" />
-  <!-- Decorative circles -->
-  <circle cx="150" cy="150" r="200" fill="#22c55e" opacity="0.05" />
-  <circle cx="1050" cy="480" r="250" fill="#22c55e" opacity="0.05" />
-  <!-- Shield icon -->
-  <path d="M600 80 L800 160 L800 320 Q800 440 600 520 Q400 440 400 320 L400 160 Z" fill="none" stroke="#22c55e" stroke-width="4" opacity="0.3" />
-  <text x="600" y="590" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="bold" fill="#ffffff" letter-spacing="2">ScoutOff</text>
-  <text x="600" y="350" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#94a3b8" letter-spacing="1">Decentralized Football Scouting</text>
-  <text x="600" y="390" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#64748b">Powered by Stellar Soroban Smart Contracts</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="og-title og-desc">
+  <title id="og-title">Promiscope — Community project accountability</title>
+  <desc id="og-desc">See what’s promised. Follow what’s done.</desc>
+  <rect width="1200" height="630" fill="#f6f5ef"/>
+  <circle cx="1080" cy="40" r="270" fill="#dceadd" opacity=".75"/>
+  <circle cx="114" cy="586" r="220" fill="#e9eee5"/>
+  <rect x="92" y="92" width="76" height="76" rx="24" fill="#245d49"/>
+  <path d="M111 132c8-12 17-18 27-18s19 6 27 18c-8 12-17 18-27 18s-19-6-27-18Z" fill="none" stroke="#fff" stroke-width="4"/>
+  <circle cx="138" cy="132" r="7" fill="#a8cfad"/>
+  <text x="194" y="148" font-family="system-ui, sans-serif" font-size="38" font-weight="700" fill="#204e3d">Promiscope</text>
+  <text x="92" y="300" font-family="Georgia, serif" font-size="78" font-weight="600" fill="#182923">Good work deserves</text>
+  <text x="92" y="390" font-family="Georgia, serif" font-size="78" font-weight="600" fill="#38745d">to be seen.</text>
+  <text x="96" y="460" font-family="system-ui, sans-serif" font-size="26" fill="#596860">See what’s promised. Follow what’s done.</text>
+  <rect x="96" y="512" width="288" height="5" rx="3" fill="#4b8b69"/>
 </svg>

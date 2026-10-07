@@ -95,13 +95,13 @@ export default function CookieConsentBanner({
   }, []); // Expose reopen on the window object for the footer link
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as unknown as Record<string, unknown>).__scoutoffReopenConsent =
+      (window as unknown as Record<string, unknown>).__promiscopeReopenConsent =
         reopen;
     }
     return () => {
       if (typeof window !== 'undefined') {
         delete (window as unknown as Record<string, unknown>)
-          .__scoutoffReopenConsent;
+          .__promiscopeReopenConsent;
       }
     };
   }, [reopen]);
@@ -180,6 +180,6 @@ export default function CookieConsentBanner({
  */
 export function reopenConsentBanner() {
   const fn = (window as unknown as Record<string, unknown>)
-    .__scoutoffReopenConsent as (() => void) | undefined;
+    .__promiscopeReopenConsent as (() => void) | undefined;
   fn?.();
 }

@@ -17,7 +17,7 @@ export const ShortContent: Story = {
     eyebrow: 'Privacy',
     title: 'Privacy Policy',
     description:
-      'Learn how ScoutOff collects, uses, and protects information when you use the platform.',
+      'Learn how Promiscope collects, uses, and protects information when you use the platform.',
     children: (
       <>
         <h2>Information we collect</h2>
@@ -27,7 +27,7 @@ export const ShortContent: Story = {
         </p>
         <p>
           Questions about this policy can be sent to{' '}
-          <a href="mailto:privacy@scoutoff.com">privacy@scoutoff.com</a>.
+          <a href="mailto:privacy@promiscope.example">privacy@promiscope.example</a>.
         </p>
       </>
     ),
@@ -41,7 +41,7 @@ export const LongContentWithTableOfContents: Story = {
     eyebrow: 'Terms',
     title: 'Terms of Service',
     description:
-      'The rules and responsibilities that apply when using ScoutOff services.',
+      'The rules and responsibilities that apply when using Promiscope services.',
     lastUpdated: 'Last updated: August 27, 2026',
     children: (
       <>
@@ -84,7 +84,7 @@ export const LongContentWithTableOfContents: Story = {
         <h2 id="contact">Contact</h2>
         <p>
           For questions about these terms, contact{' '}
-          <a href="mailto:legal@scoutoff.com">legal@scoutoff.com</a>.
+          <a href="mailto:legal@promiscope.example">legal@promiscope.example</a>.
         </p>
       </>
     ),

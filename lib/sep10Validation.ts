@@ -52,7 +52,7 @@ export interface ValidateSep10ChallengeParams {
    */
   serverAccount: string;
   /**
-   * Expected home domain (e.g. scoutoff.app) — must come from trusted client
+   * Expected home domain (e.g. promiscope.example) — must come from trusted client
    * config (NEXT_PUBLIC_SEP10_HOME_DOMAIN), never from the challenge itself.
    */
   homeDomain: string;

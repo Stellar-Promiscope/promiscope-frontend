@@ -27,7 +27,7 @@ import { WebAuth } from '@stellar/stellar-sdk';
 const mockVerify = WebAuth.verifyChallengeTxSigners as jest.Mock;
 
 const PUBLIC_KEY = 'GREFRESHKEY000000000000000000000000000000000000000000000';
-const ALLOWED_ORIGIN = 'https://app.scoutoff.com';
+const ALLOWED_ORIGIN = 'https://app.promiscope.example';
 
 function makeRefreshRequest(refreshCookieValue?: string): NextRequest {
   const headers: Record<string, string> = {};
@@ -66,7 +66,7 @@ beforeEach(() => {
   SessionStore.resetInstance();
   process.env.NEXT_PUBLIC_BASE_URL = ALLOWED_ORIGIN;
   process.env.SEP10_SERVER_KEY = 'GBSERVERKEY0000000000000000000000000000000';
-  process.env.SEP10_HOME_DOMAIN = 'scoutoff.com';
+  process.env.SEP10_HOME_DOMAIN = 'promiscope.example';
   process.env.NEXT_PUBLIC_NETWORK = 'testnet';
 });
 

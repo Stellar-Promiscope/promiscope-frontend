@@ -1,11 +1,14 @@
 {
-  "app_title": "ScoutOff",
+  "app_title": "Promiscope",
   "nav": {
+    "projects": "Projets",
+    "how_it_works": "Comment ça marche",
+    "for_organizations": "Pour les organisations",
     "scout_dashboard": "Tableau de bord des scouts",
     "player_dashboard": "Tableau de bord des joueurs",
     "sponsorship": "Parrainage",
     "soon": "Bientôt",
-    "maintenance_warning": "ScoutOff est actuellement en maintenance. Les actions d'écriture sont temporairement désactivées."
+    "maintenance_warning": "Promiscope est en maintenance. Les mises à jour des projets sont temporairement suspendues."
   },
   "common": {
     "connect_wallet": "Connecter le portefeuille",
@@ -127,7 +130,7 @@
     "connected": "Connecté",
     "disconnect": "Déconnecter le portefeuille",
     "selectProvider": "Sélectionner un portefeuille",
-    "selectProviderHint": "Choisissez un portefeuille Stellar pour vous connecter à ScoutOff.",
+    "selectProviderHint": "Choisissez un portefeuille Stellar pour continuer vers Promiscope.",
     "install": "Extension de navigateur",
     "installMobile": "Extension de navigateur / mobile",
     "cancel": "Annuler",
@@ -183,7 +186,7 @@
     "badge": "Bientôt disponible",
     "title": "Parrainage fractionné de joueurs",
     "description": "Les fans et investisseurs pourront bientôt acheter des « Jetons Joueur » pour financer l'entraînement et les déplacements d'un joueur — avec les revenus reversés de manière transparente sur la chaîne.",
-    "metaDescription": "Soutenez des joueurs talentueux issus de régions défavorisées grâce au parrainage XLM fractionné sur la blockchain Stellar. ScoutOff connecte directement les fans et soutiens avec les talents repérés.",
+    "metaDescription": "Soutenez des joueurs talentueux issus de régions défavorisées grâce au parrainage XLM fractionné sur la blockchain Stellar. Promiscope connecte directement les fans et soutiens avec les talents repérés.",
     "howItWorksTitle": "Comment cela fonctionnera",
     "howItWorksDescription": "Les parrains achèteront des Jetons Joueur fractionnés représentant une participation aux revenus futurs d'un joueur. Les fonds collectés financent directement l'entraînement, les déplacements et le développement, tandis qu'une part des revenus futurs du joueur sur la chaîne est reversée aux détenteurs de jetons — tout cela appliqué par des contrats intelligents Soroban.",
     "notice": "Cette page est un espace réservé. Aucun jeton ne peut encore être acheté et aucune interaction blockchain n'est disponible ici."
@@ -217,11 +220,11 @@
     "dependency_backend": "API backend",
     "dependency_rpc": "Soroban RPC / Horizon",
     "live_status_title": "État en direct et historique des incidents",
-    "live_status_description": "L'état en temps réel et l'historique des incidents de ScoutOff sont suivis sur notre page de statut externe, mise à jour automatiquement au fur et à mesure que les problèmes sont détectés et résolus.",
+    "live_status_description": "L'état en temps réel et l'historique des incidents de Promiscope sont suivis sur notre page de statut externe, mise à jour automatiquement au fur et à mesure que les problèmes sont détectés et résolus.",
     "live_status_cta": "Voir la page de statut en direct",
     "incident_history_note": "Les incidents passés et leur résolution sont répertoriés sur la page de statut ci-dessus.",
     "empty_title": "Page de statut non encore configurée",
-    "empty_description": "Une page de statut en direct n'a pas encore été liée. Veuillez consulter le Discord de ScoutOff pour les mises à jour en attendant."
+    "empty_description": "Une page de statut en direct n'a pas encore été liée. Veuillez consulter le Discord de Promiscope pour les mises à jour en attendant."
   },
   "progress_levels": {
     "level0": "Non vérifié",
@@ -347,11 +350,11 @@
   "privacy": {
     "back_to_home": "Retour à l'accueil",
     "page_title": "Politique de confidentialité",
-    "page_description": "Comment ScoutOff collecte, utilise et protège vos données personnelles.",
+    "page_description": "Comment Promiscope collecte, utilise et protège vos données personnelles.",
     "eyebrow": "Juridique",
     "last_updated": "Dernière mise à jour : 24 septembre 2026",
     "section1_title": "1. Introduction",
-    "section1_content": "ScoutOff s'engage à protéger votre vie privée. Cette politique explique comment nous collectons, utilisons et protégeons vos informations. En utilisant ScoutOff, vous acceptez la collecte et l'utilisation des informations conformément à cette politique.",
+    "section1_content": "Promiscope s'engage à protéger votre vie privée. Cette politique explique comment nous collectons, utilisons et protégeons vos informations. En utilisant Promiscope, vous acceptez la collecte et l'utilisation des informations conformément à cette politique.",
     "section2_title": "2. Données que nous collectons",
     "section2_content": "Données on-chain : votre clé publique Stellar, l'historique des transactions, le statut d'abonnement et les données d'inscription sont stockés sur la blockchain Stellar. Ces données sont publiques, immuables et ne peuvent être supprimées par personne. Données off-chain : nous collectons les coordonnées, les métadonnées de profil, les messages de chat et les données d'utilisation via Vercel Analytics et Sentry.",
     "section3_title": "3. Médias hébergés sur IPFS",
@@ -363,7 +366,7 @@
     "section6_title": "6. Conservation et suppression",
     "section6_content": "Les données on-chain sont permanentes et ne peuvent pas être supprimées. Les données off-chain sont conservées aussi longtemps que nécessaire. Vous pouvez demander la suppression de vos données off-chain via les paramètres du compte. Utilisez l'action « Demander la suppression des données » dans les paramètres du compte. L'export et la suppression de vos données couvrent votre liste de suivi, vos recherches enregistrées, vos paramètres et l'état de lecture des notifications, vos contestations et approbations de jalons, les joueurs récemment consultés, vos sessions de connexion (y compris les informations sur l'appareil et le navigateur) et vos enregistrements de téléversement. La suppression vous déconnecte également de tous vos appareils. Les enregistrements de téléversement sont conservés sans votre portefeuille afin que les médias orphelins puissent encore être nettoyés, et les entrées du journal d'audit administrateur sont anonymisées plutôt que supprimées.",
     "section7_title": "7. Vos droits et contact",
-    "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de ScoutOff.",
+    "section7_content": "Selon votre juridiction, vous pouvez disposer de droits d'accès, de rectification, de suppression ou de portabilité de vos données personnelles. Ces droits s'appliquent uniquement aux données off-chain. Pour toute question, contactez-nous via les canaux officiels de Promiscope.",
     "section8_title": "8. Services tiers",
     "section8_content": "Pour afficher des valeurs approximatives en monnaie locale, nos serveurs (et non votre navigateur) récupèrent le taux de change du XLM auprès de CoinGecko et, en secours, de l'API publique Horizon du réseau Stellar ; votre adresse IP n'est pas partagée avec ces fournisseurs. Les médias téléversés sont épinglés sur IPFS via Pinata, et les rapports d'erreurs sont envoyés à Sentry.",
     "section9_title": "9. Signalements de médias",
@@ -376,19 +379,19 @@
     "eyebrow": "Juridique",
     "last_updated": "Dernière mise à jour : 29 juillet 2026",
     "section1_title": "1. Acceptation des conditions",
-    "section1_content": "En utilisant ScoutOff, vous acceptez les présentes Conditions d'utilisation. Si vous n'êtes pas d'accord, n'utilisez pas la plateforme. ScoutOff est une plateforme décentralisée de recrutement de footballeurs construite sur le réseau Stellar.",
+    "section1_content": "En utilisant Promiscope, vous acceptez les présentes Conditions d'utilisation. Si vous n'êtes pas d'accord, n'utilisez pas la plateforme. Promiscope est une plateforme décentralisée de recrutement de footballeurs construite sur le réseau Stellar.",
     "section2_title": "2. Utilisation autorisée",
-    "section2_content": "Vous acceptez d'utiliser ScoutOff uniquement à des fins légales. Vous ne devez pas soumettre de fausses informations, utiliser la plateforme pour harceler autrui, contourner les frais d'abonnement, utiliser des outils automatisés sans autorisation ou soumettre du contenu illégal. Nous nous réservons le droit de suspendre l'accès en cas de violation.",
+    "section2_content": "Vous acceptez d'utiliser Promiscope uniquement à des fins légales. Vous ne devez pas soumettre de fausses informations, utiliser la plateforme pour harceler autrui, contourner les frais d'abonnement, utiliser des outils automatisés sans autorisation ou soumettre du contenu illégal. Nous nous réservons le droit de suspendre l'accès en cas de violation.",
     "section3_title": "3. Frais et paiements",
     "section3_content": "Tous les frais sont libellés en XLM (Stellar Lumens). Les frais comprennent les abonnements des recruteurs et les frais de plateforme. Les frais ne sont pas remboursables, sauf indication contraire. Tous les paiements sont traités on-chain via des contrats intelligents Soroban.",
     "section4_title": "4. Actions on-chain et irréversibilité",
-    "section4_content": "Les actions effectuées sur la blockchain Stellar sont permanentes et irréversibles. Cela inclut les inscriptions de joueurs, les approbations de jalons, les paiements d'abonnement et les retraits de frais. ScoutOff ne peut pas annuler une transaction on-chain une fois confirmée.",
+    "section4_content": "Les actions effectuées sur la blockchain Stellar sont permanentes et irréversibles. Cela inclut les inscriptions de joueurs, les approbations de jalons, les paiements d'abonnement et les retraits de frais. Promiscope ne peut pas annuler une transaction on-chain une fois confirmée.",
     "section5_title": "5. Propriété intellectuelle",
-    "section5_content": "Les joueurs conservent la propriété du contenu de leur profil et de leurs données personnelles. En soumettant du contenu à ScoutOff, vous nous accordez une licence pour afficher ce contenu uniquement aux fins de l'exploitation de la plateforme. Le code de la plateforme est open source.",
+    "section5_content": "Les joueurs conservent la propriété du contenu de leur profil et de leurs données personnelles. En soumettant du contenu à Promiscope, vous nous accordez une licence pour afficher ce contenu uniquement aux fins de l'exploitation de la plateforme. Le code de la plateforme est open source.",
     "section6_title": "6. Avertissements et limitations",
-    "section6_content": "ScoutOff est fourni « en l'état » sans garantie. Nous ne sommes pas responsables de l'exactitude des informations sur les joueurs, du contenu IPFS, des pertes dues à des problèmes de réseau blockchain ou à des bugs de contrats intelligents. Notre responsabilité n'excédera pas les frais que vous nous avez versés au cours des 12 mois précédant la réclamation.",
+    "section6_content": "Promiscope est fourni « en l'état » sans garantie. Nous ne sommes pas responsables de l'exactitude des informations sur les joueurs, du contenu IPFS, des pertes dues à des problèmes de réseau blockchain ou à des bugs de contrats intelligents. Notre responsabilité n'excédera pas les frais que vous nous avez versés au cours des 12 mois précédant la réclamation.",
     "section7_title": "Signalement et retrait des médias",
-    "section7_content": "Toute personne peut signaler une photo ou une vidéo d'un joueur depuis la galerie du profil (motifs : nudité, violence, usurpation d'identité, droits d'auteur, autre). Nos modérateurs examinent les signalements et peuvent retirer les médias qui enfreignent ces conditions ou la loi. Les médias retirés ne sont plus affichés ni servis par ScoutOff et peuvent également être désépinglés de notre service d'épinglage IPFS après un court délai de grâce. IPFS étant un réseau public, le retrait ne s'applique qu'à ScoutOff : le même contenu peut rester accessible via des passerelles IPFS publiques ou des nœuds qui l'épinglent indépendamment. Les titulaires de droits et toute personne concernée peuvent aussi nous contacter pour demander un retrait ; nous traiterons rapidement les demandes valables."
+    "section7_content": "Toute personne peut signaler une photo ou une vidéo d'un joueur depuis la galerie du profil (motifs : nudité, violence, usurpation d'identité, droits d'auteur, autre). Nos modérateurs examinent les signalements et peuvent retirer les médias qui enfreignent ces conditions ou la loi. Les médias retirés ne sont plus affichés ni servis par Promiscope et peuvent également être désépinglés de notre service d'épinglage IPFS après un court délai de grâce. IPFS étant un réseau public, le retrait ne s'applique qu'à Promiscope : le même contenu peut rester accessible via des passerelles IPFS publiques ou des nœuds qui l'épinglent indépendamment. Les titulaires de droits et toute personne concernée peuvent aussi nous contacter pour demander un retrait ; nous traiterons rapidement les demandes valables."
   },
   "settings": {
     "back_to_home": "Retour à l'accueil",
@@ -400,7 +403,7 @@
     "data_deletion_button": "Demander la suppression",
     "connect_wallet_to_request": "Connectez votre portefeuille pour demander la suppression des données.",
     "data_export_title": "Télécharger mes données",
-    "data_export_description": "Téléchargez une exportation JSON portable des données hors-chaîne que ScoutOff détient sur votre portefeuille — votre liste de suivi, vos recherches enregistrées, vos préférences de notification et votre état de lecture, vos litiges de jalons et vos téléversements en cours.",
+    "data_export_description": "Téléchargez une exportation JSON portable des données hors-chaîne que Promiscope détient sur votre portefeuille — votre liste de suivi, vos recherches enregistrées, vos préférences de notification et votre état de lecture, vos litiges de jalons et vos téléversements en cours.",
     "data_export_button": "Télécharger mes données",
     "data_export_exporting": "Préparation de votre exportation…",
     "data_export_error": "Échec de la préparation de votre exportation de données. Veuillez réessayer.",
@@ -442,13 +445,13 @@
   "dataDeletion": {
     "modal_title": "Demander la suppression des données",
     "onchain_heading": "Données on-chain (ne peuvent pas être supprimées)",
-    "onchain_description": "Votre clé publique Stellar, l'historique des transactions, l'inscription du joueur et les paiements sont stockés de façon permanente sur la blockchain. Personne — pas même ScoutOff — ne peut modifier ou supprimer ces données.",
+    "onchain_description": "Votre clé publique Stellar, l'historique des transactions, l'inscription du joueur et les paiements sont stockés de façon permanente sur la blockchain. Personne — pas même Promiscope — ne peut modifier ou supprimer ces données.",
     "offchain_heading": "Données off-chain (peuvent être supprimées)",
     "offchain_description": "L'historique de chat, les métadonnées de profil, les coordonnées et les données d'analyse stockées sur nos serveurs peuvent être supprimées sur demande.",
     "request_button": "Demander la suppression des données",
     "request_note": "Seuls les enregistrements off-chain peuvent être supprimés. Les données on-chain sont permanentes.",
     "confirm_title": "Êtes-vous sûr ?",
-    "confirm_message": "Cette action enverra une demande de suppression de vos données personnelles off-chain des serveurs de ScoutOff. Les données on-chain ne peuvent pas être supprimées et resteront définitivement sur la blockchain Stellar.",
+    "confirm_message": "Cette action enverra une demande de suppression de vos données personnelles off-chain des serveurs de Promiscope. Les données on-chain ne peuvent pas être supprimées et resteront définitivement sur la blockchain Stellar.",
     "confirm_button": "Oui, demander la suppression",
     "cancel": "Annuler",
     "close": "Fermer",
@@ -469,9 +472,9 @@
     "privacy_link": "Politique de confidentialité"
   },
   "meta": {
-    "title": "ScoutOff — Recrutement footballistique décentralisé",
-    "description": "Profils de joueurs infalsifiables, étapes vérifiables et connexions directes entre recruteurs et joueurs — propulsé par les contrats intelligents Stellar Soroban.",
-    "og_image_alt": "ScoutOff — Recrutement footballistique décentralisé sur Stellar"
+    "title": "Promiscope — Suivi des projets communautaires",
+    "description": "Suivez les projets communautaires, des engagements aux résultats, avec des mises à jour claires, des preuves et des avis de la communauté.",
+    "og_image_alt": "Promiscope — Les engagements en vue. Les progrès documentés."
   },
   "offline": {
     "bannerMessage": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être indisponibles jusqu'au retour de la connexion."
@@ -731,8 +734,8 @@
       "description": "Consultez les détails d'abonnement et l'activité récente de ce recruteur.",
       "not_found_title": "Recruteur introuvable",
       "not_found_description": "Le profil de recruteur que vous recherchez n'existe pas.",
-      "meta_title": "Profil du recruteur | ScoutOff",
-      "meta_description": "Consultez les détails d'abonnement et l'activité récente de ce recruteur sur ScoutOff."
+      "meta_title": "Profil du recruteur | Promiscope",
+      "meta_description": "Consultez les détails d'abonnement et l'activité récente de ce recruteur sur Promiscope."
     },
     "subscribe": {
       "title": "Abonnement recruteur",

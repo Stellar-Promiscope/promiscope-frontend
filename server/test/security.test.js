@@ -5,13 +5,13 @@ const os = require('os');
 const path = require('path');
 
 const tmpDbPath = path.join(
-  fs.mkdtempSync(path.join(os.tmpdir(), 'scout-off-backend-security-test-')),
+  fs.mkdtempSync(path.join(os.tmpdir(), 'promiscope-backend-security-test-')),
   'test.db',
 );
 process.env.DB_PATH = tmpDbPath;
-process.env.CORS_ORIGINS = 'https://scout-off.app, https://admin.scout-off.app';
+process.env.CORS_ORIGINS = 'https://promiscope.example, https://admin.promiscope.example';
 process.env.CORS_ORIGIN_PATTERN =
-  '^https://scout-off-[a-z0-9-]+\\.vercel\\.app$';
+  '^https://promiscope-[a-z0-9-]+\\.vercel\\.app$';
 process.env.RATE_LIMIT_MAX = '1000';
 process.env.RATE_LIMIT_WRITE_MAX = '3';
 
@@ -50,9 +50,9 @@ test('security headers are present on 404s too', async () => {
 
 test('allows every configured CORS origin and the preview pattern', async () => {
   for (const origin of [
-    'https://scout-off.app',
-    'https://admin.scout-off.app',
-    'https://scout-off-git-feature-x.vercel.app',
+    'https://promiscope.example',
+    'https://admin.promiscope.example',
+    'https://promiscope-git-feature-x.vercel.app',
   ]) {
     const res = await fetch(`${baseUrl}/health`, {
       headers: { Origin: origin },

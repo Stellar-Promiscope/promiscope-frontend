@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for ScoutOff
+about: Suggest an idea for Promiscope
 title: ''
 labels: enhancement
 assignees: ''

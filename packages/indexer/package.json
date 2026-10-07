@@ -1,8 +1,8 @@
 {
-  "name": "@scoutoff/indexer",
+  "name": "@promiscope/indexer",
   "version": "0.1.0",
   "private": true,
-  "description": "Off-chain Soroban event indexer for the ScoutOff platform. See README.md.",
+  "description": "Off-chain Soroban event indexer for the Promiscope platform. See README.md.",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -11,7 +11,7 @@
     "test": "cd ../.. && npx jest packages/indexer"
   },
   "dependencies": {
-    "@scoutoff/contract-events": "0.1.0",
+    "@promiscope/contract-events": "0.1.0",
     "pg": "^8.23.0"
   },
   "devDependencies": {

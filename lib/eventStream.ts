@@ -21,8 +21,8 @@
  *   // call unsubscribe() in useEffect cleanup
  */
 
-const CHANNEL_NAME = 'scoutoff:indexer-events';
-const LOCK_NAME = 'scoutoff:sse-leader';
+const CHANNEL_NAME = 'promiscope:indexer-events';
+const LOCK_NAME = 'promiscope:sse-leader';
 const STREAM_URL = '/api/indexer/stream';
 const HEARTBEAT_TIMEOUT_MS = 60_000; // leader re-connects if no message for 60 s
 

@@ -16,7 +16,7 @@ env:
   NEXT_PUBLIC_HORIZON_URL: https://horizon-testnet.stellar.org
   NEXT_PUBLIC_IPFS_GATEWAY: https://gateway.pinata.cloud/ipfs
   NEXT_PUBLIC_API_URL: http://localhost:4000
-  NEXT_PUBLIC_APP_URL: https://scoutoff.app
+  NEXT_PUBLIC_APP_URL: https://promiscope.example
   NEXT_PUBLIC_STATUS_PAGE_URL: ''
   NEXT_PUBLIC_ADMIN_ADDRESS: ''
   PINATA_API_KEY: ci-placeholder

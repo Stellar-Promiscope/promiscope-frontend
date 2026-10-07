@@ -14,7 +14,7 @@ export interface BlockedUser {
 
 /**
  * Base key for the local block-list cache. Entries are stored per wallet as
- * `scoutoff_blocked_users:<wallet>` so switching accounts never exposes (or
+ * `promiscope_blocked_users:<wallet>` so switching accounts never exposes (or
  * appends to) another wallet's block list — see #1343.
  */
 export { BLOCKED_USERS_KEY };

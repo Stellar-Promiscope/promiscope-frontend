@@ -80,14 +80,14 @@ function truncateAddress(address: string): string {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }
 
-/** Builds a `playername-scoutoff-cv.pdf`-style filename, safe for all filesystems. */
+/** Builds a `playername-promiscope-cv.pdf`-style filename, safe for all filesystems. */
 export function buildCvFilename(playerName: string): string {
   const slug = playerName
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return `${slug || 'player'}-scoutoff-cv.pdf`;
+  return `${slug || 'player'}-promiscope-cv.pdf`;
 }
 
 /**
@@ -150,7 +150,7 @@ export async function generatePlayerCvPdf(
 
   const doc = await PDFDocument.create();
   if (verification) {
-    doc.setSubject(`ScoutOff verification token: ${verification.token}`);
+    doc.setSubject(`Promiscope verification token: ${verification.token}`);
     doc.setKeywords([verification.token, verification.contentHash]);
   }
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -192,7 +192,7 @@ export async function generatePlayerCvPdf(
     y -= size + gapAfter;
   }
 
-  drawText('ScoutOff — Player CV', {
+  drawText('Promiscope — Player CV', {
     size: 11,
     font: boldFont,
     color: GREEN,
@@ -289,7 +289,7 @@ export async function generatePlayerCvPdf(
     });
     y -= 60;
   }
-  drawText(`Generated ${new Date().toLocaleDateString()} · scoutoff.app`, {
+  drawText(`Generated ${new Date().toLocaleDateString()} · promiscope.example`, {
     size: 8,
     color: MUTED,
   });

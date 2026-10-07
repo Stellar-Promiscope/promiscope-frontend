@@ -1,6 +1,6 @@
-# ScoutOff Indexer
+# Promiscope Indexer
 
-Off-chain event indexer for the ScoutOff platform. Subscribes to Soroban contract events emitted by the ScoutOff smart contract on Stellar, persists them for fast querying, and exposes an HTTP server for health checks and Prometheus-compatible metrics.
+Off-chain event indexer for the Promiscope platform. Subscribes to Soroban contract events emitted by the Promiscope smart contract on Stellar, persists them for fast querying, and exposes an HTTP server for health checks and Prometheus-compatible metrics.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ Off-chain event indexer for the ScoutOff platform. Subscribes to Soroban contrac
 
 ## Purpose and Architecture
 
-The ScoutOff smart contract emits on-chain events for every state change (player registration, milestone approvals, scout subscriptions, etc.). The indexer listens to these events via the Stellar Soroban RPC `getEvents` stream, decodes them, and stores them off-chain so the frontend can query historical data without hitting the RPC node for every page load.
+The Promiscope smart contract emits on-chain events for every state change (player registration, milestone approvals, scout subscriptions, etc.). The indexer listens to these events via the Stellar Soroban RPC `getEvents` stream, decodes them, and stores them off-chain so the frontend can query historical data without hitting the RPC node for every page load.
 
 ```
 Stellar Network
@@ -65,7 +65,7 @@ Key design decisions:
 
 - Node.js ≥ 18
 - Access to a Stellar Soroban RPC endpoint (testnet or mainnet)
-- The deployed ScoutOff contract address
+- The deployed Promiscope contract address
 
 This package is an npm workspace (declared in the repo root's `package.json`), so a single `npm install` at the repo root installs everything needed for both the frontend app and this package — there's no separate install step required here.
 
@@ -104,13 +104,13 @@ PORT=9090 npm start
 ### Docker
 
 ```bash
-docker build -t scoutoff-indexer packages/indexer
-docker run -p 3001:3001 scoutoff-indexer
+docker build -t promiscope-indexer packages/indexer
+docker run -p 3001:3001 promiscope-indexer
 ```
 
 Or, as part of the full local stack (frontend + indexer + mocked RPC/API), see the "Docker Compose Quick Start" section in [DEVELOPMENT.md](../../DEVELOPMENT.md).
 
-> **Note:** `package.json`/`tsconfig.json` here are a minimal scaffold added to make this package buildable/containerizable (see [#675](https://github.com/scout-off/scout-off-frontend/issues/675)). A fuller npm-package setup (proper `exports`, publishing config, a watch-mode dev script) is tracked separately as a companion packaging issue.
+> **Note:** `package.json`/`tsconfig.json` here are a minimal scaffold added to make this package buildable/containerizable (see [#675](https://github.com/promiscope/promiscope-frontend/issues/675)). A fuller npm-package setup (proper `exports`, publishing config, a watch-mode dev script) is tracked separately as a companion packaging issue.
 
 ---
 
@@ -120,7 +120,7 @@ Or, as part of the full local stack (frontend + indexer + mocked RPC/API), see t
 | ------------------------- | -------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                    | No       | `3001`                                                | HTTP server port for `/health` and `/metrics`                                                                                                                        |
 | `SOROBAN_RPC_URL`         | Yes      | —                                                     | Soroban RPC endpoint, e.g. `https://soroban-testnet.stellar.org`                                                                                                     |
-| `CONTRACT_ID`             | Yes      | —                                                     | Deployed ScoutOff contract address (Strkey format)                                                                                                                   |
+| `CONTRACT_ID`             | Yes      | —                                                     | Deployed Promiscope contract address (Strkey format)                                                                                                                   |
 | `NETWORK_PASSPHRASE`      | No       | Testnet passphrase                                    | Stellar network passphrase used to decode event XDR                                                                                                                  |
 | `POLL_INTERVAL_MS`        | No       | `5000`                                                | How often (ms) to poll for new ledgers                                                                                                                               |
 | `START_LEDGER`            | No       | `0`                                                   | Ledger sequence to start indexing from (0 = latest)                                                                                                                  |
@@ -139,7 +139,7 @@ cp ../../.env.example ../../.env.local
 
 ## Indexed Event Schema
 
-The indexer processes eight event types emitted by the ScoutOff contract. All events carry a `ledger` sequence number and `timestamp` (Unix seconds) sourced from the Soroban event envelope.
+The indexer processes eight event types emitted by the Promiscope contract. All events carry a `ledger` sequence number and `timestamp` (Unix seconds) sourced from the Soroban event envelope.
 
 `eventPoller.ts`'s `decodeEvent` assumes the common Soroban convention —
 `topic[0]` is a Symbol equal to the event name, `value` is a Map/struct
@@ -359,7 +359,7 @@ Projection rules (applied inside the same SQLite transaction as the event insert
 Queries paginate with **keyset cursor over `(created_ledger DESC, player_id DESC)`** — a stable, total order — so page cost stays proportional to page size and pages never skip or duplicate rows when new players register mid-pagination. Seed a local 10,000-player registry for benchmarking with:
 
 ```bash
-npm run seed:players --workspace @scoutoff/indexer -- --count 10000
+npm run seed:players --workspace @promiscope/indexer -- --count 10000
 time curl 'localhost:3001/players?limit=50&region=West%20Africa'
 ```
 
@@ -551,7 +551,7 @@ indexer_healthy 1
 
 ```yaml
 scrape_configs:
-  - job_name: scoutoff_indexer
+  - job_name: promiscope_indexer
     scrape_interval: 15s
     static_configs:
       - targets: ['localhost:3001']

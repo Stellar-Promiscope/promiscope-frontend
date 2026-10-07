@@ -3,7 +3,7 @@
  * lib/mediaModerationStore.ts (server-only, imports better-sqlite3) so client
  * components can use the same shapes.
  *
- * The denylist only covers ScoutOff surfaces (the /api/media proxy and the
+ * The denylist only covers Promiscope surfaces (the /api/media proxy and the
  * profile gallery). A denylisted CID can still be fetched from any public
  * IPFS gateway.
  */

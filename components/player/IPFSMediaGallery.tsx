@@ -82,7 +82,7 @@ function RemovedMediaItem() {
       aria-label="Media removed by moderation"
     >
       <span className="text-sm text-gray-400">
-        This media was removed for violating ScoutOff&apos;s policies.
+        This media was removed for violating Promiscope&apos;s policies.
       </span>
     </div>
   );

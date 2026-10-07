@@ -33,7 +33,7 @@ describe('LocaleLayout', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHeaders.clear();
-    process.env.NEXT_PUBLIC_APP_URL = 'https://scoutoff.app';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://promiscope.example';
   });
 
   it('renders its children unchanged', () => {
@@ -97,8 +97,8 @@ describe('LocaleLayout', () => {
         openGraph: {
           title: fr.title,
           description: fr.description,
-          url: 'https://scoutoff.app/fr/scout',
-          siteName: 'ScoutOff',
+          url: 'https://promiscope.example/fr/scout',
+          siteName: 'Promiscope',
           type: 'website',
           locale: 'fr_FR',
           alternateLocale: ['en_US', 'sw_KE'],
@@ -120,12 +120,12 @@ describe('LocaleLayout', () => {
 
       expect(metadata).toMatchObject({
         alternates: {
-          canonical: 'https://scoutoff.app/en/scout/abc123',
+          canonical: 'https://promiscope.example/en/scout/abc123',
           languages: {
-            en: 'https://scoutoff.app/en/scout/abc123',
-            fr: 'https://scoutoff.app/fr/scout/abc123',
-            sw: 'https://scoutoff.app/sw/scout/abc123',
-            'x-default': 'https://scoutoff.app/en/scout/abc123',
+            en: 'https://promiscope.example/en/scout/abc123',
+            fr: 'https://promiscope.example/fr/scout/abc123',
+            sw: 'https://promiscope.example/sw/scout/abc123',
+            'x-default': 'https://promiscope.example/en/scout/abc123',
           },
         },
       });
@@ -136,12 +136,12 @@ describe('LocaleLayout', () => {
 
       expect(metadata).toMatchObject({
         alternates: {
-          canonical: 'https://scoutoff.app/',
+          canonical: 'https://promiscope.example/',
           languages: {
-            en: 'https://scoutoff.app/en/',
-            fr: 'https://scoutoff.app/fr/',
-            sw: 'https://scoutoff.app/sw/',
-            'x-default': 'https://scoutoff.app/en/',
+            en: 'https://promiscope.example/en/',
+            fr: 'https://promiscope.example/fr/',
+            sw: 'https://promiscope.example/sw/',
+            'x-default': 'https://promiscope.example/en/',
           },
         },
       });

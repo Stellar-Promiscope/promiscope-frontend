@@ -546,7 +546,7 @@ describe('WalletContext', () => {
         await result.current.connectWithProvider('freighter');
       });
 
-      const stored = localStorage.getItem('scoutoff:session_expiry');
+      const stored = localStorage.getItem('promiscope:session_expiry');
       expect(stored).not.toBeNull();
       expect(Number(stored)).toBe(result.current.sessionExpiresAt);
     });
@@ -561,7 +561,7 @@ describe('WalletContext', () => {
           networkType: 'testnet',
         }),
       );
-      localStorage.setItem('scoutoff:session_expiry', String(futureExpiry));
+      localStorage.setItem('promiscope:session_expiry', String(futureExpiry));
 
       // Mock getServerSession to return authenticated
       mockFetch.mockResolvedValueOnce({
@@ -592,7 +592,7 @@ describe('WalletContext', () => {
       });
 
       expect(result.current.sessionExpiresAt).toBeNull();
-      expect(localStorage.getItem('scoutoff:session_expiry')).toBeNull();
+      expect(localStorage.getItem('promiscope:session_expiry')).toBeNull();
     });
   });
 
@@ -768,7 +768,7 @@ describe('WalletContext', () => {
       act(() => {
         window.dispatchEvent(
           new StorageEvent('storage', {
-            key: 'scoutoff:session-invalidated',
+            key: 'promiscope:session-invalidated',
             newValue: String(Date.now()),
           }),
         );
@@ -792,7 +792,7 @@ describe('WalletContext', () => {
       // Listen for storage events dispatched by disconnect().
       let storageEventFired = false;
       const handler = (e: StorageEvent) => {
-        if (e.key === 'scoutoff:session-invalidated') storageEventFired = true;
+        if (e.key === 'promiscope:session-invalidated') storageEventFired = true;
       };
       window.addEventListener('storage', handler);
 
@@ -803,7 +803,7 @@ describe('WalletContext', () => {
       // The key should have been written then removed (best-effort).
       // In jsdom the storage event fires synchronously from setItem, but
       // the key itself should be gone after removeItem.
-      expect(localStorage.getItem('scoutoff:session-invalidated')).toBeNull();
+      expect(localStorage.getItem('promiscope:session-invalidated')).toBeNull();
 
       window.removeEventListener('storage', handler);
     });
@@ -996,7 +996,7 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
     // stored being null is also acceptable — nothing persisted.
   });
 
-  it('AC4 – scoutoff:remembered_addresses is NOT updated for the unintended key after a mismatch', async () => {
+  it('AC4 – promiscope:remembered_addresses is NOT updated for the unintended key after a mismatch', async () => {
     freighter.getPublicKey.mockResolvedValue(PUBLIC_KEY);
 
     const { result } = renderHook(() => useWalletContext(), { wrapper });
@@ -1011,7 +1011,7 @@ describe('connectWithProvider — account-switch mismatch verification', () => {
       }),
     ).rejects.toThrow(WalletAccountMismatchError);
 
-    const raw = localStorage.getItem('scoutoff:remembered_addresses');
+    const raw = localStorage.getItem('promiscope:remembered_addresses');
     if (raw) {
       const addresses = JSON.parse(raw) as Array<{ publicKey: string }>;
       const hasUnintended = addresses.some((a) => a.publicKey === PUBLIC_KEY);

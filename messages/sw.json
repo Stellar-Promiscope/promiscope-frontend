@@ -43,13 +43,16 @@
     "retry": "Jaribu tena",
     "unauthorized_message": "Hauruhusiwi: pochi ya msimamizi inahitajika."
   },
-  "app_title": "ScoutOff",
+  "app_title": "Promiscope",
   "nav": {
+    "projects": "Miradi",
+    "how_it_works": "Jinsi inavyofanya kazi",
+    "for_organizations": "Kwa mashirika",
     "scout_dashboard": "Dashibodi ya Scout",
     "player_dashboard": "Dashibodi ya Mchezaji",
     "sponsorship": "TODO: Machine-translated - Ufadhili",
     "soon": "TODO: Machine-translated - Hivi Karibuni",
-    "maintenance_warning": "ScoutOff iko chini ya matengenezo sasa. Vitendo vya kuandika vimezimwa kwa sasa."
+    "maintenance_warning": "Promiscope iko kwenye matengenezo. Masasisho ya miradi yamesitishwa kwa muda."
   },
   "common": {
     "connect_wallet": "Unganisha Pochi",
@@ -185,7 +188,7 @@
     "connected": "Imeunganishwa",
     "disconnect": "Tenganisha Pochi",
     "selectProvider": "Chagua Pochi",
-    "selectProviderHint": "Chagua pochi ya Stellar kuunganisha na ScoutOff.",
+    "selectProviderHint": "Chagua pochi ya Stellar ili uendelee kutumia Promiscope.",
     "install": "Nyongeza ya kivinjari",
     "installMobile": "Nyongeza ya kivinjari / simu",
     "cancel": "Ghairi",
@@ -241,7 +244,7 @@
     "badge": "TODO: Machine-translated - Inakuja Hivi Karibuni",
     "title": "TODO: Machine-translated - Ufadhili wa Tokeni za Wachezaji",
     "description": "TODO: Machine-translated - Mashabiki na wawekezaji hivi karibuni wataweza kununua \"Tokeni za Mchezaji\" kufadhili mafunzo na usafiri wa mchezaji — huku mapato yakirejeshwa kwa uwazi kwenye blockchain.",
-    "metaDescription": "TODO: Machine-translated - Saidia wachezaji wenye vipawa kutoka mikoa iliyonyimwa rasilimali kupitia ufadhili wa XLM uliochanganywa kwenye blockchain ya Stellar. ScoutOff inaunganisha mashabiki na wanahisa moja kwa moja na vipawa vilivyogunduliwa.",
+    "metaDescription": "TODO: Machine-translated - Saidia wachezaji wenye vipawa kutoka mikoa iliyonyimwa rasilimali kupitia ufadhili wa XLM uliochanganywa kwenye blockchain ya Stellar. Promiscope inaunganisha mashabiki na wanahisa moja kwa moja na vipawa vilivyogunduliwa.",
     "howItWorksTitle": "TODO: Machine-translated - Jinsi itakavyofanya kazi",
     "howItWorksDescription": "TODO: Machine-translated - Wafadhili watanunua Tokeni za Mchezaji zinazowakilisha hisa katika mapato ya baadaye ya mchezaji. Fedha zilizokusanywa zinaelekezwa moja kwa moja kwenye mafunzo, usafiri, na maendeleo, huku sehemu ya mapato ya baadaye ya mchezaji kwenye blockchain ikirejeshwa kwa wamiliki wa tokeni — yote yakisimamiwa na mikataba mahiri ya Soroban.",
     "notice": "TODO: Machine-translated - Ukurasa huu ni nafasi ya muda. Hakuna tokeni zinazoweza kununuliwa bado na hakuna mwingiliano wa blockchain unaopatikana hapa."
@@ -275,11 +278,11 @@
     "dependency_backend": "TODO: Machine-translated - API ya nyuma",
     "dependency_rpc": "TODO: Machine-translated - Soroban RPC / Horizon",
     "live_status_title": "TODO: Machine-translated - Hali ya moja kwa moja na historia ya matukio",
-    "live_status_description": "TODO: Machine-translated - Hali ya wakati halisi na muhtasari wa historia ya matukio ya ScoutOff hufuatiliwa kwenye ukurasa wetu wa nje wa hali, unaosasishwa kiotomatiki matatizo yanapogunduliwa na kutatuliwa.",
+    "live_status_description": "TODO: Machine-translated - Hali ya wakati halisi na muhtasari wa historia ya matukio ya Promiscope hufuatiliwa kwenye ukurasa wetu wa nje wa hali, unaosasishwa kiotomatiki matatizo yanapogunduliwa na kutatuliwa.",
     "live_status_cta": "TODO: Machine-translated - Tazama ukurasa wa hali ya moja kwa moja",
     "incident_history_note": "TODO: Machine-translated - Matukio ya awali na utatuzi wake yameorodheshwa kwenye ukurasa wa hali hapo juu.",
     "empty_title": "TODO: Machine-translated - Ukurasa wa hali bado haujawekwa",
-    "empty_description": "TODO: Machine-translated - Ukurasa wa hali ya moja kwa moja bado haujaunganishwa. Tafadhali angalia Discord ya ScoutOff kwa masasisho wakati huo huo."
+    "empty_description": "TODO: Machine-translated - Ukurasa wa hali ya moja kwa moja bado haujaunganishwa. Tafadhali angalia Discord ya Promiscope kwa masasisho wakati huo huo."
   },
   "progress_levels": {
     "level0": "Haijathibitishwa",
@@ -347,11 +350,11 @@
   "privacy": {
     "back_to_home": "Rudi Nyumbani",
     "page_title": "Sera ya Faragha",
-    "page_description": "Jinsi ScoutOff inavyokusanya, kutumia, na kulinda data yako binafsi.",
+    "page_description": "Jinsi Promiscope inavyokusanya, kutumia, na kulinda data yako binafsi.",
     "eyebrow": "Kisheria",
     "last_updated": "Ilisasishwa mwisho: Septemba 24, 2026",
     "section1_title": "1. Utangulizi",
-    "section1_content": "ScoutOff imejitolea kulinda faragha yako. Sera hii inaeleza jinsi tunavyokusanya, kutumia, na kulinda taarifa zako. Kwa kutumia ScoutOff, unakubali ukusanyaji na matumizi ya taarifa kulingana na sera hii.",
+    "section1_content": "Promiscope imejitolea kulinda faragha yako. Sera hii inaeleza jinsi tunavyokusanya, kutumia, na kulinda taarifa zako. Kwa kutumia Promiscope, unakubali ukusanyaji na matumizi ya taarifa kulingana na sera hii.",
     "section2_title": "2. Data Tunazokusanya",
     "section2_content": "Data za on-chain: Funguo yako ya umma ya Stellar, historia ya miamala, hali ya usajili, na data za usajili huhifadhiwa kwenye blockchain ya Stellar. Data hizi ni za umma, hazibadiliki, na hazawezi kufutwa na yeyote. Data za off-chain: Tunakusanya maelezo ya mawasiliano, metadata ya wasifu, ujumbe wa mazungumzo, na uchambuzi wa matumizi kupitia Vercel Analytics na Sentry.",
     "section3_title": "3. Maudhui Yanayohifadhiwa kwenye IPFS",
@@ -363,7 +366,7 @@
     "section6_title": "6. Uhifadhi na Ufutaji",
     "section6_content": "Data za on-chain ni za kudumu na haziwezi kufutwa. Data za off-chain zinahifadhiwa kwa muda unaohitajika. Unaweza kuomba ufutaji wa data zako za off-chain kupitia mipangilio ya akaunti. Tumia kitendo cha 'Omba Ufutaji wa Data' katika Mipangilio ya Akaunti. Uhamishaji na ufutaji wa data zako unajumuisha orodha yako ya ufuatiliaji, utafutaji uliohifadhiwa, mipangilio na hali ya kusomwa ya arifa, mizozo na uidhinishaji wa hatua muhimu, wachezaji uliowatazama hivi karibuni, vipindi vya kuingia (ikiwa ni pamoja na taarifa za kifaa na kivinjari), na rekodi za upakiaji. Ufutaji pia unakuondoa kwenye vifaa vyote. Rekodi za upakiaji huhifadhiwa bila pochi yako ili midia iliyoachwa bado iweze kusafishwa, na maingizo ya kumbukumbu ya ukaguzi wa msimamizi hufanywa kuwa bila jina badala ya kufutwa.",
     "section7_title": "7. Haki Zako na Mawasiliano",
-    "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za ScoutOff.",
+    "section7_content": "Kulingana na eneo lako la kisheria, unaweza kuwa na haki za kufikia, kusahihisha, kufuta, au kuhamisha data yako binafsi. Haki hizi zinatumika tu kwa data za off-chain. Kwa maswali, wasiliana nasi kupitia njia rasmi za Promiscope.",
     "section8_title": "8. Huduma za Wahusika Wengine",
     "section8_content": "Ili kuonyesha thamani za takriban kwa sarafu ya kawaida, seva zetu (si kivinjari chako) hupata kiwango cha ubadilishaji cha XLM kutoka CoinGecko na, kama mbadala, API ya umma ya Horizon ya mtandao wa Stellar; anwani yako ya IP haishirikiwi na watoa huduma hawa. Maudhui yaliyopakiwa huhifadhiwa kwenye IPFS kupitia Pinata, na ripoti za hitilafu hutumwa kwa Sentry.",
     "section9_title": "9. Ripoti za maudhui",
@@ -376,19 +379,19 @@
     "eyebrow": "Kisheria",
     "last_updated": "Ilisasishwa mwisho: Julai 29, 2026",
     "section1_title": "1. Kukubali Masharti",
-    "section1_content": "Kwa kutumia ScoutOff, unakubali Masharti haya ya Huduma. Ikiwa hukubaliani, usitumie jukwaa hili. ScoutOff ni jukwaa lililogatuliwa la uchunguzi wa vipaji vya soka lililojengwa kwenye mtandao wa Stellar.",
+    "section1_content": "Kwa kutumia Promiscope, unakubali Masharti haya ya Huduma. Ikiwa hukubaliani, usitumie jukwaa hili. Promiscope ni jukwaa lililogatuliwa la uchunguzi wa vipaji vya soka lililojengwa kwenye mtandao wa Stellar.",
     "section2_title": "2. Matumizi Yanayokubalika",
-    "section2_content": "Unakubali kutumia ScoutOff kwa madhumuni halali pekee. Usiwasilishe taarifa za uongo, kutumia jukwaa kunyanyasa wengine, kukwepa ada za usajili, kutumia zana za kiotomatiki bila idhini, au kuwasilisha maudhui haramu. Tunahifadhi haki ya kusimamisha ufikiaji kwa ukiukaji.",
+    "section2_content": "Unakubali kutumia Promiscope kwa madhumuni halali pekee. Usiwasilishe taarifa za uongo, kutumia jukwaa kunyanyasa wengine, kukwepa ada za usajili, kutumia zana za kiotomatiki bila idhini, au kuwasilisha maudhui haramu. Tunahifadhi haki ya kusimamisha ufikiaji kwa ukiukaji.",
     "section3_title": "3. Ada na Malipo",
     "section3_content": "Ada zote zimeainishwa kwa XLM (Stellar Lumens). Ada ni pamoja na usajili wa wachunguzi na ada za jukwaa. Ada hazirudishwi isipokuwa imeelezwa vinginevyo. Malipo yote yanachakatwa on-chain kupitia mikataba mahiri ya Soroban.",
     "section4_title": "4. Vitendo vya On-Chain na Kutobadilika",
-    "section4_content": "Vitendo vinavyofanyika kwenye blockchain ya Stellar ni vya kudumu na haviwezi kubadilishwa. Hii ni pamoja na usajili wa wachezaji, idhini za hatua muhimu, malipo ya usajili, na utoaji wa ada. ScoutOff haiwezi kubadilisha miamala ya on-chain baada ya kuthibitishwa.",
+    "section4_content": "Vitendo vinavyofanyika kwenye blockchain ya Stellar ni vya kudumu na haviwezi kubadilishwa. Hii ni pamoja na usajili wa wachezaji, idhini za hatua muhimu, malipo ya usajili, na utoaji wa ada. Promiscope haiwezi kubadilisha miamala ya on-chain baada ya kuthibitishwa.",
     "section5_title": "5. Haki Miliki",
-    "section5_content": "Wachezaji wanabaki na umiliki wa maudhui ya wasifu wao na data binafsi. Kwa kuwasilisha maudhui kwa ScoutOff, unatupa leseni ya kuonyesha maudhui hayo kwa madhumuni ya uendeshaji wa jukwaa pekee. Msimbo wa jukwaa ni chanzo huria.",
+    "section5_content": "Wachezaji wanabaki na umiliki wa maudhui ya wasifu wao na data binafsi. Kwa kuwasilisha maudhui kwa Promiscope, unatupa leseni ya kuonyesha maudhui hayo kwa madhumuni ya uendeshaji wa jukwaa pekee. Msimbo wa jukwaa ni chanzo huria.",
     "section6_title": "6. Kanusho na Vikwazo",
-    "section6_content": "ScoutOff inatolewa 'kama ilivyo' bila dhamana. Hatuwajibiki kwa usahihi wa taarifa za wachezaji, maudhui ya IPFS, hasara kutokana na matatizo ya mtandao wa blockchain, au hitilafu za mikataba mahiri. Dhima yetu haitazidi ada ulizotulipa katika miezi 12 kabla ya madai.",
+    "section6_content": "Promiscope inatolewa 'kama ilivyo' bila dhamana. Hatuwajibiki kwa usahihi wa taarifa za wachezaji, maudhui ya IPFS, hasara kutokana na matatizo ya mtandao wa blockchain, au hitilafu za mikataba mahiri. Dhima yetu haitazidi ada ulizotulipa katika miezi 12 kabla ya madai.",
     "section7_title": "Kuripoti na kuondoa maudhui",
-    "section7_content": "Mtu yeyote anaweza kuripoti picha au video ya mchezaji kutoka kwenye galeri ya wasifu (sababu: uchi, vurugu, kujifanya mtu mwingine, hakimiliki, nyingine). Wasimamizi wetu hukagua ripoti na wanaweza kuondoa maudhui yanayokiuka masharti haya au sheria. Maudhui yaliyoondolewa hayaonyeshwi tena wala kutolewa na ScoutOff, na yanaweza pia kuondolewa kwenye huduma yetu ya kuhifadhi IPFS baada ya muda mfupi wa neema. Kwa kuwa IPFS ni mtandao wa umma, uondoaji unatumika kwa ScoutOff pekee: maudhui hayo yanaweza kuendelea kupatikana kupitia lango za umma za IPFS au nodi zinazoyahifadhi kivyao. Wamiliki wa hakimiliki na yeyote aliyeathirika wanaweza pia kuwasiliana nasi kuomba kuondolewa, nasi tutashughulikia maombi halali haraka."
+    "section7_content": "Mtu yeyote anaweza kuripoti picha au video ya mchezaji kutoka kwenye galeri ya wasifu (sababu: uchi, vurugu, kujifanya mtu mwingine, hakimiliki, nyingine). Wasimamizi wetu hukagua ripoti na wanaweza kuondoa maudhui yanayokiuka masharti haya au sheria. Maudhui yaliyoondolewa hayaonyeshwi tena wala kutolewa na Promiscope, na yanaweza pia kuondolewa kwenye huduma yetu ya kuhifadhi IPFS baada ya muda mfupi wa neema. Kwa kuwa IPFS ni mtandao wa umma, uondoaji unatumika kwa Promiscope pekee: maudhui hayo yanaweza kuendelea kupatikana kupitia lango za umma za IPFS au nodi zinazoyahifadhi kivyao. Wamiliki wa hakimiliki na yeyote aliyeathirika wanaweza pia kuwasiliana nasi kuomba kuondolewa, nasi tutashughulikia maombi halali haraka."
   },
   "settings": {
     "back_to_home": "Rudi Nyumbani",
@@ -400,7 +403,7 @@
     "data_deletion_button": "Omba Ufutaji",
     "connect_wallet_to_request": "Unganisha pochi yako ili kuomba ufutaji wa data.",
     "data_export_title": "Pakua Data Yangu",
-    "data_export_description": "Pakua uhamishaji wa JSON unaoweza kubeba wa data ya off-chain ambayo ScoutOff inashikilia kuhusu pochi yako — orodha yako ya kufuatilia, utafutaji uliosagwa, mapendeleo ya arifa na hali ya kusoma, mzozo wa hatua muhimu, na upakiaji wowote unaofanya kazi.",
+    "data_export_description": "Pakua uhamishaji wa JSON unaoweza kubeba wa data ya off-chain ambayo Promiscope inashikilia kuhusu pochi yako — orodha yako ya kufuatilia, utafutaji uliosagwa, mapendeleo ya arifa na hali ya kusoma, mzozo wa hatua muhimu, na upakiaji wowote unaofanya kazi.",
     "data_export_button": "Pakua Data Yangu",
     "data_export_exporting": "Inatayarisha uhamishaji wako…",
     "data_export_error": "Imeshindwa kutayarisha uhamishaji wako wa data. Tafadhali jaribu tena.",
@@ -442,13 +445,13 @@
   "dataDeletion": {
     "modal_title": "Omba Ufutaji wa Data",
     "onchain_heading": "Data za On-Chain (Haziwezi Kufutwa)",
-    "onchain_description": "Funguo yako ya umma ya Stellar, historia ya miamala, usajili wa mchezaji, na malipo huhifadhiwa kwa kudumu kwenye blockchain. Hakuna yeyote — ikiwa ni pamoja na ScoutOff — anayeweza kubadilisha au kufuta data hizi.",
+    "onchain_description": "Funguo yako ya umma ya Stellar, historia ya miamala, usajili wa mchezaji, na malipo huhifadhiwa kwa kudumu kwenye blockchain. Hakuna yeyote — ikiwa ni pamoja na Promiscope — anayeweza kubadilisha au kufuta data hizi.",
     "offchain_heading": "Data za Off-Chain (Zinaweza Kufutwa)",
     "offchain_description": "Historia ya mazungumzo, metadata ya wasifu, maelezo ya mawasiliano, na data za uchambuzi zilizohifadhiwa kwenye seva zetu zinaweza kufutwa ukiomba.",
     "request_button": "Omba Ufutaji wa Data",
     "request_note": "Rekodi za off-chain pekee ndizo zinaweza kufutwa. Data za on-chain ni za kudumu.",
     "confirm_title": "Una uhakika?",
-    "confirm_message": "Hatua hii itatuma ombi la kufuta data yako binafsi ya off-chain kutoka kwenye seva za ScoutOff. Data za on-chain haziwezi kufutwa na zitabaki kwenye blockchain ya Stellar kwa kudumu.",
+    "confirm_message": "Hatua hii itatuma ombi la kufuta data yako binafsi ya off-chain kutoka kwenye seva za Promiscope. Data za on-chain haziwezi kufutwa na zitabaki kwenye blockchain ya Stellar kwa kudumu.",
     "confirm_button": "Ndiyo, Omba Ufutaji",
     "cancel": "Ghairi",
     "close": "Funga",
@@ -469,9 +472,9 @@
     "privacy_link": "Sera ya Faragha"
   },
   "meta": {
-    "title": "ScoutOff — Utafutaji wa Vipaji vya Soka Uliogatuliwa",
-    "description": "Wasifu wa wachezaji usioweza kughushiwa, hatua zinazothibitishwa, na miunganisho ya moja kwa moja kati ya wasaka vipaji na wachezaji — inayoendeshwa na mikataba mahiri ya Stellar Soroban.",
-    "og_image_alt": "ScoutOff — Utafutaji wa Vipaji vya Soka Uliogatuliwa kwenye Stellar"
+    "title": "Promiscope — Uwajibikaji wa miradi ya jamii",
+    "description": "Fuatilia miradi ya jamii kutoka ahadi hadi maendeleo kupitia taarifa zilizo wazi, ushahidi, na mapitio ya jamii.",
+    "og_image_alt": "Promiscope — Ahadi zionekane. Maendeleo yaandikwe."
   },
   "offline": {
     "bannerMessage": "Uko nje ya mtandao. Baadhi ya vipengele huenda visipatikane hadi muunganisho urudi."
@@ -731,8 +734,8 @@
       "description": "Tazama maelezo ya usajili na shughuli za hivi karibuni za skauti huyu.",
       "not_found_title": "Skauti hakupatikana",
       "not_found_description": "Wasifu wa skauti unaoutafuta haupo.",
-      "meta_title": "Wasifu wa skauti | ScoutOff",
-      "meta_description": "Tazama maelezo ya usajili na shughuli za hivi karibuni za skauti huyu kwenye ScoutOff."
+      "meta_title": "Wasifu wa skauti | Promiscope",
+      "meta_description": "Tazama maelezo ya usajili na shughuli za hivi karibuni za skauti huyu kwenye Promiscope."
     },
     "subscribe": {
       "title": "Usajili wa skauti",

@@ -23,14 +23,14 @@ wallet that connects on the same device:
 | `watchlist:{scoutWallet}`       | SWR cache    | Private watchlist per wallet      |
 | `saved-searches:{sccoutWallet}` | SWR cache    | Private saved searches per wallet |
 | `blocked-users`                 | localStorage | Blocks made by this wallet        |
-| `scoutoff_recently_viewed`      | localStorage | **Not reset** - see note below    |
-| `scoutoff_currency_preference`  | localStorage | **Not reset** - see note below    |
-| `scoutoff_theme_preference`     | localStorage | **Not reset** - see note below    |
+| `promiscope_recently_viewed`      | localStorage | **Not reset** - see note below    |
+| `promiscope_currency_preference`  | localStorage | **Not reset** - see note below    |
+| `promiscope_theme_preference`     | localStorage | **Not reset** - see note below    |
 
 **Notes:**
 
-- `scoutoff_recently_viewed`, `scoutoff_currency_preference`, and
-  `scoutoff_theme_preference` are **device-level preferences** that persist
+- `promiscope_recently_viewed`, `promiscope_currency_preference`, and
+  `promiscope_theme_preference` are **device-level preferences** that persist
   across wallets because they represent user preferences for the device itself,
   not per-wallet identity data.
 
@@ -39,8 +39,8 @@ wallet that connects on the same device:
 | State Key                       | Storage      | Already Handled?                    |
 | ------------------------------- | ------------ | ----------------------------------- |
 | `wallet_session`                | localStorage | ✅ Yes                              |
-| `scoutoff:session_expiry`       | localStorage | ✅ Yes                              |
-| `scoutoff:remembered_addresses` | localStorage | ❌ No - needs fix                   |
+| `promiscope:session_expiry`       | localStorage | ✅ Yes                              |
+| `promiscope:remembered_addresses` | localStorage | ❌ No - needs fix                   |
 | Contact details (SWR)           | SWR cache    | ✅ Yes (via purgeAllContactDetails) |
 
 ## Current implementation
@@ -49,12 +49,12 @@ The `disconnect()` function in `context/WalletContext.tsx` currently:
 
 1. **Cleared on disconnect:**
    - `wallet_session` localStorage entry
-   - `scoutoff:session_expiry` localStorage entry
+   - `promiscope:session_expiry` localStorage entry
    - SWR cache (blanket `mutate(() => true, undefined, { revalidate: false })`)
    - Contact details cache via `purgeAllContactDetails()`
 
 2. **NOT cleared on disconnect (needs fix):**
-   - `scoutoff:remembered_addresses` - should be cleared
+   - `promiscope:remembered_addresses` - should be cleared
 
 ## Fix required
 

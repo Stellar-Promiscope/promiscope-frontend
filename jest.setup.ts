@@ -79,7 +79,7 @@ jest.mock('next-intl', () => ({
     const english = mockEnglishTranslator(namespace);
     const t = (key: string, values?: Record<string, unknown>) => {
       const stub: Record<string, string> = {
-        app_title: 'ScoutOff',
+        app_title: 'Promiscope',
         'nav.scout_dashboard': 'Scout Dashboard',
         'nav.player_dashboard': 'Player Dashboard',
         'common.loading': 'Loading...',
@@ -88,7 +88,7 @@ jest.mock('next-intl', () => ({
         connecting: 'Connecting…',
         disconnect: 'Disconnect Wallet',
         selectProvider: 'Select Wallet',
-        selectProviderHint: 'Choose a Stellar wallet to connect with ScoutOff.',
+        selectProviderHint: 'Choose a Stellar wallet to connect with Promiscope.',
         install: 'Browser extension',
         installMobile: 'Browser extension / mobile',
         cancel: 'Cancel',

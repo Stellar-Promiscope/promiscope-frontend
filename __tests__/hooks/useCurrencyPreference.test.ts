@@ -4,7 +4,7 @@ import {
   SUPPORTED_CURRENCIES,
 } from '@/hooks/useCurrencyPreference';
 
-const STORAGE_KEY = 'scoutoff_currency_preference';
+const STORAGE_KEY = 'promiscope_currency_preference';
 
 beforeEach(() => {
   localStorage.clear();

@@ -8,7 +8,7 @@
  * polled one for query purposes.
  *
  * Usage (build first — the script ships in dist/):
- *   npm run build --workspace @scoutoff/indexer
+ *   npm run build --workspace @promiscope/indexer
  *   node packages/indexer/dist/scripts/seedPlayers.js [--count 10000] [--db /path/to/indexer.db]
  *
  * Then benchmark against a running indexer pointed at the same DB:

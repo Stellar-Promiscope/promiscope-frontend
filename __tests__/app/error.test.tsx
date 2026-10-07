@@ -53,7 +53,7 @@ describe('ErrorPage', () => {
     render(<ErrorPage error={error} reset={jest.fn()} />);
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[ScoutOff] Unhandled error:',
+      '[Promiscope] Unhandled error:',
       error,
     );
   });

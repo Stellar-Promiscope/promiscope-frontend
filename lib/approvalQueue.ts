@@ -27,7 +27,7 @@ export interface ApprovalIntent {
   errorReason?: string;
 }
 
-const DB_NAME = 'scoutoff-approval-queue';
+const DB_NAME = 'promiscope-approval-queue';
 const DB_VERSION = 1;
 const STORE_NAME = 'approval_intents';
 

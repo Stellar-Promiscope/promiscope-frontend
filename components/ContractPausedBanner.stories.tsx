@@ -27,7 +27,7 @@ function PausedBannerPreview({ onDismiss = fn() }: { onDismiss?: () => void }) {
       <div className="w-full bg-yellow-300 text-black px-4 py-3 flex items-center justify-between gap-4 sticky top-0 z-40 border-b border-yellow-400">
         <div>
           <strong className="font-semibold">
-            ScoutOff is currently under maintenance.
+            Promiscope is currently under maintenance.
           </strong>{' '}
           <span className="text-sm">
             Transactions are disabled.{' '}

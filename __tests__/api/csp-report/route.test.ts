@@ -50,11 +50,11 @@ describe('POST /api/csp-report', () => {
   it('accepts application/csp-report content and logs a normalized violation', async () => {
     const report = {
       'csp-report': {
-        'document-uri': 'https://scoutoff.app/player/1',
+        'document-uri': 'https://promiscope.example/player/1',
         'violated-directive': 'script-src',
         'effective-directive': 'script-src-elem',
         'blocked-uri': 'https://evil.com/script.js',
-        'source-file': 'https://scoutoff.app/app.js',
+        'source-file': 'https://promiscope.example/app.js',
         'line-number': 12,
         disposition: 'enforce',
         'script-sample': 'should not be logged',
@@ -70,11 +70,11 @@ describe('POST /api/csp-report', () => {
       message: 'CSP violation report received',
       userAgent: 'jest-test-agent',
       report: {
-        documentUri: 'https://scoutoff.app/player/1',
+        documentUri: 'https://promiscope.example/player/1',
         violatedDirective: 'script-src',
         effectiveDirective: 'script-src-elem',
         blockedUri: 'https://evil.com/script.js',
-        sourceFile: 'https://scoutoff.app/app.js',
+        sourceFile: 'https://promiscope.example/app.js',
         lineNumber: 12,
         disposition: 'enforce',
       },
@@ -97,9 +97,9 @@ describe('POST /api/csp-report', () => {
     const reports = [
       {
         type: 'csp-violation',
-        url: 'https://scoutoff.app/',
+        url: 'https://promiscope.example/',
         body: {
-          documentURL: 'https://scoutoff.app/',
+          documentURL: 'https://promiscope.example/',
           blockedURL: 'https://evil.com/a.js',
           effectiveDirective: 'script-src-elem',
           disposition: 'report',
@@ -114,7 +114,7 @@ describe('POST /api/csp-report', () => {
     const lines = loggedLines();
     expect(lines).toHaveLength(1);
     expect(lines[0].report).toEqual({
-      documentUri: 'https://scoutoff.app/',
+      documentUri: 'https://promiscope.example/',
       blockedUri: 'https://evil.com/a.js',
       effectiveDirective: 'script-src-elem',
       disposition: 'report',
@@ -125,17 +125,17 @@ describe('POST /api/csp-report', () => {
   it('strips query strings and fragments from URIs', async () => {
     const report = {
       'csp-report': {
-        'document-uri': 'https://scoutoff.app/p?token=secret#frag',
+        'document-uri': 'https://promiscope.example/p?token=secret#frag',
         'blocked-uri': 'https://cdn.example.com/v.mp4?sig=abc123&exp=1',
-        'source-file': 'https://scoutoff.app/app.js?v=1',
+        'source-file': 'https://promiscope.example/app.js?v=1',
       },
     };
     await POST(makeRequest(report));
 
     const [line] = loggedLines();
-    expect(line.report.documentUri).toBe('https://scoutoff.app/p');
+    expect(line.report.documentUri).toBe('https://promiscope.example/p');
     expect(line.report.blockedUri).toBe('https://cdn.example.com/v.mp4');
-    expect(line.report.sourceFile).toBe('https://scoutoff.app/app.js');
+    expect(line.report.sourceFile).toBe('https://promiscope.example/app.js');
     expect(JSON.stringify(line)).not.toMatch(/sig=|token=/);
   });
 

@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import {
   decodeHorizonOperation,
   type EventType,
-} from '@scoutoff/contract-events';
+} from '@promiscope/contract-events';
 
-export type { EventType } from '@scoutoff/contract-events';
+export type { EventType } from '@promiscope/contract-events';
 
 export interface FeedEvent {
   id: string;

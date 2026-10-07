@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve ScoutOff
+about: Create a report to help us improve Promiscope
 title: ''
 labels: bug
 assignees: ''

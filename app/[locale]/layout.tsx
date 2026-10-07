@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { seoMetadata } from '@/lib/seo';
 import { locales } from '@/lib/locales';
+import { BRAND_NAME } from '@/lib/brand';
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -31,7 +32,7 @@ const OG_LOCALES: Record<string, string> = {
  *
  * The canonical URL is constructed from the `x-pathname` request header set
  * by the middleware so it reflects the actual page path (e.g.
- * `/en/player/123` → `https://scoutoff.app/en/player/123`).
+ * `/en/player/123` → `https://promiscope.example/en/player/123`).
  *
  * Title, description and Open Graph / Twitter fields are translated from the
  * `meta` namespace. The OG image comes from the sibling
@@ -58,7 +59,7 @@ export async function generateMetadata({
       title,
       description,
       url: typeof canonical === 'string' ? canonical : undefined,
-      siteName: 'ScoutOff',
+      siteName: BRAND_NAME,
       type: 'website',
       locale: OG_LOCALES[locale] ?? locale,
       alternateLocale: locales

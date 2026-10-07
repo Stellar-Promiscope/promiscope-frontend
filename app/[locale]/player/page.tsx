@@ -31,7 +31,7 @@ import Spinner from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import { ARCHIVED_ENTRY_MESSAGE } from '@/lib/errors';
 
-const SEEN_BADGES_STORAGE_PREFIX = 'scoutoff_seen_badges_';
+const SEEN_BADGES_STORAGE_PREFIX = 'promiscope_seen_badges_';
 
 type TabId = 'register' | 'profile';
 

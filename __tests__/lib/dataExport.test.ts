@@ -176,7 +176,7 @@ describe('downloadExportPayload', () => {
     downloadExportPayload(PAYLOAD);
     const anchor = appendChildSpy.mock.calls[0][0] as HTMLAnchorElement;
     const today = new Date().toISOString().split('T')[0];
-    expect(anchor.download).toBe(`scoutoff-export-player-1-${today}.json`);
+    expect(anchor.download).toBe(`promiscope-export-player-1-${today}.json`);
   });
 
   it('uses a custom filename when provided', () => {

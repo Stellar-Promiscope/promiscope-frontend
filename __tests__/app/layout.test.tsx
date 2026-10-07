@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import RootLayout, { metadata } from '@/app/layout';
 
 jest.mock('next-intl/server', () => ({
-  getMessages: jest.fn().mockResolvedValue({ app_title: 'ScoutOff' }),
+  getMessages: jest.fn().mockResolvedValue({ app_title: 'Promiscope' }),
 }));
 
 // The real `@/lib/locales` only lists 'en'/'fr'/'sw' (all LTR). To prove the
@@ -229,14 +229,14 @@ describe('RootLayout', () => {
   });
 
   it('exposes SEO metadata for the app', () => {
-    expect(metadata.title).toBe('ScoutOff — Decentralized Football Scouting');
+    expect(metadata.title).toBe('Promiscope — Decentralized Football Scouting');
     expect(metadata.metadataBase).toBeInstanceOf(URL);
     expect(metadata.openGraph).toEqual({
-      siteName: 'ScoutOff',
+      siteName: 'Promiscope',
       type: 'website',
     });
     // No hard-coded production origin or SVG OG image in the root metadata.
-    expect(JSON.stringify(metadata)).not.toMatch(/scoutoff\.app|\.svg/);
+    expect(JSON.stringify(metadata)).not.toMatch(/promiscope\.app|\.svg/);
   });
 
   it('renders ConfigWarningBanner when config is invalid', async () => {

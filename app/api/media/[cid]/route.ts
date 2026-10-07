@@ -112,7 +112,7 @@ async function getMedia(
   }
 
   // Moderated media (issue #1320): never proxied, and never cached, so a
-  // later reinstatement takes effect. This only covers ScoutOff's own
+  // later reinstatement takes effect. This only covers Promiscope's own
   // surfaces — the CID stays reachable through public IPFS gateways.
   if (MediaModerationStore.getInstance().isDenylisted(cid)) {
     return NextResponse.json(

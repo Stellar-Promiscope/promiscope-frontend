@@ -24,8 +24,8 @@ describe('buildCsp', () => {
   const baseEnv = {
     NEXT_PUBLIC_SOROBAN_RPC: 'https://soroban-testnet.stellar.org',
     NEXT_PUBLIC_HORIZON_URL: 'https://horizon-testnet.stellar.org',
-    NEXT_PUBLIC_API_URL: 'https://api.scoutoff.app',
-    NEXT_PUBLIC_INDEXER_API_URL: 'https://indexer.scoutoff.app',
+    NEXT_PUBLIC_API_URL: 'https://api.promiscope.example',
+    NEXT_PUBLIC_INDEXER_API_URL: 'https://indexer.promiscope.example',
     NEXT_PUBLIC_IPFS_GATEWAY: 'https://gateway.pinata.cloud/ipfs',
     SENTRY_DSN: 'https://abc123@o12345.ingest.sentry.io/67890',
     NODE_ENV: 'production',
@@ -67,8 +67,8 @@ describe('buildCsp', () => {
 
   it('includes api and indexer origins in connect-src', () => {
     const csp = buildCsp({ nonce: 'abc', env: baseEnv });
-    expect(csp).toContain('https://api.scoutoff.app');
-    expect(csp).toContain('https://indexer.scoutoff.app');
+    expect(csp).toContain('https://api.promiscope.example');
+    expect(csp).toContain('https://indexer.promiscope.example');
   });
 
   it('includes coingecko in connect-src', () => {

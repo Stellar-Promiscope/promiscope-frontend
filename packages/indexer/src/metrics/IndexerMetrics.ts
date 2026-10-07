@@ -1,5 +1,5 @@
 /**
- * IndexerMetrics — lightweight, zero-dependency metrics for the ScoutOff indexer.
+ * IndexerMetrics — lightweight, zero-dependency metrics for the Promiscope indexer.
  *
  * Tracks ingestion rate, error rate, processing latency, throughput, success/failure
  * counts, retry counts, and general indexer health indicators.
@@ -11,9 +11,9 @@
  *  - Fixed-size sliding window for rate calculations to bound memory growth.
  */
 
-import type { EventType } from '@scoutoff/contract-events';
+import type { EventType } from '@promiscope/contract-events';
 
-export type { EventType } from '@scoutoff/contract-events';
+export type { EventType } from '@promiscope/contract-events';
 
 export interface MetricSnapshot {
   // Counters

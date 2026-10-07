@@ -6,7 +6,7 @@ import CookieConsentBanner, {
   reopenConsentBanner,
 } from '@/components/ui/CookieConsentBanner';
 
-const STORAGE_KEY = 'scoutoff:cookie-consent';
+const STORAGE_KEY = 'promiscope:cookie-consent';
 
 describe('CookieConsentBanner', () => {
   beforeEach(() => {
@@ -181,13 +181,13 @@ describe('CookieConsentBanner', () => {
   it('removes the window hook on unmount', () => {
     const { unmount } = render(<CookieConsentBanner />);
     expect(
-      (window as unknown as Record<string, unknown>).__scoutoffReopenConsent,
+      (window as unknown as Record<string, unknown>).__promiscopeReopenConsent,
     ).toBeInstanceOf(Function);
 
     unmount();
 
     expect(
-      (window as unknown as Record<string, unknown>).__scoutoffReopenConsent,
+      (window as unknown as Record<string, unknown>).__promiscopeReopenConsent,
     ).toBeUndefined();
   });
 

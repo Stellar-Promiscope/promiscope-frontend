@@ -4,7 +4,7 @@ const PORT = process.env.PORT ?? 4000;
 
 const app = createApp();
 const server = app.listen(PORT, () => {
-  console.log(`scout-off backend listening on port ${PORT}`);
+  console.log(`promiscope backend listening on port ${PORT}`);
 });
 
 // Drop requests that take longer than this to arrive in full (slowloris).

@@ -19,7 +19,7 @@ type ToastVariant = 'success' | 'error' | 'info' | 'warning';
  * session can't be rehydrated on mount. The ToastProvider listens for these
  * and surfaces a non-blocking toast — see Issue #13.
  */
-export const SESSION_EXPIRED_EVENT = 'scoutoff:session-expired';
+export const SESSION_EXPIRED_EVENT = 'promiscope:session-expired';
 
 interface SessionExpiredDetail {
   message: string;
