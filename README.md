@@ -4,7 +4,7 @@
 
 ## Product status
 
-The home, project directory, and organization pages are an early visual preview. Project cards are fictional examples; project creation, evidence submission, community review, and organization accounts are not connected yet. Existing dashboards, APIs, data models, and Soroban contracts still implement the former football scouting product. Do not treat those legacy workflows as live Promiscope functionality.
+The home, project directory, and organization pages are an early visual preview. Project cards are fictional examples; project creation, evidence submission, community review, and organization accounts are not connected yet. Existing dashboards, APIs, data models, and Soroban contracts still implement the previous product workflows. Do not treat those legacy workflows as live Promiscope functionality.
 
 ## Project structure
 
