@@ -1,6 +1,6 @@
 # Promiscope Frontend — Community Project Accountability on Stellar
 
-Promiscope helps communities follow project commitments, milestones, progress updates, supporting evidence, and responses. The frontend uses Stellar SEP-10 wallet authentication to attribute publishing activity to a wallet address; project records are stored off-chain. A wallet address does not prove an organization's identity or that its claims are true. Some account and dashboard routes are still being migrated from the previous product and are outside the current accountability workflow.
+Promiscope helps communities follow project commitments, milestones, progress updates, supporting evidence, and responses. The frontend uses Stellar SEP-10 wallet authentication to attribute publishing activity to a wallet address; project records are stored off-chain. A wallet address does not prove an organization's identity or that its claims are true. 
 
 ## Architecture and tree
 
