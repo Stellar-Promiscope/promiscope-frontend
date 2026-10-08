@@ -8,6 +8,10 @@ The app is a localized Next.js application. Server and client pages live under `
 
 The project accountability flow uses same-origin route handlers in `app/api/community/projects/` and a SQLite record store in `lib/projectRecordStore.ts`. Authenticated writes use the app's SEP-10 wallet session. Records are off-chain; no Soroban attestations are written. The Next.js app calls the Express service in `server/` for legacy API workflows. The standalone event indexer is in `packages/indexer/`.
 
+## How the project uses Stellar
+
+Stellar SEP-10 authenticates a connected wallet for project publishing and updates. The wallet address attributes activity to a pseudonymous account; it does not verify a person's identity or the accuracy of their claims. Project records and evidence links are stored off-chain in SQLite, and the current accountability flow does not transfer XLM or write to Soroban. A future Soroban integration could timestamp a hash of a published revision while keeping project details and evidence off-chain; that design is tracked in the [contracts issue tracker](https://github.com/Stellar-Promiscope/promiscope-contracts/issues/1) and is not implemented yet.
+
 ## Configuration
 
 Copy `.env.example` to `.env.local`. Treat that file as the full environment-variable reference; values are grouped by service:
