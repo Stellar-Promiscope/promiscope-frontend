@@ -4,7 +4,7 @@
 # time, so they're passed as build ARGs (not just runtime env) — see
 # docker-compose.yml, which supplies values pointing at the mock RPC/API
 # services so the browser can reach them directly (mapped to localhost).
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -12,7 +12,7 @@ COPY package.json package-lock.json ./
 # directory in the build context, so that would otherwise fail the build.
 RUN CI=true npm ci
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -28,6 +28,8 @@ ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_ADMIN_ADDRESS
 ARG NEXT_PUBLIC_DOMAIN
 ARG NEXT_PUBLIC_BASE_URL
+ARG NEXT_PUBLIC_SEP10_SERVER_ACCOUNT
+ARG NEXT_PUBLIC_SEP10_HOME_DOMAIN
 ENV NEXT_PUBLIC_CONTRACT_ID=$NEXT_PUBLIC_CONTRACT_ID \
     NEXT_PUBLIC_NETWORK=$NEXT_PUBLIC_NETWORK \
     NEXT_PUBLIC_HORIZON_URL=$NEXT_PUBLIC_HORIZON_URL \
@@ -38,12 +40,14 @@ ENV NEXT_PUBLIC_CONTRACT_ID=$NEXT_PUBLIC_CONTRACT_ID \
     NEXT_PUBLIC_ADMIN_ADDRESS=$NEXT_PUBLIC_ADMIN_ADDRESS \
     NEXT_PUBLIC_DOMAIN=$NEXT_PUBLIC_DOMAIN \
     NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL \
+    NEXT_PUBLIC_SEP10_SERVER_ACCOUNT=$NEXT_PUBLIC_SEP10_SERVER_ACCOUNT \
+    NEXT_PUBLIC_SEP10_HOME_DOMAIN=$NEXT_PUBLIC_SEP10_HOME_DOMAIN \
     CI=true \
     NODE_ENV=production
 
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production

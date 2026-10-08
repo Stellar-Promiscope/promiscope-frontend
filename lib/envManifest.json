@@ -459,6 +459,13 @@
       "description": "TCP port the server listens on. Set by your host platform in production. Leave blank locally — Next.js defaults to 3000."
     },
     {
+      "name": "PROJECT_RECORDS_DB_PATH",
+      "requiredIn": [],
+      "secret": false,
+      "usedBy": ["lib/projectRecordStore.ts"],
+      "description": "Path to the persistent SQLite database for project records, milestones, updates, and responses. Configure a durable volume for deployments."
+    },
+    {
       "name": "RATE_LIMIT_MAX",
       "requiredIn": [],
       "secret": false,

@@ -1,16 +1,19 @@
 # End-to-End Local Development Setup
 
-This guide walks you from a freshly cloned repository to a fully running local stack: Stellar testnet contracts, backend API, Next.js frontend, and wallet connection. It assumes no prior project context. Target time: under 30 minutes.
+This guide covers the Promiscope frontend and its local service stack. The active accountability workflow runs in this repository: publish a project and milestones with a SEP-10 wallet, post owner updates, and let other signed-in wallets respond. Project data is off-chain in a persistent SQLite file.
 
-> **Product migration:** Promiscope is the community project accountability product. The public marketing and sample-record pages are a static preview; the local backend, indexer, mock data, and Soroban workflows still model the former football scouting product. Use this guide for legacy system development only. The new project, evidence, and community review flows are not implemented yet.
+> **Repository boundary:** `promiscope-backend/` and `promiscope-contracts/` still implement the previous product domain. Their APIs, indexer, and Soroban workflows do not power the accountability records described here. See [PRODUCT_SCOPE.md](docs/PRODUCT_SCOPE.md) for the active and legacy boundaries.
 
 ---
 
 ## Docker Compose Quick Start (recommended for first-time contributors)
 
-The full manual setup below (Stellar CLI, a live testnet contract deploy, a real backend API, Pinata credentials) is the most accurate way to develop against real infrastructure, but it's a lot to provision just to make a small frontend change. `docker-compose.yml` brings up a complete local stack — the frontend, the indexer, and mocked local versions of the Soroban RPC and backend API — with a single command and **no external credentials**.
+`docker-compose.yml` starts the frontend, the legacy indexer, and mock Soroban/backend services. The public project directory works without credentials. Publishing or responding requires local SEP-10 values in a `.env` file and project data is retained in the named `project-records` volume.
 
 ```bash
+cp .env.example .env
+# Set SESSION_SECRET, SEP10_SERVER_KEY, and the matching SEP10_SERVER_ACCOUNT.
+# Set both SEP10 home-domain variables to localhost:3000.
 docker compose up --build
 ```
 
@@ -25,12 +28,13 @@ This starts four containers:
 | `mock-rpc` | 8000 | A local mock of the Soroban RPC endpoints `lib/stellar.ts`/`lib/contract.ts` call |
 | `mock-api` | 4000 | A local mock of the backend REST API `lib/api.ts` calls (`NEXT_PUBLIC_API_URL`)   |
 
-**What works out of the box:** browsing player profiles and lists, milestone history, validator lists, contract health/paused banners, scout dashboards and profiles, and full write flows (register a player, approve a milestone, subscribe, pay-to-contact) — `mock-rpc` decodes the real transaction XDR your wallet builds and returns a canned-but-valid response, including simulate → sign (with Freighter, pointed at a custom network matching `mock-rpc`'s passphrase) → submit → confirm.
+**What works out of the box:** public project directory and project records, plus the legacy player/scout pages backed by local mocks. After configuring SEP-10, create a project, update its milestones, publish a dated owner update with an optional HTTPS/IPFS link, then respond from another wallet. The record database persists in the Docker volume across restarts.
 
 **Known limitations of the mocks** (see `docker/mock-rpc/server.js` and `docker/mock-api/server.js` for exactly what's implemented):
 
 - `mock-rpc` doesn't execute real contract logic or persist ledger state across restarts — it returns fixed/generated data keyed off which contract method was called, not the actual on-chain rules (e.g. it won't really enforce "only the admin can withdraw fees").
 - `mock-api` responses are static fixtures; nothing you write through it is actually persisted.
+- Project records are stored separately by the frontend in `project-records`; the backend mock does not receive those writes.
 - This compose stack builds and serves the frontend with `next build && next start` (production mode), not `next dev` — there's no hot-reloading. If you're actively editing frontend code, run `docker compose up mock-rpc mock-api` for just the mocks, then `npm run dev` locally with `.env.local` pointed at `http://localhost:8000` / `http://localhost:4000`; that gives you the credential-free mocks with normal hot-reload.
 
 For anything that depends on real contract behavior or a real backend (integration testing before a release, verifying an actual Soroban migration), fall back to the manual setup below.
@@ -75,8 +79,9 @@ cargo install stellar-cli --locked
 The contracts live in a separate `promiscope-contracts` repository, expected as a sibling directory.
 
 ```bash
-git clone https://github.com/promiscope/promiscope-frontend.git
-git clone https://github.com/promiscope/promiscope-contracts.git
+git clone https://github.com/Stellar-Promiscope/promiscope-frontend.git
+git clone https://github.com/Stellar-Promiscope/promiscope-backend.git
+git clone https://github.com/Stellar-Promiscope/promiscope-contracts.git
 ```
 
 Your directory layout should be:
@@ -84,6 +89,7 @@ Your directory layout should be:
 ```
 projects/
 ├── promiscope-frontend/
+├── promiscope-backend/
 └── promiscope-contracts/
 ```
 
@@ -344,13 +350,13 @@ frontend only performs it when Soroban says it is necessary.
 The operational TTL strategy is deliberately two-tiered:
 
 - The indexer should periodically identify active player records and submit a
-   low-frequency `extendFootprintTtl` transaction for those footprints using a
-   funded maintenance wallet. Extend only records that have recent profile or
-   milestone activity; extending every historical record indefinitely creates a
-   recurring XLM cost with no product value.
+  low-frequency `extendFootprintTtl` transaction for those footprints using a
+  funded maintenance wallet. Extend only records that have recent profile or
+  milestone activity; extending every historical record indefinitely creates a
+  recurring XLM cost with no product value.
 - The wallet restoration path remains the fallback for long-inactive players.
-   It is user-authorized, pays only when a player is actually accessed or
-   updated, and does not require the platform to hold player-wallet keys.
+  It is user-authorized, pays only when a player is actually accessed or
+  updated, and does not require the platform to hold player-wallet keys.
 
 The indexer maintenance job must monitor its last successful ledger and XLM
 balance. If it is unavailable, archival is expected behavior rather than a

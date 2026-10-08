@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Full local dev stack: frontend + indexer + mocked Soroban RPC + mocked
 # backend API. No external credentials (Pinata, real testnet keys) are
 # required — every service here is either this repo's own code or a small
@@ -77,10 +75,17 @@ services:
         NEXT_PUBLIC_ADMIN_ADDRESS: ${NEXT_PUBLIC_ADMIN_ADDRESS:-GBR6LYRKEFYV3MG322FYLED6PLOTEV77KCX6AZSR7V4RV7EJLIWOZJWQ}
         NEXT_PUBLIC_DOMAIN: localhost:3000
         NEXT_PUBLIC_BASE_URL: http://localhost:3000
+        NEXT_PUBLIC_SEP10_SERVER_ACCOUNT: ${NEXT_PUBLIC_SEP10_SERVER_ACCOUNT:-}
+        NEXT_PUBLIC_SEP10_HOME_DOMAIN: ${NEXT_PUBLIC_SEP10_HOME_DOMAIN:-localhost:3000}
     ports:
       - '3000:3000'
     environment:
       NODE_ENV: production
+      PROJECT_RECORDS_DB_PATH: /app/data/project-records.db
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      SEP10_SERVER_KEY: ${SEP10_SERVER_KEY:-}
+      SEP10_HOME_DOMAIN: ${SEP10_HOME_DOMAIN:-localhost:3000}
+      SEP10_ALLOWED_ORIGINS: ${SEP10_ALLOWED_ORIGINS:-http://localhost:3000}
       # Server-only override so SSR/Server Component fetches (e.g. the scout
       # profile page) reach mock-api via the docker-internal hostname; the
       # browser bundle only ever sees NEXT_PUBLIC_API_URL above. See
@@ -91,3 +96,8 @@ services:
         condition: service_healthy
       mock-api:
         condition: service_healthy
+    volumes:
+      - project-records:/app/data
+
+volumes:
+  project-records:
